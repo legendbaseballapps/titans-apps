@@ -21,6 +21,8 @@ old one — tap the amber stamp to fix it.
 | **Pitch Chart** (game) | **v23** | **v20** — **v21, v22 and v23 waiting to be pushed** |
 | **Offense Chart** | **v42** | v40 — **v41 and v42 waiting to be pushed** |
 
+**The site moved Oct 14, 2026** to the program-owned account: **legendbaseballapps.github.io/titans-apps** (repo transferred from vaughnzj, so the live files, including the real `roster.js`, moved as they were). Every iPad installs from the new link; History saved under the old address does not carry over. The Coach's Guides in the pending builds (bullpen v31, game v23, offense v42) carry the new address, so pushing those builds is what puts it on the iPads.
+
 Verified live Oct 8 against the Pages URLs: bullpen v29, offense v40, game v18, and
 `game/roster.js` serving the 66-player release stamped 2026-10-07 with no sample flag.
 
