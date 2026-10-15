@@ -99,6 +99,19 @@ for folder, name in APPS:
     else:
         check("ALLOW_WIPE present", False, True)
 
+    # DASHBOARD UPLOAD. Only reported for an app that has the switch (bullpen from
+    # v32; the other two before Mar 1). A blank URL is legal - the app says upload
+    # is off - but shipping one by accident means nothing reaches the dashboard.
+    up = re.search(r'var UPLOAD_URL = "([^"]*)";', idx)
+    if up:
+        key = re.search(r'var UPLOAD_KEY = "([^"]*)";', idx)
+        k = key.group(1) if key else ""
+        if not up.group(1):
+            print("  !!!  DASHBOARD UPLOAD IS OFF".ljust(46) + "UPLOAD_URL is blank")
+        else:
+            check("upload URL is an Apps Script /exec", bool(re.match(r'https://script\.google\.com/macros/s/[A-Za-z0-9_-]+/exec$', up.group(1))), True)
+            check("upload key is 40 hex characters", bool(re.match(r'^[0-9a-f]{40}$', k)), True)
+
     # The roster file every app now needs a copy of, inside its own folder.
     check("roster.js in the folder", os.path.exists(os.path.join(ROOT, folder, "roster.js")), True)
     check("  and in the worker's file list", '"./roster.js"' in sw, True)

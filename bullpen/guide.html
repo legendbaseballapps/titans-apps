@@ -195,7 +195,7 @@ footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--rule);
       <div class="eyebrow">Legend Titans Baseball</div>
       <h1>Bullpen Chart Coach's Guide</h1>
       <p>How to run a winter bullpen on the iPad. The script goes in before anybody warms up; after that it's one tap a pitch.</p>
-      <div class="meta">App v31 &nbsp;·&nbsp; October 2026 &nbsp;·&nbsp; Winter workouts</div>
+      <div class="meta">App v32 &nbsp;·&nbsp; October 2026 &nbsp;·&nbsp; Winter workouts</div>
     </div>
   </div>
 
@@ -206,11 +206,12 @@ footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--rule);
       <li>Records where each pitch actually finished, and works out whether he hit the spot, whether he was close, and whether it was a strike either way.</li>
       <li>Tells you the <b>pattern in his misses</b>, not just the percentage.</li>
       <li>Ranks the pitchers on your iPad against each other. Same script, same targets, so the numbers actually compare.</li>
-      <li>Exports a spreadsheet file that stacks with the other iPads' files.</li>
+      <li><b>Sends every filed session to the coaching dashboard</b> on its own, the next time the iPad has signal. Nobody has to export anything.</li>
+      <li>Still exports a spreadsheet file, as a backup or for anyone who wants the raw rows.</li>
     </ul>
     <div class="note">
       <span class="lab">Before you start</span>
-      <p>It keeps <b>every session you file</b>. Tapping <b>Finish &amp; file this session</b> moves the current one into <b>History</b> and starts a clean one with the same script and the same names &mdash; nothing is erased, and a session you forgot to export is still sitting there next week.</p>
+      <p>It keeps <b>every session you file</b>. Tapping <b>Finish &amp; file this session</b> moves the current one into <b>History</b> and starts a clean one with the same script and the same names &mdash; nothing is erased, and the session waits in History until it has reached the dashboard.</p>
     </div>
   </section>
 
@@ -229,7 +230,7 @@ footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--rule);
     </ul>
     <div class="note">
       <span class="lab">Which version am I on?</span>
-      <p>The build is printed in the header, next to &ldquo;Legend Titans &middot; winter workouts.&rdquo; This guide describes <b>v31</b>. If it shows two numbers in amber, like <code>v9 &ne; v8</code>, that iPad downloaded an update but is still showing the old one &mdash; see below.</p>
+      <p>The build is printed in the header, next to &ldquo;Legend Titans &middot; winter workouts.&rdquo; This guide describes <b>v32</b>. If it shows two numbers in amber, like <code>v9 &ne; v8</code>, that iPad downloaded an update but is still showing the old one &mdash; see below.</p>
     </div>
 
     <h3 class="upd">Getting a new version</h3>
@@ -241,7 +242,7 @@ footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--rule);
     </ol>
     <div class="warn">
       <span class="lab">Don't delete the icon and add it back</span>
-      <p>That is the one way to lose data. On iOS, removing a home-screen app can take its saved session with it &mdash; an unexported bullpen would be gone. The two steps above are all an update needs. If you ever do have to remove it, <b>export first</b>.</p>
+      <p>That is the one way to lose data. On iOS, removing a home-screen app can take its saved session with it &mdash; a session that has not reached the dashboard yet would be gone. The two steps above are all an update needs. If you ever do have to remove it, open it on wifi first and check that History says <b>Every filed session is on the dashboard</b>.</p>
     </div>
   </section>
 
@@ -252,6 +253,7 @@ footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--rule);
       <li><b>Mound</b> &mdash; name it so it's different from the other iPads: Mound 1, Mound 2, and so on. This goes into every row of the export and is what keeps the four files apart when they're merged.</li>
       <li><b>Date</b> and <b>Coach</b> &mdash; who's charting.</li>
       <li><b>The script</b> &mdash; either <b>load a template</b> (see below) or build it by hand: <b>+ Add pitch</b>, then <b>+ Repeat last</b> to add four of the same call in a row quickly. Each row is a delivery (<b>W</b> wind-up, <b>S</b> stretch, <b>SS</b> slide step), a pitch type, a target <b>location</b>, and an optional <b>situation</b> &mdash; in that order, left to right.</li>
+      <li><b>Practice session</b>, new in v32. Tick it when you are training a new charter or just trying the app out. A practice session charts and files like any other, but it <b>never goes to the dashboard</b>, so it can't land in a kid's numbers. A bar on the Chart tab reminds you it's on. It switches itself off when you file, so the next pen is real.</li>
       <li><b>Pitchers</b> &mdash; 4 or 5 per iPad. Name, jersey, hand, PitchSafe number 0&ndash;100, the stretch-only box, and under <b>Runs</b>, whether he follows the script or goes freeform.</li>
     </ul>
     <div class="note">
@@ -473,27 +475,33 @@ footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--rule);
     <ul>
       <li>Type your notes into <b>Coach's comments</b> for each pitcher while you still remember what you told him. It's on the Chart tab, under the log.</li>
       <li>Open the <b>Report</b> tab. The leaderboard at the top ranks everybody on your iPad; each pitcher's card below has his numbers, his miss read and a per-pitch-type breakdown with velo.</li>
-      <li>Tap <b>Export pitch log (.csv)</b>. The iPad asks where to put it &mdash; send it to Files or straight to the shared folder. That's the file that matters: one row per pitch, and it merges with the other mounds.</li>
-      <li><b>Export summary (.txt)</b> is the readable version, if you want to hand a pitcher a page.</li>
-      <li>Files are named <code>bullpen-2027-01-21-mound-1.csv</code>, so a winter's worth sorts itself.</li>
-      <li><b>Then tap Finish &amp; file this session.</b> It moves to <b>History</b> and the app hands you a clean sheet with the same script and the same five names, ready for next week. Filing never deletes: History keeps an <b>Export</b> beside every session, and if more than one is sitting there unsent it says so at the top.</li>
+      <li><b>Then tap Finish &amp; file this session.</b> That's the step that matters. It moves the session to <b>History</b>, sends it to the dashboard if there is signal, and hands you a clean sheet with the same script and the same five names, ready for next week.</li>
+      <li>No signal in the gym? Nothing to do. It goes the next time the app opens with signal. See <i>Sending to the dashboard</i> below.</li>
+      <li><b>Export pitch log (.csv)</b> and <b>Export summary (.txt)</b> are still there, on the Report tab and beside every session in History, for a backup or a page to hand a pitcher. Files are named <code>bullpen-2027-01-21-mound-1.csv</code>, so a winter's worth sorts itself.</li>
       <li>Every row carries <code>Build</code>, <code>Template</code>, <code>ScriptID</code> and <code>ScriptModified</code> next to the pitch data. <b>Merge the four files and sort on ScriptID</b> &mdash; one value means all four mounds ran the same routine, and anything else shows you which one drifted.</li>
     </ul>
     <div class="note">
-      <span class="lab">Export before you leave</span>
-      <p>The session lives in the iPad's browser storage and the next session overwrites it. If the iPad gets wiped, cleared or handed to somebody else before you export, the pen is gone.</p>
+      <span class="lab">File before you leave</span>
+      <p>The session in progress lives only on this iPad until it is filed. If the iPad gets wiped, cleared or handed to somebody else first, the pen is gone. Filed sessions stay in History.</p>
     </div>
-  
+    <div class="note">
+      <span class="lab">The red Erase everything button is gone</span>
+      <p>It was there for testing in the fall. From v32 it is switched off, so nothing on this iPad can wipe History. <b>Reset this session</b> still clears a session that was set up wrong, and never touches History.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="upd">Sending to the dashboard</h2>
+    <p class="sub">New in v32. Every filed session goes to the coaching dashboard by itself. You don't tap anything, and charting never waits for it.</p>
+    <ul>
+      <li><b>When it sends:</b> the moment you file, and again every time the app opens or comes back to the front with signal. The gym has none, so most pens go out when the iPad next sees wifi.</li>
+      <li><b>One quiet line on the History tab</b> tells you where things stand: <i>Every filed session is on the dashboard</i>, or <i>2 sessions waiting to upload</i>.</li>
+      <li>Each session in History has a pill: <b>on dashboard</b>, <b>waiting</b>, or <b>practice</b> (practice never goes).</li>
+      <li><b>Nothing is lost by waiting.</b> A session stays in History whether it has gone or not, and sending the same one twice is harmless. The dashboard ignores a copy it already has.</li>
+    </ul>
     <div class="warn">
-      <span class="lab">Erase everything on this iPad</span>
-      <p>At the bottom of the <b>Setup</b> tab, under <i>Start over</i> there is a red <b>Erase everything on this iPad</b> button. It
-      deletes the session in progress <b>and everything in History</b>, for good, with nothing
-      uploaded first. It is there for <b>testing</b> &mdash; charting a few junk sessions and
-      wanting a clean app back.</p>
-      <p>It tells you exactly what it is about to destroy, including how many filed sessions have
-      <b>never been exported</b>, and Cancel is what the button starts on. <b>Finish &amp; file</b>
-      is how a real session ends; this is not. The roster is not affected &mdash; it ships with
-      the app.</p>
+      <span class="lab">If the line turns red</span>
+      <p>It says the dashboard <b>turned a session away</b>, with the reason. Your sessions are safe on the iPad. Tell Jim, and use <b>Export</b> in History as a backup until he says it's fixed.</p>
     </div>
   </section>
 
@@ -502,7 +510,7 @@ footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--rule);
     <p class="sub">These are known. No need to write them up.</p>
     <ul>
       <li>No history between sessions. Each pen starts clean, so week-over-week trend happens in the spreadsheet, not in the app.</li>
-      <li>The four iPads don't talk to each other. Merging the files is a manual step in Excel.</li>
+      <li>The four iPads don't talk to each other. Each one sends to the dashboard, and that is where the mounds come together.</li>
       <li>In and Out are fixed to the grid, not flipped for left-handers.</li>
       <li>PitchSafe is recorded, not enforced. Nothing warns you at a pitch count.</li>
       <li>Nothing stops a coach unlocking a template and changing it. The app records that he did.</li>
@@ -523,7 +531,7 @@ footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--rule);
     </ul>
   </section>
 
-  <footer>Legend Titans Bullpen Chart · app v31 · Guide prepared for winter workouts</footer>
+  <footer>Legend Titans Bullpen Chart · app v32 · Guide prepared for winter workouts</footer>
 
 </div>
 </body>

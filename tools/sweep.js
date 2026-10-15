@@ -10,9 +10,27 @@ const { chromium } = require("playwright");
 const BASE = process.env.BASE || "http://localhost:8807";
 let fails = 0, checks = 0;
 
-async function sweep(b, app, path, controls) {
+/* Serve an app with its erase switch forced ON. From v32 the bullpen SHIPS with
+   ALLOW_WIPE = false, and the other two follow before Mar 1, but the erase
+   control still exists in the code and its wording and key list still have to
+   be proved - so the tests that drive it serve the real file with the switch on.
+   Returns true when the page carried the flag at all. */
+async function wipeOn(pg, path) {
+  let seen = false;
+  await pg.route(BASE + path, async route => {
+    const res = await route.fetch();
+    let body = await res.text();
+    seen = /var ALLOW_WIPE = (true|false);/.test(body);
+    body = body.replace("var ALLOW_WIPE = false;", "var ALLOW_WIPE = true;");
+    route.fulfill({ response: res, body });
+  });
+  return () => seen;
+}
+
+async function sweep(b, app, path, controls, opts) {
   const pg = await (await b.newContext({ viewport:{width:1280,height:1100}, serviceWorkers:"block" })).newPage();
   const errs = []; pg.on("pageerror", e => errs.push(String(e)));
+  if (opts && opts.wipeOn) await wipeOn(pg, path);
   await pg.goto(BASE + path, { waitUntil:"load" });
   await pg.waitForTimeout(1400);
   console.log("\n" + app);
@@ -257,6 +275,7 @@ async function wipeWarning(b) {
     await ctx.addInitScript(([k, v]) => { try { localStorage.setItem(k, v); } catch(e) {} }, [app.key, two]);
     const pg = await ctx.newPage();
     const errs = []; pg.on("pageerror", e => errs.push(String(e)));
+    await wipeOn(pg, app.path);
     await pg.goto(BASE + app.path, { waitUntil:"load" });
     await pg.waitForTimeout(1400);
     let got;
@@ -313,7 +332,8 @@ async function wipeOff(b) {
       let body = await res.text();
       const before = body;
       body = body.replace("var ALLOW_WIPE = true;", "var ALLOW_WIPE = false;");
-      flipped = body !== before;
+      /* the bullpen already ships OFF (v32); the others are flipped here */
+      flipped = body.indexOf("var ALLOW_WIPE = false;") >= 0;
       route.fulfill({ response: res, body });
     });
     await pg.goto(BASE + app.path, { waitUntil:"load" });
@@ -355,7 +375,10 @@ async function wipeOff(b) {
 }
 
 (async () => {
-  const b = await chromium.launch({ executablePath:"/opt/pw-browsers/chromium" });
+  const b = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium",
+    /* The shipped bullpen carries the REAL receiver URL. No test may ever reach it:
+       Google's script hosts do not resolve inside this browser. */
+    args: ["--host-resolver-rules=MAP script.google.com ~NOTFOUND, MAP *.googleusercontent.com ~NOTFOUND", "--no-proxy-server"] });
 
   await sweep(b, "PITCH CHART", "/game/index.html", [
     ["no duplicate fns",  null,              NO_DUPLICATE_FUNCTIONS, null, ""],
@@ -839,6 +862,23 @@ async function wipeOff(b) {
        null, "yes"],
     ["mound pick sticks",  null, sticks('#rosterTbl [data-f="rid"]'),
        'document.getElementById("tab-setup").click();', "stuck"],
+    /* v32: practice mode. The switch must stick, raise the bar on the Chart tab,
+       and land in the export, so a practice pen is never mistaken for a real one. */
+    ["practice switch",    "#s-practice",
+       '(function(){ var b=document.getElementById("practiceBar"); return b ? String(b.hidden) : "no bar"; })()',
+       'document.getElementById("tab-setup").click(); document.getElementById("s-practice").checked=false;'],
+    ["practice is stored", null,
+       '(function(){ var s=JSON.parse(localStorage.getItem("titans-bullpen-v1")||"{}");'+
+       ' var on=s.practice===true; var c=document.getElementById("s-practice");'+
+       ' c.click(); var off=JSON.parse(localStorage.getItem("titans-bullpen-v1")||"{}").practice===false;'+
+       ' return on && off ? "on, then off" : "on="+on+" off="+off; })()',
+       null, "on, then off"],
+    ["upload line explains itself", null,
+       '(function(){ document.getElementById("tab-hist").click(); var u=document.getElementById("upLine");'+
+       ' var t=u?u.textContent:""; document.getElementById("tab-setup").click();'+
+       ' if(u && u.hidden) return "quiet until a session is filed";'+
+       ' return /not set up/.test(t) ? "UPLOAD IS OFF IN THIS BUILD" : "line: "+t; })()',
+       null, "quiet until a session is filed"],
     /* The panel is collapsed by default. Sixty-six players is ~2,200px of list
        sitting directly above the mound list a coach starts a session with, and you
        pick arms off a dropdown - so the list is reference, not the screen. */
@@ -1718,8 +1758,8 @@ async function wipeOff(b) {
       ["ALLOW_WIPE is one findable line", null,
         '(function(){'+
         '  var m=document.documentElement.innerHTML.match(/var ALLOW_WIPE = (true|false);/g);'+
-        '  return m ? (m.length===1 ? m[0] : m.length+" of them") : "NO FLAG"; })()',
-        null, "var ALLOW_WIPE = true;"],
+        '  return m ? (m.length===1 ? "one flag" : m.length+" of them") : "NO FLAG"; })()',
+        null, "one flag"],
       ["it sits against BUILD, where releases look", null,
         '(function(){'+
         '  var src=document.documentElement.innerHTML;'+
@@ -1728,7 +1768,7 @@ async function wipeOff(b) {
         '  return (b>f && b-f < 1400) ? "adjacent" : "far apart ("+(b-f)+" chars)"; })()',
         null, "adjacent"],
 
-    ]);
+    ], { wipeOn: true });
   }
 
   await wipeWarning(b);

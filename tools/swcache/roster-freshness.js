@@ -108,7 +108,10 @@ const R3 = [["id001", "Aaa", "Al", "Sr"], ["id002", "Bbb", "Bob", "Jr"], ["id003
   roster("v1-stamp", R1);
   await startServer();
 
-  const b = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium" });
+  const b = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium",
+    /* The shipped bullpen carries the REAL receiver URL. No test may ever reach it:
+       Google's script hosts do not resolve inside this browser. */
+    args: ["--host-resolver-rules=MAP script.google.com ~NOTFOUND, MAP *.googleusercontent.com ~NOTFOUND", "--no-proxy-server"] });
   const ctx = await b.newContext({ viewport: { width: 1280, height: 1000 }, serviceWorkers: "allow" });
   const pg = await ctx.newPage();
   const errs = [];

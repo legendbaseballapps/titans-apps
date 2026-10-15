@@ -1,7 +1,7 @@
 /* Titans Bullpen Chart - offline cache
    Bump CACHE when you change the APP - index.html, the guide, templates.js - or
    iPads keep the old one. A new roster.js needs no bump: see rosterFirst below. */
-var CACHE = "titans-bullpen-v31";
+var CACHE = "titans-bullpen-v32";
 var FILES = [
   "./",
   "./index.html",

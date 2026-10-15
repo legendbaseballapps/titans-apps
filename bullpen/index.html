@@ -87,6 +87,16 @@ button{cursor:pointer}
   letter-spacing:.07em;text-transform:uppercase;padding:5px 11px;border-radius:6px;
   border:1px solid var(--line);color:var(--ink);background:var(--card)}
 .histnag{color:var(--close)}
+.hrow .pill.up{border-color:var(--good);color:var(--good)}
+.hrow .pill.prac{border-color:var(--ink-2);color:var(--ink-2)}
+/* Practice switch on Setup, and the bar that says so on every tab. */
+.practice{display:flex;gap:12px;align-items:flex-start;margin:14px 0 0;padding:12px 14px;
+  border:1px dashed var(--line);border-radius:10px;cursor:pointer}
+.practice input{width:24px;height:24px;flex:0 0 auto;margin:0}
+.practice span{font-size:13.5px;line-height:1.45;color:var(--ink-2)}
+.practice b{color:var(--ink)}
+.upline{font-size:13px;line-height:1.45;color:var(--ink-2);margin:0 0 10px}
+.upline.wait{color:var(--close)} .upline.bad{color:var(--miss)} .upline.ok{color:var(--good)}
 .tabs{display:flex;gap:4px;margin-left:auto;background:rgba(255,255,255,.09);padding:3px;border-radius:8px}
 .tabs button{
   border:0;background:transparent;color:var(--bar-ink);opacity:.72;
@@ -438,6 +448,13 @@ footer{max-width:1340px;margin:0 auto;padding:0 16px 30px;color:var(--ink-2);fon
 
   <div class="notice ok" id="setupNote" hidden></div>
 
+  <!-- On every tab, not just Setup: a practice session that looks like a real one
+       is a real pen that never reaches the dashboard. -->
+  <div class="notice" id="practiceBar" hidden>
+    <strong>Practice session</strong>
+    <span>Charted and filed on this iPad, <b>never sent to the dashboard</b>. Turn it off on the Setup tab for a real pen.</span>
+  </div>
+
   <div class="notice" id="finishBar" hidden>
     <strong>Done for today?</strong>
     <span>Filing moves this session to History and starts a clean one with the same
@@ -462,7 +479,13 @@ footer{max-width:1340px;margin:0 auto;padding:0 16px 30px;color:var(--ink-2);fon
               <input type="text" id="s-coach" placeholder="Who's charting">
             </label>
           </div>
-          <p class="tiny" style="margin:12px 0 0">Every iPad exports its own file. The mound name keeps the four files apart when you merge them in Excel.</p>
+          <label class="practice" for="s-practice">
+            <input type="checkbox" id="s-practice">
+            <span><b>Practice session</b> &mdash; for training a new charter or trying things out.
+              Charted and filed here like any pen, but <b>never sent to the dashboard</b>.
+              It switches itself off when you file, so the next pen is real.</span>
+          </label>
+          <p class="tiny" style="margin:12px 0 0">Every filed pen goes to the coaching dashboard on its own the next time the app opens with signal. The mound name keeps the iPads apart.</p>
         </div>
       </div>
 
@@ -708,6 +731,7 @@ footer{max-width:1340px;margin:0 auto;padding:0 16px 30px;color:var(--ink-2);fon
       <div class="panel">
         <h2>Filed sessions</h2>
         <div class="body">
+          <p class="upline" id="upLine" hidden></p>
           <div class="tiny histnag" id="histNag" style="margin-bottom:8px"></div>
           <div id="histList"></div>
         </div>
@@ -716,7 +740,7 @@ footer{max-width:1340px;margin:0 auto;padding:0 16px 30px;color:var(--ink-2);fon
   </section>
 </div>
 
-<footer>Data lives on this iPad only, one session at a time. Export before you start the next one.<br>
+<footer>Filed sessions go to the coaching dashboard by themselves the next time the app opens with signal. Practice sessions stay on this iPad.<br>
 Add this page to your home screen and it works with no signal at all. Legend Titans.</footer>
 
 <script src="templates.js"></script>
@@ -954,6 +978,8 @@ function finishAndFile(){
 function doFile(){
   var filed = JSON.parse(JSON.stringify(S));
   filed.filed = Date.now(); filed.sent = false; filed.build = BUILD;
+  /* sent = exported by hand (unchanged meaning); up = on the dashboard. */
+  filed.practice = !!S.practice; filed.up = 0; filed.upErr = "";
   A.push(filed); saveArch(A);
   /* The script and the names carry forward: same routine, same four arms next week. */
   var keep = {script:S.script, tpl:S.tpl, tplId:S.tplId, locked:S.locked, pad:S.pad, coach:S.coach};
@@ -968,7 +994,10 @@ function doFile(){
   });
   S.cur = S.pitchers[0].id;
   save(); drawSetup(); drawHistory(); show("setup");
-  noteSetup("Filed. " + A.length + (A.length===1 ? " session in History." : " sessions in History."));
+  noteSetup("Filed. " + A.length + (A.length===1 ? " session in History." : " sessions in History.") +
+            (filed.practice ? " It was a practice session, so it stays on this iPad." : ""));
+  /* Signal is likeliest right now, at the end of the session in the gym. */
+  uploadPending();
 }
 var DL = null;
 
@@ -1075,6 +1104,10 @@ function blank(){
      the same mound on the same day (morning and afternoon groups) would merge into
      one in a roll-up, and nothing downstream could tell them apart. */
   return {v:1,sid:uid(),pad:"Mound 1",date:today(),coach:"",
+          /* Practice is per session and starts OFF every time: filing resets it,
+             so a practice pen can never quietly turn the next real one into a
+             pen the dashboard never sees. */
+          practice:false,
           tpl:"", tplId:"", locked:false,
           script:[],
           pitchers:[newPitcher(""),newPitcher(""),newPitcher(""),newPitcher(""),newPitcher("")],
@@ -1095,6 +1128,7 @@ if(!S.cur || !byId(S.cur)) S.cur = S.pitchers.length ? S.pitchers[0].id : null;
 if(typeof S.locked !== "boolean") S.locked = false;
 if(typeof S.tpl !== "string") S.tpl = "";
 if(typeof S.tplId !== "string") S.tplId = "";
+if(typeof S.practice !== "boolean") S.practice = false;
 
 function save(){
   try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){}
@@ -1122,9 +1156,28 @@ function cur(){ return byId(S.cur); }
    control with nothing to put back.
    To delete the feature outright rather than switch it off, remove this flag,
    gateWipe(), wipeEverything(), WIPE_KEYS, the #wipeBox markup and its listener. */
-var ALLOW_WIPE = true;
+var ALLOW_WIPE = false;
 
-var BUILD = "v31";
+var BUILD = "v32";
+
+/* ======================= DASHBOARD UPLOAD =======================
+   Where a filed session goes: the Titans Upload Receiver, an Apps Script web app
+   owned by the program Google account (claude/dashboard-google-setup.md).
+   Blank UPLOAD_URL = upload off: nothing is sent, History says so, and the app
+   behaves exactly as it did before v32.
+
+   UPLOAD_KEY is NOT a secret - this page is public, so anyone can read it here.
+   It keeps stray requests out of the season Sheet. The real protection is that
+   the receiver only writes and never hands data back.
+
+   The receiver URL never changes between seasons (it is a standalone script that
+   is pointed at each new season's Sheet), so this line is set once. */
+var UPLOAD_URL = "https://script.google.com/macros/s/AKfycbz91-L6Dag2o9HLpvh7ArD26HkotIPy1ZvYIc3OpcktvXfH7ppm8LD9Wu-MUYjBUMSnOw/exec";
+var UPLOAD_KEY = "a14e63e713f34b5f9a9a87daf137e4aef8c564e8";
+var UPLOAD_SCHEMA = 1;
+/* Apps Script can take several seconds to wake up. This only bounds how long the
+   status line says "Sending" - nothing ever waits on it. */
+var UPLOAD_WAIT = 20000;
 function stampBuild(){
   var e = el("buildStamp");
   if(!e) return;
@@ -1331,6 +1384,8 @@ function wsOpts(sel){ var h=""; for(var i=0;i<WS.length;i++) h+=opt(WS[i].k, WS[
 
 function drawSetup(){
   el("s-pad").value = S.pad; el("s-date").value = S.date; el("s-coach").value = S.coach;
+  el("s-practice").checked = !!S.practice;
+  drawPractice();
   /* Only offer to file once something has actually been charted. */
   el("finishBar").hidden = !pitchCount(S);
 
@@ -1606,6 +1661,8 @@ el("rosterTbl").addEventListener("click", function(e){
 el("s-pad").oninput = function(){ S.pad=this.value; save(); };
 el("s-date").oninput = function(){ S.date=this.value; save(); };
 el("s-coach").oninput = function(){ S.coach=this.value; save(); };
+el("s-practice").onchange = function(){ S.practice = this.checked; save(); drawPractice(); };
+function drawPractice(){ var b = el("practiceBar"); if(b) b.hidden = !S.practice; }
 el("addPitch").onclick = function(){ S.script.push({id:uid(),type:"FB",ws:"S",spot:0,sit:""}); save(); drawSetup(); };
 el("dupLast").onclick = function(){
   var l = S.script[S.script.length-1] || {type:"FB",ws:"S",spot:0,sit:""};
@@ -2245,7 +2302,16 @@ function drawReport(){
 
 /* ===================== export ===================== */
 function slug(s){ return String(s||"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,""); }
+/* The same rows feed the .csv file and the dashboard upload, so the two can never
+   disagree about a pitch. Values stay typed (numbers as numbers) for the upload;
+   csv() turns them into text. */
 function csv(){
+  var t = table(), out = [t.head.join(",")];
+  function q(v){ v = (v==null?"":String(v)); return /[",\n]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v; }
+  for(var i=0;i<t.rows.length;i++) out.push(t.rows[i].map(q).join(","));
+  return out.join("\r\n");
+}
+function table(){
   /* AB / ABResult / AO3plus are live-AB only and blank elsewhere, so one file can
      hold a scripted mound and a live-AB mound without two schemas.
      "Result" is the execution grade; it is now BLANK when no spot was called,
@@ -2265,9 +2331,11 @@ function csv(){
               "PitcherID","Pitcher","PitcherLast","PitcherFirst","Class","ClassName","Throws","PitchSafe","StretchOnly","Mode","PitchNo",
               "CalledType","CalledWS","CalledSpot","SpotName","Situation","SituationName","OffScript",
               "ActualRow","ActualCol","Strike","Result","MissVert","MissHoriz","Velo",
-              "AB","ABResult","ABOut","AO3plus"];
-  var lines = [head.join(",")], sid = scriptId(S.script);
-  function q(v){ v = (v==null?"":String(v)); return /[",\n]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v; }
+              "AB","ABResult","ABOut","AO3plus",
+              /* v32. Practice sessions are never uploaded, but a hand export of one
+                 must still say so before it gets merged with real pens. */
+              "Practice"];
+  var rows = [], sid = scriptId(S.script);
   for(var i=0;i<S.pitchers.length;i++){
     var p = S.pitchers[i], who = moundPerson(p);
     for(var j=0;j<p.pitches.length;j++){
@@ -2278,7 +2346,8 @@ function csv(){
       var ab = (ai == null) ? null : (p.abs || [])[ai];
       var a3 = (ai == null) ? null : ao3OfAB(p, ai);
       var mode = plive(p) ? "Live" : (x.free ? "Freeform" : "Script");
-      lines.push([S.sid||"",S.pad,S.date,S.coach,BUILD,S.tpl||"",sid,tplModified()?"Y":"N",
+      /* A filed session keeps the build it was charted on. */
+      rows.push([S.sid||"",S.pad,S.date,S.coach,S.build||BUILD,S.tpl||"",sid,tplModified()?"Y":"N",
         p.rid||"", who.name, who.last, who.first, who.cls, classLabel(who.cls), who.throws, p.safe, p.stretch?"Y":"N",
         mode,j+1,
         x.type,x.ws,x.spot==null?"":x.spot,t?t.l:"",x.sit,sitLabel(x.sit),x.off?"Y":"N",
@@ -2286,15 +2355,16 @@ function csv(){
         g==="none"?"":(g==="hit"?"Spot":(g==="near"?"Close":"Miss")),mv,mh,x.velo==null?"":x.velo,
         ai==null?"":(ai+1), (ab&&ab.result)||"",
         (ab&&ab.result)?(OUT_RESULT[ab.result]?"Y":"N"):"",
-        a3?a3.state:""].map(q).join(","));
+        a3?a3.state:"", S.practice?"Y":"N"]);
     }
   }
-  return lines.join("\r\n");
+  return {head:head, rows:rows};
 }
 function txt(){
   var L = [];
   L.push("LEGEND TITANS — BULLPEN SESSION");
-  L.push(S.date+"   "+S.pad+(S.coach?"   Charted by "+S.coach:"")+"   app "+BUILD);
+  L.push(S.date+"   "+S.pad+(S.coach?"   Charted by "+S.coach:"")+"   app "+(S.build||BUILD));
+  if(S.practice) L.push("PRACTICE SESSION - not sent to the dashboard");
   L.push("");
   L.push("SCRIPT ("+S.script.length+" pitches)   ID "+scriptId(S.script)+
          (S.tpl ? "   template: "+S.tpl+(tplModified()?"  [MODIFIED — this mound does not match the template]":"") : "   [no template]"));
@@ -2427,6 +2497,7 @@ function offlineSave(name, data, mime){
 function drawHistory(){
   var host = el("histList"), nag = el("histNag");
   if(!host) return;
+  drawUpload();
   host.innerHTML = "";
   if(!A.length){
     nag.textContent = "";
@@ -2434,8 +2505,10 @@ function drawHistory(){
     return;
   }
   var u = unsentCount();
-  /* One unsent session is the normal state walking out of the gym; a backlog is not. */
-  nag.textContent = u > 1
+  /* One unsent session is the normal state walking out of the gym; a backlog is not.
+     With the dashboard upload on, "sent" is the upload and the status line above
+     says it; the export nag is only for an iPad running without one. */
+  nag.textContent = (!UPLOAD_URL && u > 1)
     ? u + " filed sessions have not been sent yet. Export them and pass them on."
     : "";
   var h = "";
@@ -2447,7 +2520,7 @@ function drawHistory(){
          '<b>'+esc(x.pad || "Mound")+'</b>'+
          '<span class="when">'+esc(x.date||"")+' \u00b7 '+pitchCount(x)+'P'+
            (named ? ' \u00b7 '+esc(named) : '')+'</span>'+
-         '<span class="pill'+(x.sent?"":" unsent")+'">'+(x.sent?"sent":"not sent")+'</span>'+
+         histPill(x)+
          '<button data-exp="'+i+'">Export .csv</button>'+
          '</div>';
   });
@@ -2455,6 +2528,12 @@ function drawHistory(){
   host.querySelectorAll("[data-exp]").forEach(function(b){
     b.onclick = function(){ exportFiled(+b.getAttribute("data-exp")); };
   });
+}
+function histPill(x){
+  if(x.practice) return '<span class="pill prac">practice</span>';
+  if(!UPLOAD_URL) return '<span class="pill'+(x.sent?"":" unsent")+'">'+(x.sent?"sent":"not sent")+'</span>';
+  if(x.up) return '<span class="pill up">on dashboard</span>';
+  return '<span class="pill unsent">waiting</span>';
 }
 /* A filed session stays recoverable - History always has an Export beside it. */
 function exportFiled(i){
@@ -2476,6 +2555,113 @@ el("expNow").onclick = function(){ show("report"); doExport("csv"); };
 el("expTxt").onclick = function(){ doExport("txt"); };
 
 
+
+/* ============ dashboard upload (v32) ============
+   Catch up on open: iOS gives a web app nothing in the background, so every
+   filed session is offered to the receiver whenever the app opens, comes back
+   to the front, or gets its signal back - and at the moment it is filed.
+
+   Rules, all of them from E-004:
+   - never block: nothing here is awaited by charting, filing or the UI
+   - never nag at the field: one quiet status line on the History tab
+   - mark uploaded ONLY on the receiver's ok; anything else stays queued
+   - one at a time, oldest first, and stop at the first failure (no signal now
+     means no signal for the next one either - try again next open)
+   - the receiver ignores a session it already has, so a retry after a reply was
+     lost costs nothing
+   Practice sessions and empty ones are never offered. */
+var upBusy = false, upLast = "";
+function upQueue(){
+  return A.filter(function(x){ return !x.practice && !x.up && pitchCount(x) > 0; });
+}
+function upPayload(x){
+  var live = S, t;
+  S = x;
+  try{ t = table(); }
+  finally{ S = live; }
+  return {
+    schema: UPLOAD_SCHEMA, key: UPLOAD_KEY, app: "bullpen", build: x.build || BUILD,
+    record: { id: x.sid, mound: x.pad || "", date: x.date || "", coach: x.coach || "",
+              template: x.tpl || "", scriptId: scriptId(x.script || []),
+              filedAt: x.filed ? new Date(x.filed).toISOString() : "",
+              pitches: pitchCount(x) },
+    tables: { pitches: { columns: t.head, rows: t.rows } }
+  };
+}
+function upPost(x){
+  return new Promise(function(resolve){
+    var done = false, ctl = null;
+    try{ ctl = new AbortController(); }catch(e){}
+    function finish(r){ if(done) return; done = true; clearTimeout(timer); resolve(r); }
+    var timer = setTimeout(function(){
+      try{ if(ctl) ctl.abort(); }catch(e){}
+      finish({ok:false, error:"timeout", retry:true});
+    }, UPLOAD_WAIT);
+    var body;
+    try{ body = JSON.stringify(upPayload(x)); }
+    catch(e){ finish({ok:false, error:"could not package this session", retry:false}); return; }
+    /* text/plain and no custom headers: a "simple" request, so the browser sends
+       no preflight - Apps Script web apps do not answer one. */
+    var opts = {method:"POST", body:body, cache:"no-store", redirect:"follow",
+                headers:{"Content-Type":"text/plain;charset=utf-8"}};
+    if(ctl) opts.signal = ctl.signal;
+    fetch(UPLOAD_URL, opts).then(function(r){ return r.text(); }).then(function(txt){
+      var j = null;
+      try{ j = JSON.parse(txt); }catch(e){}
+      if(j && j.ok) finish({ok:true, status:j.status || "stored"});
+      else finish({ok:false, error:(j && j.error) || "the dashboard sent back something unexpected",
+                   retry: !(j && j.error) || !!(j && j.retry)});
+    })["catch"](function(){ finish({ok:false, error:"offline", retry:true}); });
+  });
+}
+function uploadPending(){
+  if(!UPLOAD_URL || upBusy){ drawUpload(); return; }
+  var q = upQueue();
+  if(!q.length || navigator.onLine === false){ drawUpload(); return; }
+  upBusy = true; drawUpload();
+  var i = 0;
+  (function next(){
+    if(i >= q.length){ upBusy = false; upLast = ""; drawUpload(); drawHistory(); return; }
+    var x = q[i++];
+    upPost(x).then(function(r){
+      if(r.ok){ x.up = Date.now(); x.upErr = ""; }
+      else { x.upErr = r.error; }
+      saveArch(A);
+      if(r.ok){ next(); return; }
+      upBusy = false; upLast = r.retry ? "retry" : "refused:" + r.error;
+      drawUpload(); drawHistory();
+    });
+  })();
+}
+function drawUpload(){
+  var e = el("upLine");
+  if(!e) return;
+  var n = UPLOAD_URL ? upQueue().length : 0;
+  var prac = A.filter(function(x){ return x.practice; }).length;
+  var pracNote = prac ? " " + prac + " practice session" + (prac===1?"":"s") + " stay" + (prac===1?"s":"") + " on this iPad." : "";
+  var t, c;
+  if(!UPLOAD_URL){
+    t = "Dashboard upload is not set up on this build. Export each session by hand."; c = "upline";
+  } else if(upBusy){
+    t = "Sending to the dashboard\u2026"; c = "upline";
+  } else if(!n){
+    if(!A.length){ e.hidden = true; return; }
+    t = "Every filed session is on the dashboard." + pracNote; c = "upline ok";
+  } else if(upLast.indexOf("refused:") === 0){
+    t = "The dashboard turned " + (n===1?"a session":"these sessions") + " away (" + upLast.slice(8) +
+        "). " + (n===1?"It is":"They are") + " safe here. Tell Jim, and export by hand meanwhile." + pracNote;
+    c = "upline bad";
+  } else {
+    t = n + " session" + (n===1?"":"s") + " waiting to upload. " + (n===1?"It goes":"They go") +
+        " the next time the app opens with signal." + pracNote;
+    c = "upline wait";
+  }
+  e.textContent = t; e.className = c; e.hidden = false;
+}
+window.addEventListener("online", function(){ uploadPending(); });
+document.addEventListener("visibilitychange", function(){
+  if(document.visibilityState === "visible") uploadPending();
+});
 
 /* ============ storage self-check (offline build) ============ */
 var PROBE = "titans-bullpen-probe";
@@ -2546,6 +2732,9 @@ initOffline();
 storageCheck();
 drawSetup();
 show("setup");
+drawUpload();
+/* After the first paint, so a slow receiver never delays the app opening. */
+setTimeout(uploadPending, 600);
 })();
 </script>
 </body>

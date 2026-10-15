@@ -66,7 +66,10 @@ const bannerFull = sel => `(function(){ var b=document.getElementById(${JSON.str
   return b ? b.textContent.replace(/\\s+/g," ").trim() : ""; })()`;
 
 (async () => {
-  const b = await chromium.launch({ executablePath:"/opt/pw-browsers/chromium" });
+  const b = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium",
+    /* The shipped bullpen carries the REAL receiver URL. No test may ever reach it:
+       Google's script hosts do not resolve inside this browser. */
+    args: ["--host-resolver-rules=MAP script.google.com ~NOTFOUND, MAP *.googleusercontent.com ~NOTFOUND", "--no-proxy-server"] });
 
   /* Both apps draw the roster panel when its screen is opened, not at boot. */
   const OPEN = {

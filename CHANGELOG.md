@@ -17,7 +17,7 @@ old one — tap the amber stamp to fix it.
 
 | App | Source & folder | Live on GitHub Pages |
 |---|---|---|
-| **Bullpen Chart** | **v31** | v29 — **v30 and v31 waiting to be pushed** |
+| **Bullpen Chart** | **v32** | v29 — **v30, v31 and v32 waiting to be pushed** (receiver deployed Oct 15, URL and key in; **push before Jan 8**) |
 | **Pitch Chart** (game) | **v23** | **v20** — **v21, v22 and v23 waiting to be pushed** |
 | **Offense Chart** | **v42** | v40 — **v41 and v42 waiting to be pushed** |
 
@@ -43,6 +43,41 @@ is only for app code.
 ---
 
 ## Bullpen Chart
+
+### v32 · Oct 15, 2026
+**Headline:** Filed pens go to the coaching dashboard on their own, a **Practice session** switch
+keeps training pens out of it, and the red **Erase everything** button is switched off for the winter.
+
+- **Upload on its own.** Every filed session is sent to the program's upload receiver (a Google Apps
+  Script on the program account that writes into the season Sheet). It sends at filing, 600 ms after
+  the app opens, when the iPad gets signal back, and when the app comes back to the front. Oldest
+  first, one at a time, and it **stops at the first failure** so a dead connection is not hammered.
+- **Never blocks.** Charting, filing and every tab work while a send is in flight. A send that takes
+  longer than 20 seconds is abandoned and tried again next time.
+- **Marked sent only on the receiver's ok.** A session is stamped `up` only when the receiver says it
+  stored it (or already had it). Anything else leaves it queued with the reason. Sending the same
+  session twice is harmless: the receiver ignores a RecordID it already has.
+- **One status line on History** (*Every filed session is on the dashboard* / *2 sessions waiting
+  to upload* / red if the receiver turned something away) and a pill per session: **on dashboard**,
+  **waiting**, **practice**. The "unsent" export nag only shows on a build with upload switched off.
+- **Practice session** switch on Setup. A practice pen charts and files like any other but is
+  **never sent**. A bar on the Chart tab says it is on, it switches itself off at filing so the next
+  pen is real, and the export carries a new `Practice` column.
+- **Erase everything is off:** `var ALLOW_WIPE = false;`. Hidden, disabled, no handler. The control
+  is still in the code, and the suite still proves it by serving the app with the switch forced on.
+- **One config spot:** `UPLOAD_URL` and `UPLOAD_KEY`, just under `BUILD`. A blank URL means upload
+  is off, the app says so on History, and the old export pills come back. **v32 ships with the real
+  receiver's address and key** (deployed by Jim Oct 15 on the program account). The key is not a
+  secret, it is in public app code by design; the receiver never returns data.
+- **No test can reach the real receiver.** Every suite's browser is launched with Google's script
+  hosts unresolvable, and the upload suite rewrites the address to its stand-in and refuses to serve
+  the page if the real one survives. `version-audit.py` now checks the URL shape and the key length.
+- **How it talks:** a plain-text POST with no custom headers, so the browser sends no preflight
+  (Apps Script cannot answer one), following Apps Script's redirect to the reply.
+- **Tests:** `tools/receiver/upload.js` (99 checks: the receiver on a stand-in Sheet that turns
+  unguarded text into formulas and dates the way Sheets does, then the real app in Chromium against
+  it on another origin: filing, practice, no signal, a lost reply, a refusal, a slow receiver, four
+  mounds at once). The sweep gained the practice switch and the upload line.
 
 ### v31 · Oct 9, 2026
 **Headline:** A red **Erase everything on this iPad** button, for testing. It deletes the session in
