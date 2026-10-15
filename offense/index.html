@@ -715,7 +715,7 @@ footer{max-width:1500px;margin:0 auto;padding:0 16px 28px;color:var(--text-3);fo
    gateWipe(), wipeEverything(), WIPE_KEYS, the #wipeBox markup and its listener. */
 var ALLOW_WIPE = true;
 
-var BUILD = "v43";
+var BUILD = "v44";
 var KEY   = "titans-offense-v1";
 /* The roster is RELEASED, not typed. roster.js ships in this folder and the app
    reads it; nobody edits the team on an iPad any more.
@@ -810,8 +810,11 @@ var TYPE_LONG = {FB:"Fastball", CT:"Cutter", CB:"Curveball",
                  SL:"Slider", CH:"Change-up", SP:"Splitter"};
 /* SAC is the sacrifice BUNT (it implies a ground ball); SF, the sacrifice fly, was
    added in v43 for quality at-bats. Both keep the scorebook abbreviation. */
-var RESULTS = ["K","Kc","BB","HBP","1B","2B","3B","HR","GO","FO","LO","PO","FC","E","SAC","SF","DP"];
-var RES_TITLE = {SAC:"Sacrifice bunt", SF:"Sacrifice fly", FC:"Fielder's choice", E:"Reached on error",
+/* IBB (v44) is the intentional walk. High school lets the coach ask for one with no
+   pitch thrown, so it is the ONE result the app accepts before a pitch is plotted.
+   Every other result needs a pitch on the grid first - see setResult(). */
+var RESULTS = ["K","Kc","BB","IBB","HBP","1B","2B","3B","HR","GO","FO","LO","PO","FC","E","SAC","SF","DP"];
+var RES_TITLE = {IBB:"Intentional walk", SAC:"Sacrifice bunt", SF:"Sacrifice fly", FC:"Fielder's choice", E:"Reached on error",
                  DP:"Double play", Kc:"Strikeout looking", HBP:"Hit by pitch"};
 var TRAJ = [{k:"GB",n:"Ground"},{k:"LD",n:"Line"},{k:"FB",n:"Fly"},{k:"PU",n:"Pop"}];
 var TRAJ_FROM_RESULT = {GO:"GB",FC:"GB",DP:"GB",SAC:"GB",SF:"FB",LO:"LD",FO:"FB",HR:"FB",PO:"PU"};
@@ -849,7 +852,7 @@ function qabReasons(a){
   var r = [], bip = isInPlay(a), n = a.pitches.length;
   if(HITS[a.result]) r.push("H");
   if(bip && trajOf(a) === "LD") r.push("LD");
-  if(a.result === "BB") r.push("BB");
+  if(a.result === "BB" || a.result === "IBB") r.push("BB");
   if(a.result === "HBP") r.push("HBP");
   if(a.result === "SAC" || a.result === "SF") r.push("SAC");
   if(bip && a.run) r.push("RUN");
@@ -1422,7 +1425,7 @@ function setMod(m){
   if(reviewing()){ hint("Reviewing an earlier at-bat — tap Back to the plate"); return; }
   var a = curPA();
   if(!a.pitches.length){ hint("Plot the pitch on the grid first"); return; }
-  if(a.result && a.result!=="K" && a.result!=="Kc" && a.result!=="BB"){
+  if(a.result && a.result!=="K" && a.result!=="Kc" && a.result!=="BB" && a.result!=="IBB"){
     hint("Undo the result first"); return;
   }
   var p = a.pitches[a.pitches.length-1];
@@ -1465,12 +1468,17 @@ function undoPitch(){
    counted as one he watched - understating swing and chase rate by one pitch per
    batted ball, which is most at-bats. */
 function MOD_FOR_RESULT(k){
-  if(!k || k==="K" || k==="Kc" || k==="BB") return null;
+  if(!k || k==="K" || k==="Kc" || k==="BB" || k==="IBB") return null;
   return k==="HBP" ? "H" : "X";
 }
 function setResult(k){
   if(reviewing()){ hint("Reviewing an earlier at-bat — tap Back to the plate"); return; }
   var a = curPA();
+  /* v44, Jim: an at-bat needs where the pitch was AND how it ended. Turning a
+     result OFF is always allowed. The intentional walk is the one exception. */
+  if(!a.pitches.length && a.result !== k && k !== "IBB"){
+    hint("Plot the pitch on the grid first — then tap how it ended"); return;
+  }
   a.result = (a.result===k) ? "" : k;
   var want = MOD_FOR_RESULT(a.result);
   if(want && a.pitches.length){
@@ -1538,6 +1546,8 @@ function nextPA(){
   if(reviewing()){ O.cur = O.pas.length-1; render(); return; }
   var a = curPA();
   if(!a.pitches.length && !a.result){ hint("Nothing charted for this hitter yet"); return; }
+  /* v44: both halves, or no Next hitter. An IBB is the only at-bat with no pitch. */
+  if(!a.pitches.length && a.result !== "IBB"){ hint("Plot the pitch on the grid first"); return; }
   if(!a.result){ hint("Pick how the at-bat ended first"); return; }
   var nextSpot = O.lineup.length ? (a.spot+1) % O.lineup.length : 0;
   O.pas.push(newPA(nextSpot, O.cp));
@@ -1713,7 +1723,7 @@ function drawBatStrip(){
 function paDotClass(a){
   if(!a.result) return a.pitches.length ? "live" : "";
   if(HITS[a.result]) return "hit";
-  if(a.result==="BB" || a.result==="HBP" || a.result==="E") return "on";
+  if(a.result==="BB" || a.result==="IBB" || a.result==="HBP" || a.result==="E") return "on";
   if(a.result==="K" || a.result==="Kc") return "k";
   return "out";
 }
@@ -1991,7 +2001,7 @@ function hitterRows(game){
       if(!iz){ o.oz++; if(isSwing(p)) o.ozsw++; }
     });
     if(a.result==="K"||a.result==="Kc") o.k++;
-    if(a.result==="BB") o.bb++;
+    if(a.result==="BB" || a.result==="IBB") o.bb++;
     if(["1B","2B","3B","HR"].indexOf(a.result)>=0) o.hit++;
     var tj = trajOf(a);
     if(tj){ o.ip++; if(tj==="LD") o.hard++; }
@@ -2274,7 +2284,23 @@ function csvOf(game){
   function q(v){ v = String(v==null?"":v); return /[",\n]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v; }
   game.pas.forEach(function(a, ai){
     var h = paHitter(a);
-    if(!a.pitches.length) return;
+    /* v44: an intentional walk with no pitch thrown still happened, so it gets
+       one row with the pitch columns blank - otherwise the export would drop a
+       walk the report counts. Any other pitchless PA (only possible before v44)
+       is skipped as before. */
+    if(!a.pitches.length){
+      if(a.result !== "IBB") return;
+      var p0 = game.pitchers[a.p] || {name:"",hand:""};
+      var row = {};
+      COLS.forEach(function(c){ row[c] = ""; });
+      Object.assign(row, {Date:game.date, Opponent:game.opp, HomeAway:game.home, Charting:game.who,
+        Build:game.build||BUILD, Pitcher:p0.name, PitcherHand:p0.hand, PitcherNotes:p0.notes||"",
+        PitcherCarried:p0.carried||"", PA:ai+1, Spot:a.spot+1, Hitter:h.name, HitterLast:h.last||"",
+        HitterFirst:h.first||"", HitterID:h.rid||"", Bats:h.hand||"", CountB:0, CountS:0,
+        Situation:"First pitch", PAResult:"IBB"});
+      lines.push(COLS.map(function(c){ return q(row[c]); }).join(","));
+      return;
+    }
     a.pitches.forEach(function(x, i){
       var pIdx = pitcherOf(a,x);
       var p = game.pitchers[pIdx] || {name:"",hand:""};
@@ -3004,6 +3030,7 @@ el("btnArchive").onclick = function(){ askFile(function(){ archiveGame(); }); };
   el("diamond").addEventListener("click", function(e){
     var a = curPA();
     if(reviewing()){ hint("Reviewing — tap Back to the plate first"); return; }
+    if(!a.pitches.length){ hint("Plot the pitch on the grid first"); return; }
     var pt = svgPoint(this, e);
     a.spray = {x:+pt.x.toFixed(1), y:+pt.y.toFixed(1)};
     /* This used to default an unanswered trajectory to "LD", so a ground-ball

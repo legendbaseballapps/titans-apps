@@ -1023,8 +1023,12 @@ var TYPES = [
 var TYPEKEYS = TYPES.map(function(t){return t.k;});
 var BREAKING = {SL:1, CB:1};
 function swung(t){ return t==="F" || t==="W" || t==="X"; }
+/* IBB (v24) is the intentional walk. High school lets the coach ask for one with no
+   pitch thrown, so it is the ONE result accepted before a pitch is logged - and
+   because it may have no first pitch to take them from, it is stamped with the
+   pitcher and inning on screen when it is tapped (see abHead). */
 var RESULTS = [
-  {k:"K"},{k:"Kc"},{k:"BB"},{k:"HBP"},
+  {k:"K"},{k:"Kc"},{k:"BB"},{k:"IBB",t:"Intentional walk"},{k:"HBP"},
   {k:"1B"},{k:"2B"},{k:"3B"},{k:"HR"},
   {k:"GO"},{k:"FO"},{k:"LO"},{k:"PO"},
   {k:"FC"},{k:"E"},{k:"SAC"},{k:"DP"}
@@ -1900,6 +1904,10 @@ function setTraj(k){
 function setResult(k){
   if(reviewing()){ nudge("Reviewing — tap Back to the plate first"); return; }
   var a = curAB();
+  /* v24, Jim: an at-bat needs where the pitch was AND how it ended. The
+     intentional walk is the one exception. */
+  if(!a.pitches.length && k !== "IBB"){ nudge("Log the pitch on the zone first — then tap how it ended"); return; }
+  if(k === "IBB"){ a.ibbP = G.curP; a.ibbInn = (G.inning || 1); }
   if(BATTED[k] && a.pitches.length){                // a batted ball implies the last pitch was hit
     var last = a.pitches[a.pitches.length-1];
     if(last.t!=="X"){ last.t="X"; }
@@ -1933,6 +1941,8 @@ function backToPlate(){
 }
 function nextAB(){
   if(reviewing()){ backToPlate(); return; }             // straight back to the live at-bat
+  /* v24: both halves, or no Next Batter. An IBB is the only at-bat with no pitch. */
+  if(!curAB().pitches.length && curAB().result !== "IBB"){ nudge("Log the pitch on the zone first"); return; }
   if(!curAB().result){ flashNext(); return; }
   closeAndAdvance();
   render(); save();
@@ -2005,6 +2015,15 @@ function tagIsAuto(b, k){
 }
 
 var HITS = {"1B":1,"2B":1,"3B":1,"HR":1};
+/* Who and when an at-bat is charged to: the pitcher and inning of its FIRST pitch,
+   as before. A zero-pitch intentional walk has no first pitch, so it carries its
+   own stamp. Anything else with no pitch (only possible before v24) is charged to
+   nobody, exactly as it always was. */
+function abHead(a){
+  if(a.pitches.length) return a.pitches[0];
+  if(a.result === "IBB" && a.ibbP != null) return {p:a.ibbP, inn:a.ibbInn, t:null};
+  return null;
+}
 
 /* Everything this batter has seen so far, broken out by pitch type.
    This is the "how do we get him out" read. */
@@ -2048,19 +2067,22 @@ function pitcherStats(i){
   var r={tot:0,str:0,fp:0,fps:0,bf:0,k:0,bb:0,hbp:0,h:0,outs:0,err:0,le3:0,lt3:0};
   allPlayers().forEach(function(b){
     b.abs.forEach(function(a){
-      if(!a.pitches.length) return;
+      var head = abHead(a);
+      if(!head) return;
       a.pitches.forEach(function(p,idx){
         if(p.p!==i) return;
         r.tot++;
         if(isStrikeType(p.t)) r.str++;
         if(idx===0){ r.fp++; if(isStrikeType(p.t)) r.fps++; }
       });
-      if(a.pitches[0].p===i && a.result){
+      if(head.p===i && a.result){
         r.bf++;
-        if(a.pitches.length<=3) r.le3++;
-        if(a.pitches.length<3)  r.lt3++;
+        /* An intentional walk is the coach's decision, not an efficient at-bat, so
+           it never counts toward "done in 3 pitches or fewer". */
+        if(a.result!=="IBB" && a.pitches.length<=3) r.le3++;
+        if(a.result!=="IBB" && a.pitches.length<3)  r.lt3++;
         if(a.result==="K"||a.result==="Kc") r.k++;
-        else if(a.result==="BB") r.bb++;
+        else if(a.result==="BB"||a.result==="IBB") r.bb++;
         else if(a.result==="HBP") r.hbp++;
         else if(HITS[a.result]) r.h++;
         else if(a.result==="E") r.err++;
@@ -2090,7 +2112,7 @@ function inningRows(){
   }
   allPlayers().forEach(function(b){
     b.abs.forEach(function(a){
-      if(!a.pitches.length) return;
+      if(!abHead(a)) return;
       a.pitches.forEach(function(p, idx){
         if(p.inn == null) return;                 /* pre-v6 pitch: no inning to file it under */
         var r = row(p.inn, p.p);
@@ -2101,12 +2123,12 @@ function inningRows(){
       /* At-bat outcomes go to the inning AND pitcher of the FIRST pitch of the
          at-bat - the same rule pitcherStats already uses, with the inning added.
          An at-bat that spans a pitching change belongs to whoever started it. */
-      var f = a.pitches[0];
+      var f = abHead(a);
       if(f.inn != null && a.result){
         var r2 = row(f.inn, f.p);
         r2.bf++;
         if(a.result === "K" || a.result === "Kc") r2.k++;
-        else if(a.result === "BB" || a.result === "HBP") r2.fb++;
+        else if(a.result === "BB" || a.result === "IBB" || a.result === "HBP") r2.fb++;
         else if(HITS[a.result]) r2.h++;
         if(OUT_RESULT[a.result]) r2.outs += OUT_RESULT[a.result];
       }
@@ -2659,7 +2681,7 @@ function renderAo3(){
 function resultClass(r){
   if(!r) return "";
   if(r==="K"||r==="Kc") return "k";
-  if(r==="BB"||r==="HBP") return "bb";
+  if(r==="BB"||r==="IBB"||r==="HBP") return "bb";
   if(r==="1B"||r==="2B"||r==="3B"||r==="HR"||r==="E") return "h";
   return "";
 }
@@ -3610,7 +3632,7 @@ function exportText(){
   L.push("  "+[G.date||"", G.opp||"", s.tot, s.str, ga.tot, s.fps,
                 ga.c["++"]+ga.c["+-"], ga.c["++"],
                 allPlayers().reduce(function(n,b){return n+b.abs.filter(function(a){return a.result==="K"||a.result==="Kc";}).length;},0),
-                allPlayers().reduce(function(n,b){return n+b.abs.filter(function(a){return a.result==="BB";}).length;},0),
+                allPlayers().reduce(function(n,b){return n+b.abs.filter(function(a){return a.result==="BB"||a.result==="IBB";}).length;},0),
                 G.notes||""].join("\t"));
   L.push("");
   L.push("  Pitcher rows:");
@@ -3678,6 +3700,18 @@ function exportText(){
    sp.men.forEach(function(b){
     b.abs.forEach(function(a,ai){
       if(!a.pitches.length && !a.result) return;
+      /* v24: an intentional walk with no pitch still happened. One row, pitch
+         columns blank, so the log does not drop a walk the pitcher lines count. */
+      if(!a.pitches.length && a.result === "IBB" && a.ibbP != null){
+        L.push([(a.ibbInn == null ? "" : a.ibbInn),
+                b.num, (b.name||"Batter "+b.num), b.hand,
+                posNormal(b.pos), posName(b.pos), ai+1, "",
+                "", "", "", "", "", "", "", "", "", "",
+                pitcherName(a.ibbP), pw(a.ibbP).rid, pw(a.ibbP).last, pw(a.ibbP).first,
+                pw(a.ibbP).cls, classLabel(pw(a.ibbP).cls), pw(a.ibbP).throws,
+                "IBB", "", "", "", ""].join("\t"));
+        return;
+      }
       var tj=trajOf(a)||"", pt=a.spray||null;
       a.pitches.forEach(function(p,pi){
         var loc = (p.r<0) ? ["","",""] :
@@ -3876,6 +3910,7 @@ function build(){
   RESULTS.forEach(function(r){
     var b=el("button",null,r.k);
     b.setAttribute("data-res", r.k);
+    if(r.t) b.title = r.t;
     b.addEventListener("click",function(){ setResult(r.k); });
     rp.appendChild(b);
   });
@@ -3938,6 +3973,7 @@ function build(){
   var svg=document.getElementById("diamond");
   svg.addEventListener("click",function(ev){
     if(reviewing()){ nudge("Reviewing — tap Back to the plate first"); return; }
+    if(!curAB().pitches.length){ nudge("Log the pitch on the zone first"); return; }
     var r=svg.getBoundingClientRect();                    // viewBox is "-10 -20 220 196"
     curAB().spray={x:Math.round((-10 + (ev.clientX-r.left)/r.width*220)*10)/10,
                    y:Math.round((-20 + (ev.clientY-r.top)/r.height*196)*10)/10};
@@ -4074,7 +4110,7 @@ function build(){
    gateWipe(), wipeEverything(), WIPE_KEYS, the #wipeBox markup and its listener. */
 var ALLOW_WIPE = true;
 
-var BUILD = "v23";
+var BUILD = "v24";
 function stampBuild(){
   var e = document.getElementById("buildStamp");
   if(!e) return;

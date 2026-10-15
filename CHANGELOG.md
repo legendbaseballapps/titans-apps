@@ -18,8 +18,8 @@ old one — tap the amber stamp to fix it.
 | App | Source & folder | Live on GitHub Pages |
 |---|---|---|
 | **Bullpen Chart** | **v32** | v29 — **v30, v31 and v32 waiting to be pushed** (receiver deployed Oct 15, URL and key in; **push before Jan 8**) |
-| **Pitch Chart** (game) | **v23** | **v20** — **v21, v22 and v23 waiting to be pushed** |
-| **Offense Chart** | **v43** | v40 — **v41, v42 and v43 waiting to be pushed** |
+| **Pitch Chart** (game) | **v24** | **v20** — **v21 to v24 waiting to be pushed** |
+| **Offense Chart** | **v44** | v40 — **v41 to v44 waiting to be pushed** |
 
 **The site moved Oct 14, 2026** to the program-owned account: **legendbaseballapps.github.io/titans-apps** (repo transferred from vaughnzj, so the live files, including the real `roster.js`, moved as they were). Every iPad installs from the new link; History saved under the old address does not carry over. The Coach's Guides in the pending builds (bullpen v31, game v23, offense v42) carry the new address, so pushing those builds is what puts it on the iPads.
 
@@ -340,6 +340,30 @@ execution grading.
 
 ## Pitch Chart (game)
 
+### v24 · Oct 15, 2026
+**Headline:** An at-bat can't end without a pitch on the zone, and **IBB** records the no-pitch
+intentional walk. Same rule as the Offense Chart v44.
+
+- **Why:** Jim, testing v43: *"I can indicate an outcome of an at bat without ever selecting where the
+  pitch was. We need to force that you can't advance to the next hitter without both the pitch
+  type/location and result."* Pitch type is sticky, so a plotted pitch always carries one; the rule is
+  "no result without a pitch".
+- **3 guards:** the result buttons, the field / spray chart and the Next button all refuse until a pitch
+  is on the zone. Next is guarded separately on purpose: a game already in progress from before this
+  build can hold a pitchless result, which the result guard never sees.
+- **IBB, the intentional walk, is the one exception** (Jim's call). High school allows one with no
+  pitch thrown. It is a walk everywhere a walk counts, and it can also be tapped after a pitch or two.
+- **Who an IBB is charged to.** Every at-bat is charged to the pitcher and inning of its first pitch, and
+  a no-pitch IBB has none, so it is stamped with the pitcher and inning on screen when tapped
+  (`ibbP`, `ibbInn`). It adds a batter faced and a BB to his line and a free base to the inning ledger,
+  and is **not** counted as an at-bat done in 3 pitches or fewer: that is the coach's decision, not the
+  pitcher's efficiency. Undo takes a mis-tapped one back.
+- **Pitch log:** a no-pitch IBB gets one row with the pitch columns blank, so the log never drops a walk
+  the pitcher line counts. The game row's BB total includes IBB.
+- Not changed: the Pitch Chart has no SF (sac fly) result. That was added to the Offense Chart for
+  quality at-bats only.
+- **Tests:** new `tools/pa-guard.js` (both apps, 39 checks), every guard proved by removing it.
+
 ### v23 · Oct 9, 2026
 **Headline:** A jersey number and a fielding position each belong to **one spot** in the lineup.
 Put one on a second spot and the app puts it back and tells you where the other one is — **enter
@@ -624,6 +648,27 @@ Not logged at the time.
 ---
 
 ## Offense Chart
+
+### v44 · Oct 15, 2026
+**Headline:** An at-bat can't end without a pitch on the grid, and **IBB** records the no-pitch
+intentional walk.
+
+- **Why:** Jim, testing v43: *"I can indicate an outcome of an at bat without ever selecting where the
+  pitch was. We need to force that you can't advance to the next hitter without both the pitch
+  type/location and result."* Pitch type is sticky, so a plotted pitch always carries one; the rule is
+  "no result without a pitch".
+- **3 guards:** the result buttons, the field / spray chart and the Next button all refuse until a pitch
+  is on the zone. Next is guarded separately on purpose: a game already in progress from before this
+  build can hold a pitchless result, which the result guard never sees.
+- **IBB, the intentional walk, is the one exception** (Jim's call). High school allows one with no
+  pitch thrown. It is a walk everywhere a walk counts, and it can also be tapped after a pitch or two.
+- **IBB in the numbers:** a walk in the hitters' BB column and a quality at-bat (the walk rule). The dot in
+  the lineup reads as on base.
+- **Export:** a no-pitch IBB gets one row with the pitch columns blank and the count 0-0, so the export
+  never drops a walk the report counts. Before v44 a pitchless PA was skipped by the export; any old one
+  still is, except an IBB.
+- **Tests:** new `tools/pa-guard.js` (both apps, 39 checks), every guard proved by removing it. The QAB
+  suite still passes unchanged.
 
 ### v43 · Oct 15, 2026
 **Headline:** **Quality at-bats**, by the program's own definition. The app works out whether each
