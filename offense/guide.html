@@ -195,7 +195,7 @@ footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--rule);
       <div class="eyebrow">Legend Titans Baseball</div>
       <h1>Offense Chart Coach's Guide</h1>
       <p>How to chart the other team's pitcher while we hit. Read it once before you go, then keep it open on your phone for the first inning.</p>
-      <div class="meta">App v42 &nbsp;&middot;&nbsp; October 2026 &nbsp;&middot;&nbsp; Game day</div>
+      <div class="meta">App v43 &nbsp;&middot;&nbsp; October 2026 &nbsp;&middot;&nbsp; Game day</div>
     </div>
   </div>
 
@@ -227,7 +227,7 @@ footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--rule);
     </ul>
     <div class="note">
       <span class="lab">Which version am I on?</span>
-      <p>The build is printed in the header, right after &ldquo;Offense Chart.&rdquo; This guide describes <b>v42</b>. If it shows two numbers in amber, like <code>v28 &ne; v27</code>, that iPad downloaded an update but is still showing the old one &mdash; see below.</p>
+      <p>The build is printed in the header, right after &ldquo;Offense Chart.&rdquo; This guide describes <b>v43</b>. If it shows two numbers in amber, like <code>v28 &ne; v27</code>, that iPad downloaded an update but is still showing the old one &mdash; see below.</p>
     </div>
 
     <h3 class="upd">Getting a new version</h3>
@@ -361,8 +361,11 @@ footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--rule);
       <li>On a ball in play, tap <b>how we hit it</b> (ground, line, fly, pop) and then <b>tap the field</b> where it went. The line that draws tells you the direction and how far.</li>
       <li><b>The diamond has the fielding positions printed on it</b> &mdash; 1 through 9, scorer's numbering. They are there to aim at: "the shortstop fielded it" is far easier to place than eyeballing a blank wedge, and it keeps two charters marking the same ball in the same spot. The Report tab's team spray leaves them off, since nobody taps that one.</li>
       <li><b>How we hit it is always on screen</b>, and tapping it also tells the app the ball was put in play. So does tapping the result. Either order works &mdash; result first or trajectory first.</li>
-      <li><b>Most results fill it in for you.</b> GO, FO, LO, PO, FC, SAC, DP and HR each say how the ball was hit, so the app ticks the box and you move on. The four it cannot work out &mdash; <b>1B, 2B, 3B</b> and <b>E</b> &mdash; could be any of the four, so it asks: the heading turns amber and reads <b>How did we hit it?</b> until you answer. If you never do, the ball still counts and still plots on the field; it just sits out of the ground/line/fly mix.</li>
+      <li><b>Most results fill it in for you.</b> GO, FO, LO, PO, FC, SAC, SF, DP and HR each say how the ball was hit, so the app ticks the box and you move on. The four it cannot work out &mdash; <b>1B, 2B, 3B</b> and <b>E</b> &mdash; could be any of the four, so it asks: the heading turns amber and reads <b>How did we hit it?</b> until you answer. If you never do, the ball still counts and still plots on the field; it just sits out of the ground/line/fly mix.</li>
       <li><b>Hard contact is a separate tap, and it is yours to make.</b> The app never guesses it &mdash; a scorched grounder at the third baseman sits in the same spot on the field as a roller, so only the person watching can tell. Tap <b>Hard contact</b> when we squared one up; leave it alone for everything from weak to normal. It is what colours the spray chart, so <i>what we did to the ball</i> leads rather than whether it happened to find grass.</li>
+      <li><b>SAC is the sacrifice bunt; SF is the sacrifice fly.</b> New in v43. Both count as a quality at-bat, so pick the right one.</li>
+      <li><b>On this play: Run scored and Moved a runner.</b> New in v43, for quality at-bats. They show up under Hard contact once the ball is in play. Tap <b>Run scored</b> when any run scores on his ball in play: a hit, an out, an error, a fielder's choice or a double play all count. Tap <b>Moved a runner</b> when he moves a runner into scoring position with fewer than 2 outs, even if he is out. The app can't see runners or the scoreboard, so <b>an untapped chip means it didn't happen</b>. Tap them every time, before <b>Next hitter</b>.</li>
+      <li>Under the chips, one line tells you whether the at-bat counts: <i>Quality at-bat &middot; moved a runner, 2-strike contact</i>, or <i>Not a quality at-bat</i>. You don't decide it; the app works it out.</li>
       <li><b>Reached on an error</b> is a ball in play like any other. Tap <b>E</b>, tap how we hit it, tap the field. It counts in the contact and direction numbers but not as a hit &mdash; on the field diagram it draws as an open circle, the same as an out.</li>
       <li>The field diagram shows <b>this hitter's</b> balls in play. Flip it to <b>Whole team</b> if you want the whole game at once &mdash; the Report tab always shows the team.</li>
       <li>Tap <b>Next hitter</b>. The order advances on its own and wraps around.</li>
@@ -373,6 +376,24 @@ footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--rule);
       <p>If the only thing wrong is <i>what the pitch did</i>, you don't need undo at all. Tap the result, or tap how we hit it, and the app re-reads the count from there &mdash; the pitch's type and location stay as you charted them.</p>
       <p>To look at an earlier at-bat, tap that spot in the order on the left. The app says <b>Reviewing</b> in amber, and nothing you tap &mdash; undo included &mdash; changes anything until you tap <b>Back to the plate</b>. <b>An at-bat is frozen once you tap Next hitter</b>, so fix it before you move on.</p>
     </div>
+  </section>
+
+  <section>
+    <h2 class="upd">Quality at-bats</h2>
+    <p class="sub">New in v43. The program's definition, not GameChanger's. GC has its own QAB stat with different rules, so the two numbers won't match.</p>
+    <p>An at-bat is a quality at-bat when <b>any</b> of these happen:</p>
+    <ul>
+      <li>A hit</li>
+      <li>A line drive, even if it's caught</li>
+      <li>A walk, or hit by pitch</li>
+      <li>A sacrifice bunt or sacrifice fly</li>
+      <li>A run scores on his ball in play <i>(you tap Run scored)</i></li>
+      <li>7 or more pitches</li>
+      <li>He moves a runner into scoring position with fewer than 2 outs <i>(you tap Moved a runner)</i></li>
+      <li>He puts the ball in play with 2 strikes</li>
+    </ul>
+    <p><b>Reaching on an error doesn't count by itself.</b> It still counts if another rule fires, for example with 2 strikes or when a run scores on it.</p>
+    <p>7 of these the app already knows from what you chart. The other 2 need your tap, which is why the chips matter.</p>
   </section>
 
   <section>
@@ -391,7 +412,8 @@ footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--rule);
       <li><b>Our chase %</b> &mdash; how often we swing at pitches off the plate. This is the number that wins or loses the game, and it's the one to tell the dugout.</li>
       <li><b>What he goes to, by count</b> &mdash; his mix on the first pitch, when he's ahead, even, behind, and with two strikes. If he throws a breaking ball with two strikes 80% of the time, our hitters should know that by the fourth inning.</li>
       <li><b>Where he puts it</b> &mdash; a heat grid per pitch. The fastball lives up, the slider lives away, and so on.</li>
-      <li><b>Our hitters</b> &mdash; pitches per plate appearance, first-pitch swings, chase, whiffs, line drives.</li>
+      <li><b>Quality at-bats</b>, new in v43: how many of our at-bats were quality at-bats, and a table of how they got there. One at-bat can count more than one way, so the rows add up to more than the total.</li>
+      <li><b>Our hitters</b> &mdash; pitches per plate appearance, first-pitch swings, <b>quality at-bats</b>, chase, whiffs, line drives.</li>
       <li><b>The umpire</b> &mdash; red cells are strikes called off the plate, green are pitches in the zone he gave us, and next to the map it tells you in words: <i>&ldquo;He is giving the corner away &mdash; 4 of 5 pitches taken off the plate away came back a strike.&rdquo;</i> That is the sentence to pass to the hitters.</li>
       <li><b>Where we hit it</b> &mdash; a filled dot is a hit, an open ring is an out; a dashed line is a ground ball and an arc is in the air. Beside it, how we are spreading the ball: pull / center / oppo, and ground / line / fly.</li>
     </ul>
@@ -437,7 +459,7 @@ footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--rule);
     <ul>
       <li>It does not track velocity. If you have a radar, write it down.</li>
       <li>It does not know balls and strikes from the scoreboard &mdash; only from what you chart.</li>
-      <li>It does not track runners, outs or innings. This is a pitcher-and-hitter chart, not a scorebook.</li>
+      <li>It does not track runners, outs or innings. This is a pitcher-and-hitter chart, not a scorebook. The two quality at-bat chips are the only runner facts it records, and only because you tap them.</li>
       <li>It does not upload anything on its own yet. Export, or hand the iPad to Jim.</li>
     </ul>
   </section>
@@ -454,7 +476,7 @@ footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--rule);
     </ul>
   </section>
 
-  <footer>Legend Titans Offense Chart &middot; app v42 &middot; Guide prepared for game day</footer>
+  <footer>Legend Titans Offense Chart &middot; app v43 &middot; Guide prepared for game day</footer>
 
 </div>
 </body>

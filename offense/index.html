@@ -297,6 +297,18 @@ table.grid tbody tr:nth-child(even){background:var(--surface-2)}
   letter-spacing:.04em}
 .hardbtn.on{background:var(--pr0);border-color:var(--pr0);color:#fff}
 .lbl.needed{color:var(--inplay)}
+/* v43 quality at-bats. The two chips are facts only the charter saw - the app
+   cannot see runners or the scoreboard - so they look like the hard-contact
+   toggle: off by default, navy when tapped (convention 17). */
+.qabchips{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:5px}
+.qabchips button{padding:9px 6px;border:1px solid var(--line);border-radius:var(--r);
+  background:var(--surface);color:var(--text-2);font-family:var(--cond);font-weight:600;
+  font-size:13px;text-transform:uppercase;letter-spacing:.04em}
+.qabchips button.on{background:var(--navy);border-color:var(--navy);color:#fff}
+.qabnow{font-size:13px;color:var(--text-2);margin-top:6px;min-height:1em}
+.qabnow b{color:var(--text)}
+.qabwhy td:first-child,.qabwhy th:first-child{white-space:nowrap;text-align:left}
+.qabnote{font-size:13px;color:var(--text-2);margin-top:8px;line-height:1.4}
 .diamond{width:100%;max-width:330px;margin:0 auto;display:block;aspect-ratio:220/196;
   background:var(--surface-2);border-radius:var(--r);border:1px solid var(--line-soft)}
 
@@ -633,6 +645,16 @@ footer{max-width:1500px;margin:0 auto;padding:0 16px 28px;color:var(--text-3);fo
                    not belong in one control. Nothing infers this - the charter
                    watched the ball, the app did not. -->
               <button class="hardbtn" id="hardBtn">Hard contact</button>
+              <!-- v43: the two quality-at-bat facts the app cannot see for itself.
+                   Only offered on a ball in play; tap when it happened. -->
+              <div id="qabWrap" hidden>
+                <span class="lbl" style="display:block;margin-top:8px">On this play</span>
+                <div class="qabchips">
+                  <button data-qf="run" id="qfRun">Run scored</button>
+                  <button data-qf="adv" id="qfAdv">Moved a runner</button>
+                </div>
+              </div>
+              <div class="qabnow" id="qabNow"></div>
             </div>
             <div>
               <div class="row" style="align-items:center;margin-bottom:6px">
@@ -693,7 +715,7 @@ footer{max-width:1500px;margin:0 auto;padding:0 16px 28px;color:var(--text-3);fo
    gateWipe(), wipeEverything(), WIPE_KEYS, the #wipeBox markup and its listener. */
 var ALLOW_WIPE = true;
 
-var BUILD = "v42";
+var BUILD = "v43";
 var KEY   = "titans-offense-v1";
 /* The roster is RELEASED, not typed. roster.js ships in this folder and the app
    reads it; nobody edits the team on an iPad any more.
@@ -786,9 +808,57 @@ var TYPES = [{k:"FB",n:"FB"},{k:"CT",n:"CT"},{k:"CB",n:"CB"},
              {k:"SL",n:"SL"},{k:"CH",n:"CH"},{k:"SP",n:"SP"}];
 var TYPE_LONG = {FB:"Fastball", CT:"Cutter", CB:"Curveball",
                  SL:"Slider", CH:"Change-up", SP:"Splitter"};
-var RESULTS = ["K","Kc","BB","HBP","1B","2B","3B","HR","GO","FO","LO","PO","FC","E","SAC","DP"];
+/* SAC is the sacrifice BUNT (it implies a ground ball); SF, the sacrifice fly, was
+   added in v43 for quality at-bats. Both keep the scorebook abbreviation. */
+var RESULTS = ["K","Kc","BB","HBP","1B","2B","3B","HR","GO","FO","LO","PO","FC","E","SAC","SF","DP"];
+var RES_TITLE = {SAC:"Sacrifice bunt", SF:"Sacrifice fly", FC:"Fielder's choice", E:"Reached on error",
+                 DP:"Double play", Kc:"Strikeout looking", HBP:"Hit by pitch"};
 var TRAJ = [{k:"GB",n:"Ground"},{k:"LD",n:"Line"},{k:"FB",n:"Fly"},{k:"PU",n:"Pop"}];
-var TRAJ_FROM_RESULT = {GO:"GB",FC:"GB",DP:"GB",SAC:"GB",LO:"LD",FO:"FB",HR:"FB",PO:"PU"};
+var TRAJ_FROM_RESULT = {GO:"GB",FC:"GB",DP:"GB",SAC:"GB",SF:"FB",LO:"LD",FO:"FB",HR:"FB",PO:"PU"};
+
+/* ===================== quality at-bats (v43, E-010) =====================
+   The Titans definition, Jim, Oct 15 2026. A plate appearance is a QAB when ANY
+   of these happen. The app records facts; this list is the formula, so the
+   dashboard can apply the same rules to every exported game.
+     - Reaching on an error is NOT a QAB by itself (Jim). It still counts if
+       another rule fires: with 2 strikes, or when a run scores on it.
+     - "Run scored" counts ANY run on his ball in play - RBI, error, FC, DP.
+     - "Moved a runner" counts even when the hitter is out.
+   Order is the order the report lists them. */
+var QAB_RULES = [
+  {k:"H",   n:"Hit"},
+  {k:"LD",  n:"Line drive"},
+  {k:"BB",  n:"Walk"},
+  {k:"HBP", n:"Hit by pitch"},
+  {k:"SAC", n:"Sac bunt or fly"},
+  {k:"RUN", n:"Run scored on his ball in play"},
+  {k:"P7",  n:"7+ pitches"},
+  {k:"ADV", n:"Moved a runner into scoring position"},
+  {k:"K2",  n:"Ball in play with 2 strikes"}
+];
+var QAB_SHORT = {H:"hit", LD:"line drive", BB:"walk", HBP:"HBP", SAC:"sacrifice",
+                 RUN:"run scored", P7:"7+ pitches", ADV:"moved a runner", K2:"2-strike contact"};
+function isInPlay(a){
+  var last = a.pitches[a.pitches.length-1];
+  return !!(last && last.m === "X");
+}
+/* Reasons this PA was a quality at-bat, [] when it was not, null while it is
+   still open - an at-bat in progress is neither. */
+function qabReasons(a){
+  if(!a || !a.result) return null;
+  var r = [], bip = isInPlay(a), n = a.pitches.length;
+  if(HITS[a.result]) r.push("H");
+  if(bip && trajOf(a) === "LD") r.push("LD");
+  if(a.result === "BB") r.push("BB");
+  if(a.result === "HBP") r.push("HBP");
+  if(a.result === "SAC" || a.result === "SF") r.push("SAC");
+  if(bip && a.run) r.push("RUN");
+  if(n >= 7) r.push("P7");
+  if(bip && a.adv) r.push("ADV");
+  if(bip && n && countBefore(a, n-1).s === 2) r.push("K2");
+  return r;
+}
+function isQAB(a){ var r = qabReasons(a); return !!(r && r.length); }
 var HOME_X = 100, HOME_Y = 162;
 var ENDERS = {X:1,H:1};
 /* Results autoClose() assigns from the count, as opposed to the ones a charter
@@ -1359,7 +1429,7 @@ function setMod(m){
   p.m = m;
   if(m!=="T") p.ov = false;
   a.result = "";
-  if(m!=="X"){ a.traj = ""; a.spray = null; }
+  if(m!=="X"){ a.traj = ""; a.spray = null; a.run = false; a.adv = false; }
   if(m==="H") a.result = "HBP";
   autoClose(a);
   render(); save();
@@ -1380,7 +1450,7 @@ function undoPitch(){
   if(reviewing()){ hint("Reviewing an earlier at-bat — tap Back to the plate"); return; }
   var a = curPA();
   if(!a.pitches.length){ hint("Nothing to undo"); return; }
-  a.pitches.pop(); a.result=""; a.traj=""; a.spray=null;
+  a.pitches.pop(); a.result=""; a.traj=""; a.spray=null; a.run=false; a.adv=false;
   autoClose(a);
   render(); save();
 }
@@ -1408,6 +1478,7 @@ function setResult(k){
     if(p.m !== want){ p.m = want; p.ov = false; }
   }
   if(a.result && TRAJ_FROM_RESULT[a.result] && !a.traj) a.traj = TRAJ_FROM_RESULT[a.result];
+  if(a.result && MOD_FOR_RESULT(a.result) !== "X"){ a.run = false; a.adv = false; }
   render(); save();
 }
 /* Same promotion as setTraj: saying the ball was hit hard says it was hit. */
@@ -1424,6 +1495,17 @@ function toggleHard(){
       autoClose(a);
     }
   }
+  render(); save();
+}
+
+/* v43. Only a ball in play can score a run "by putting the ball in play" or move
+   a runner, so the chips refuse anything else rather than storing a fact the
+   rules will ignore. */
+function toggleQF(k){
+  if(reviewing()){ hint("Reviewing an earlier at-bat \u2014 tap Back to the plate"); return; }
+  var a = curPA();
+  if(!isInPlay(a)){ hint("Only for a ball in play \u2014 tap the result first"); return; }
+  a[k] = !a[k];
   render(); save();
 }
 
@@ -1547,7 +1629,8 @@ function drawMods(){
 function drawResults(){
   var a = curPA();
   el("results").innerHTML = RESULTS.map(function(k){
-    return '<button data-res="'+k+'"'+(a.result===k?' class="on"':'')+'>'+k+'</button>';
+    return '<button data-res="'+k+'"'+(a.result===k?' class="on"':'')+
+      (RES_TITLE[k] ? ' title="'+RES_TITLE[k]+'"' : '')+'>'+k+'</button>';
   }).join("");
   /* Always on screen. Tapping one of these is itself a statement that the ball
      was put in play, so the buttons do not wait for the X mod to be set first -
@@ -1567,6 +1650,13 @@ function drawResults(){
   el("trajLbl").classList.toggle("needed", asking);
   el("trajLbl").textContent = asking ? "How did we hit it?" : "How we hit it";
   el("hardBtn").className = "hardbtn" + (a.hard ? " on" : "");
+  el("qabWrap").hidden = !isInPlay(a);
+  el("qfRun").className = a.run ? "on" : "";
+  el("qfAdv").className = a.adv ? "on" : "";
+  var qr = qabReasons(a);
+  el("qabNow").innerHTML = qr === null ? "" : qr.length
+    ? "<b>Quality at-bat</b> \u00b7 " + qr.map(function(k){ return QAB_SHORT[k]; }).join(", ")
+    : "Not a quality at-bat";
   el("paWho").textContent = paHitter(a).name || "\u2014";
 }
 function drawLineupList(){
@@ -1890,7 +1980,7 @@ function hitterRows(game){
     var h = paHitter(a);
     var k = h.name;
     var o = by[k] = by[k] || {name:k, hand:h.hand, pa:0, n:0, fps:0, fp:0, sw:0, wh:0,
-                              oz:0, ozsw:0, k:0, bb:0, hit:0, hard:0, ip:0};
+                              oz:0, ozsw:0, k:0, bb:0, hit:0, hard:0, ip:0, qpa:0, qab:0};
     o.pa++;
     a.pitches.forEach(function(p,i){
       var cb = countBefore(a,i), iz = inZone(p.r,p.c);
@@ -1905,6 +1995,8 @@ function hitterRows(game){
     if(["1B","2B","3B","HR"].indexOf(a.result)>=0) o.hit++;
     var tj = trajOf(a);
     if(tj){ o.ip++; if(tj==="LD") o.hard++; }
+    var qr = qabReasons(a);
+    if(qr){ o.qpa++; if(qr.length) o.qab++; }
   });
   var rows = [];
   for(var k in by) rows.push(by[k]);
@@ -2090,15 +2182,18 @@ function drawReport(){
 
   if(team){
   var rows = hitterRows(O);
+  out += qabBlock(O.pas);
   if(rows.length){
     out += '<div class="panel"><div class="phead"><span class="lbl">Our hitters</span></div>'+
       '<div class="pbody"><div class="scroller"><table class="grid"><thead><tr>'+
       '<th>Hitter</th><th>PA</th><th>P</th><th>P/PA</th><th>1st-P swing</th>'+
-      '<th>Chase</th><th>Whiff</th><th>K</th><th>BB</th><th>H</th><th>Line drives</th>'+
+      '<th>QAB</th><th>Chase</th><th>Whiff</th><th>K</th><th>BB</th><th>H</th><th>Line drives</th>'+
       '</tr></thead><tbody>'+ rows.map(function(o){
         return '<tr><td><b>'+esc(o.name)+'</b></td><td class="num">'+o.pa+'</td>'+
           '<td class="num">'+o.n+'</td><td class="num">'+r1(o.n,o.pa)+'</td>'+
-          '<td class="num">'+pct(o.fps,o.fp)+'</td><td class="num">'+pct(o.ozsw,o.oz)+'</td>'+
+          '<td class="num">'+pct(o.fps,o.fp)+'</td>'+
+          '<td class="num">'+(o.qpa ? o.qab+' of '+o.qpa : '\u2014')+'</td>'+
+          '<td class="num">'+pct(o.ozsw,o.oz)+'</td>'+
           '<td class="num">'+pct(o.wh,o.sw)+'</td><td class="num">'+o.k+'</td>'+
           '<td class="num">'+o.bb+'</td><td class="num">'+o.hit+'</td>'+
           '<td class="num">'+pct(o.hard,o.ip)+'</td></tr>';
@@ -2138,6 +2233,28 @@ function drawReport(){
   if(f) drawField(f, ipl, null, true);
 }
 
+/* Team quality at-bats, with the reasons. A PA can qualify more than one way, so
+   the reasons add up to more than the total - the table says so. */
+function qabBlock(pas){
+  var closed = 0, q = 0, by = {};
+  QAB_RULES.forEach(function(r){ by[r.k] = 0; });
+  pas.forEach(function(a){
+    var r = qabReasons(a); if(!r) return;
+    closed++; if(r.length) q++;
+    r.forEach(function(k){ by[k]++; });
+  });
+  if(!closed) return "";
+  return '<div class="panel"><div class="phead"><span class="lbl">Quality at-bats</span>'+
+    '<span class="lbl" style="margin-left:auto">'+q+' of '+closed+' \u00b7 '+pct(q, closed)+'</span></div>'+
+    '<div class="pbody"><div class="scroller" style="max-width:520px"><table class="grid qabwhy"><thead><tr>'+
+    '<th>How they got there</th><th>At-bats</th></tr></thead><tbody>'+
+    QAB_RULES.map(function(r){
+      return '<tr><td>'+esc(r.n)+'</td><td class="num">'+(by[r.k]||'\u2014')+'</td></tr>';
+    }).join("")+'</tbody></table></div>'+
+    '<div class="qabnote">One at-bat can count more than one way, so the rows add up to more than '+q+'. '+
+    'Run scored and Moved a runner only count when the charter tapped them.</div></div></div>';
+}
+
 /* ===================== export ===================== */
 /* PitcherTags marks a detected tag with * exactly as the Pitch Chart does for
    hitters, so a season roll-up can tell the coach's read from the app's. */
@@ -2148,7 +2265,10 @@ var COLS = ["Date","Opponent","HomeAway","Charting","Build","Pitcher","PitcherHa
      grouping. HitterLast/HitterFirst are the stable text; HitterID is the key. */
   "PA","Spot","Hitter","HitterLast","HitterFirst","HitterID","Bats","PitchNo","CountB","CountS","Situation","Pitch",
   "Row","Col","InZone","What","Call","UmpOverride","Swing","Chase",
-  "PAResult","Traj","HardContact","SprayDir","SprayDepth"];
+  "PAResult","Traj","HardContact","SprayDir","SprayDepth",
+  /* v43, quality at-bats. On the last row of a PA put in play: Y or N. Blank on
+     any other PA, where the question does not apply. */
+  "RunScored","MovedRunner"];
 function csvOf(game){
   var lines = [COLS.join(",")];
   function q(v){ v = String(v==null?"":v); return /[",\n]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v; }
@@ -2173,7 +2293,9 @@ function csvOf(game){
         (i===a.pitches.length-1 ? (a.traj||"") : ""),
         (i===a.pitches.length-1 ? (a.hard ? "Y" : "") : ""),
         (i===a.pitches.length-1 && a.spray ? sprayDir(a.spray.x) : ""),
-        (i===a.pitches.length-1 && a.spray ? sprayDepth(a.spray.x,a.spray.y) : "")
+        (i===a.pitches.length-1 && a.spray ? sprayDepth(a.spray.x,a.spray.y) : ""),
+        (i===a.pitches.length-1 && a.result && isInPlay(a) ? (a.run ? "Y" : "N") : ""),
+        (i===a.pitches.length-1 && a.result && isInPlay(a) ? (a.adv ? "Y" : "N") : "")
       ].map(q).join(","));
     });
   });
@@ -2776,7 +2898,7 @@ el("btnArchive").onclick = function(){ askFile(function(){ archiveGame(); }); };
     var t = e.target.closest ? e.target.closest("[data-r],[data-mod],[data-ty],"+
       "[data-res],[data-tr],[data-spot],[data-cp],[data-newp],[data-pdel],"+
       "[data-hexp],[data-hdel],[data-hv],[data-hp],[data-sv],[data-rp],[data-ptag],"+
-      "[data-ppull]") : null;
+      "[data-ppull],[data-qf]") : null;
     if(!t) return;
     var g = function(k){ return t.getAttribute(k); };
     if(g("data-r")!==null){ logPitch(+g("data-r"), +g("data-c")); return; }
@@ -2784,6 +2906,7 @@ el("btnArchive").onclick = function(){ askFile(function(){ archiveGame(); }); };
     if(g("data-ty")!==null && g("data-ty")!==""){ sel.type = +g("data-ty"); drawTypes(); return; }
     if(g("data-res")){ setResult(g("data-res")); return; }
     if(g("data-tr")){ setTraj(g("data-tr")); return; }
+    if(g("data-qf")){ toggleQF(g("data-qf")); return; }
     if(g("data-spot")!==null && g("data-spot")!==""){
       var sp = +g("data-spot");
       for(var i=O.pas.length-1;i>=0;i--) if(O.pas[i].spot===sp){ gotoPA(i); return; }

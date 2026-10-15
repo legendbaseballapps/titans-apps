@@ -19,7 +19,7 @@ old one — tap the amber stamp to fix it.
 |---|---|---|
 | **Bullpen Chart** | **v32** | v29 — **v30, v31 and v32 waiting to be pushed** (receiver deployed Oct 15, URL and key in; **push before Jan 8**) |
 | **Pitch Chart** (game) | **v23** | **v20** — **v21, v22 and v23 waiting to be pushed** |
-| **Offense Chart** | **v42** | v40 — **v41 and v42 waiting to be pushed** |
+| **Offense Chart** | **v43** | v40 — **v41, v42 and v43 waiting to be pushed** |
 
 **The site moved Oct 14, 2026** to the program-owned account: **legendbaseballapps.github.io/titans-apps** (repo transferred from vaughnzj, so the live files, including the real `roster.js`, moved as they were). Every iPad installs from the new link; History saved under the old address does not carry over. The Coach's Guides in the pending builds (bullpen v31, game v23, offense v42) carry the new address, so pushing those builds is what puts it on the iPads.
 
@@ -624,6 +624,37 @@ Not logged at the time.
 ---
 
 ## Offense Chart
+
+### v43 · Oct 15, 2026
+**Headline:** **Quality at-bats**, by the program's own definition. The app works out whether each
+at-bat was a QAB and why, from what is already charted plus two new optional taps.
+
+- **The definition (Jim, Oct 15).** A QAB is any one of: a hit; a line drive, even if caught; a walk;
+  HBP; a sac bunt or sac fly; a run scoring on his ball in play; 7 or more pitches; moving a runner into
+  scoring position with fewer than 2 outs; a ball in play with 2 strikes. Reaching on an error is not a
+  QAB by itself. Any run counts (RBI, error, FC, DP). A moved runner counts even if the hitter is out.
+- **Not GameChanger's QAB.** GC has one with different rules (6+ pitches, extra-base hits, hard-hit
+  balls, no HBP or line-drive outs). The numbers will not match, and should not be compared.
+- **SF is a new result**, beside SAC. SAC is now specifically the sac bunt (it already implied a
+  ground ball); SF implies a fly ball. Both buttons have a tooltip with the full name.
+- **2 chips under Hard contact: Run scored and Moved a runner.** Shown only once the ball is in play,
+  because the app cannot see runners or the scoreboard. Off unless tapped. They clear themselves if the
+  at-bat stops being a ball in play (undo, or the last pitch re-marked as a whiff), and the app refuses
+  them on a strikeout or walk rather than store a fact the rules ignore.
+- **A live line under the chips:** *Quality at-bat · moved a runner, 2-strike contact*, or *Not a
+  quality at-bat*. The charter never decides it.
+- **Report:** a **Quality at-bats** panel on the At the plate view (total, percentage, and how many
+  at-bats each rule caught) and a **QAB** column in Our hitters ("3 of 4").
+- **Export:** two columns appended at the end, `RunScored` and `MovedRunner`: Y or N on the last row of
+  an at-bat put in play, blank on every other row. Every older column keeps its position. **There is no
+  QAB column on purpose:** the export carries the facts and the dashboard applies the rules, so a change
+  to the definition recalculates every past game.
+- **Older games** read as no run scored and no runner moved, because those facts were never asked.
+- **Tests:** new `tools/qab.js`, 59 checks: all 9 rules on hand-built at-bats, Jim's 3 rulings, the
+  not-a-QAB side, the chips on the real Chart tab, the report and the export columns. Proved failable
+  by breaking 5 rules one at a time. It also checks the app's own "Something went wrong" banner, because
+  render() catches its errors: a clash with a local variable named `inPlay` hid the chips during this
+  build without ever reaching the browser's error log.
 
 ### v42 · Oct 9, 2026
 **Headline:** A red **Erase everything on this iPad** button, for testing. It also fixes a warning
