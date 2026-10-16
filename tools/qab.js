@@ -65,6 +65,26 @@ const CASES = [
   ["sac fly with 2 strikes, run in",    pa([S, S, X], "SF", { run: true }),     "SAC,RUN,K2"],
 ];
 
+/* v45 / v25: both game apps lock charting until a level is picked for the game.
+   Pick one the way a charter would: tap a level on Setup, then go to charting. */
+async function pickLevel(pg, path) {
+  if (!/\/(offense|game)\//.test(path)) return;
+  await pg.evaluate(() => {
+    const b = document.querySelector('[data-lvl="Varsity"]');
+    if (b && !b.classList.contains("on")) b.click();
+  });
+  await pg.waitForTimeout(150);
+  await pg.evaluate((isGame) => {
+    if (isGame) {
+      const s = document.getElementById("v-setup"), btn = document.getElementById("btnSetup");
+      if (s && !s.hidden && btn) btn.click();
+    } else {
+      const t = document.getElementById("tab-chart"); if (t) t.click();
+    }
+  }, /\/game\//.test(path));
+  await pg.waitForTimeout(150);
+}
+
 async function part1(b) {
   console.log("\nRULES · qabReasons() on hand-built at-bats");
   const pg = await (await b.newContext({ serviceWorkers: "block" })).newPage();
@@ -88,7 +108,7 @@ async function part2(b) {
   const errs = []; pg.on("pageerror", e => errs.push(String(e)));
   await pg.goto(BASE + "/offense/index.html", { waitUntil: "load" });
   await pg.waitForTimeout(900);
-  await pg.evaluate(() => document.getElementById("tab-chart") && document.getElementById("tab-chart").click());
+  await pickLevel(pg, "/offense/index.html");
   await pg.waitForTimeout(200);
 
   /* every tap is a real click on the control a charter would touch */
@@ -172,16 +192,19 @@ async function part2(b) {
   /* ---- export */
   const csv = await pg.evaluate(() => csvOf(O).split("\n"));
   const head = csv[0].split(",");
-  check("export ends with RunScored, MovedRunner", head.slice(-2).join(","), "RunScored,MovedRunner");
+  /* Found by name: v45 appended Level and Practice after them. */
+  const iRun = head.indexOf("RunScored"), iAdv = head.indexOf("MovedRunner");
+  check("export has RunScored, MovedRunner side by side", (iRun > 0 && iAdv === iRun + 1), true);
+  check("  appended after SprayDepth", iRun, head.indexOf("SprayDepth") + 1);
   check("every older column kept its place", head.indexOf("SprayDepth"), 34);
   const lastOf = n => csv.filter(l => l.split(",")[10] === String(n)).slice(-1)[0].split(",");
-  const pick = (row) => row.slice(-2).join("/");
+  const pick = (row) => row[iRun] + "/" + row[iAdv];
   check("PA 1, in play with a moved runner", pick(lastOf(1)), "N/Y");
   check("PA 2, in play, nothing tapped", pick(lastOf(2)), "N/N");
   check("PA 3, a strikeout: blank, not N", pick(lastOf(3)), "/");
   check("PA 4 result is SF", lastOf(4)[head.indexOf("PAResult")], "SF");
   const early = csv.filter(l => l.split(",")[10] === "1");
-  check("only the last pitch of a PA carries the facts", early[0].split(",").slice(-2).join("/"), "/");
+  check("only the last pitch of a PA carries the facts", pick(early[0].split(",")), "/");
 
   /* ---- an at-bat filed before v43 has no flags at all */
   const old = await pg.evaluate(() => qabReasons({ pitches: [{ m: "X", r: 2, c: 2 }], result: "GO", traj: "GB" }));

@@ -195,7 +195,7 @@ footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--rule);
       <div class="eyebrow">Legend Titans Baseball</div>
       <h1>Pitch Chart Coach's Guide</h1>
       <p>Everything you need to chart a game on the iPad. Read it once before you go, then keep it open on your phone for the first inning.</p>
-      <div class="meta">App v24 &nbsp;&middot;&nbsp; October 2026 &nbsp;&middot;&nbsp; Game day</div>
+      <div class="meta">App v25 &nbsp;&middot;&nbsp; October 2026 &nbsp;&middot;&nbsp; Game day</div>
     </div>
   </div>
 
@@ -227,7 +227,7 @@ footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--rule);
     </ul>
     <div class="note">
       <span class="lab">Which version am I on?</span>
-      <p>The build is printed in the header, right after &ldquo;Pitch Chart.&rdquo; This guide describes <b>v24</b>. If it shows two numbers in amber, like <code>v15 &ne; v14</code>, that iPad has downloaded an update but is still showing the old one &mdash; see below.</p>
+      <p>The build is printed in the header, right after &ldquo;Pitch Chart.&rdquo; This guide describes <b>v25</b>. If it shows two numbers in amber, like <code>v15 &ne; v14</code>, that iPad has downloaded an update but is still showing the old one &mdash; see below.</p>
     </div>
 
     <h3 class="upd">Getting a new version</h3>
@@ -246,6 +246,8 @@ footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--rule);
   <section>
     <h2>60 seconds before first pitch</h2>
     <ul>
+      <li><b>Pick the level first: Varsity, JV, Sophomore or Freshman.</b> New in v25. The app opens on the <b>Setup</b> screen with the level blank, every game, and <b>won't go to charting until you pick one</b>. It's what puts the game in the right level on the dashboard. Picked the wrong one? Open Setup and tap the right one any time before you file.</li>
+      <li>Training a new charter, or just trying the app out? Tick <b>Practice game</b> under the level. It charts and files like any game but is <b>never sent to the dashboard</b>, and a bar above the chart reminds you it's on. It switches itself off when you file.</li>
       <li>Fill in the date and the opponent across the top, then <b>pick your starter</b> from the drop-down on the first mound chip &mdash; our pitchers come off the roster now, there is nothing to type.</li>
       <li>Type the opposing lineup down the left: name, jersey, position, and R or L. Tap a row to select that hitter, tap again to type in the box.</li>
       <li><b>Position is a drop-down</b> and it is the scorecard number &mdash; 1 pitcher through 9 right field, plus DH. The abbreviation is printed beside each number so you are not counting on your fingers. It had to be numbers: <code>1B</code>, <code>2B</code> and <code>3B</code> are already <i>results</i> on the pad two inches away.</li>
@@ -342,23 +344,32 @@ footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--rule);
     <ul>
       <li><b>If the game ended mid-inning</b> &mdash; walk-off, run rule, time limit &mdash; filing asks about that last inning first, headed <b>Final inning (partial)</b>. Answer it and the file goes through; cancel and nothing is filed.</li>
       <li><b>Finish &amp; file this game</b> lives on the <b>Game</b> tab. It <i>moves</i> the game to History and starts a clean one &mdash; your pitching staff carries over, the opposing lineup does not, because next week it is a different team.</li>
-      <li><b>Filing never deletes.</b> Everything you have ever filed stays in <b>History</b>, with an <b>Export</b> beside it, so a game you forgot to send is still there weeks later.</li>
-      <li><b>History tells you what is outstanding.</b> More than one filed game that has not been exported and it says so at the top.</li>
+      <li><b>Filing sends the game to the dashboard</b> as soon as there is signal, and brings back the <b>Setup</b> screen with the level blank for the next game.</li>
+      <li><b>Filing never deletes.</b> Everything you have ever filed stays in <b>History</b>, with an <b>Export</b> beside it.</li>
       <li><b>Discard this game</b> is the other path, and it is the only one that throws anything away. It takes two taps and it says so. It never touches anything already filed.</li>
     </ul>
   
-    <div class="warn">
-      <span class="lab">Erase everything on this iPad</span>
-      <p>At the bottom of the <b>Game</b> tab there is a red <b>Erase everything on this iPad</b> button. It
-      deletes the game in progress <b>and everything in History</b>, for good, with nothing
-      uploaded first. It is there for <b>testing</b> &mdash; charting a few junk games and
-      wanting a clean app back.</p>
-      <p>It tells you exactly what it is about to destroy, including how many filed games have
-      <b>never been exported</b>, and Cancel is what the button starts on. <b>Finish &amp; file</b>
-      is how a real game ends; this is not. The roster is not affected &mdash; it ships with
-      the app.</p>
+    <div class="note">
+      <span class="lab">The red Erase everything button is gone</span>
+      <p>It was there for testing in the fall. From v25 it is switched off, so nothing on this iPad can wipe History.</p>
     </div>
   </section>
+
+  <section>
+    <h2 class="upd">Sending to the dashboard</h2>
+    <p class="sub">New in v25. Every filed game goes to the coaching dashboard by itself. You don't tap anything, and charting never waits for it.</p>
+    <ul>
+      <li><b>When it sends:</b> the moment you file, and again every time the app opens or comes back to the front with signal. No signal at the field? It goes when the iPad next sees wifi.</li>
+      <li><b>One line at the top of History</b> tells you where things stand: <i>Every filed game is on the dashboard</i>, or <i>1 game waiting to upload</i>.</li>
+      <li>Each filed game has a pill: <b>on dashboard</b>, <b>waiting</b>, <b>practice</b> (never sent), or <b>kept here</b> (filed before v25, before games had a level, so it stays on the iPad).</li>
+      <li><b>Nothing is lost by waiting.</b> A game stays in History whether it has gone or not, and sending the same one twice is harmless.</li>
+    </ul>
+    <div class="warn">
+      <span class="lab">If the line turns red</span>
+      <p>It says the dashboard <b>turned a game away</b>, with the reason. Your games are safe on the iPad. Tell Jim, and use <b>Export</b> as a backup until he says it's fixed.</p>
+    </div>
+  </section>
+
 
   <section>
     <h2>Ending the at-bat</h2>
@@ -495,8 +506,8 @@ footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--rule);
       <li>The header line records which app build produced the file.</li>
     </ul>
     <div class="note">
-      <span class="lab">Nothing leaves the iPad on its own</span>
-      <p>Everything lives in the iPad's storage. <b>File</b> keeps the game in History; <b>Export</b> is the only thing that gets it off the device. Do both.</p>
+      <span class="lab">Filing is what sends it</span>
+      <p><b>Finish &amp; file</b> keeps the game in History and sends it to the dashboard. <b>Export</b> is a backup, and the way to hand a file to someone directly.</p>
     </div>
   </section>
 
@@ -525,7 +536,7 @@ footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--rule);
     </ul>
   </section>
 
-  <footer>Legend Titans Pitch Chart &middot; app v24 &middot; Guide prepared for game day</footer>
+  <footer>Legend Titans Pitch Chart &middot; app v25 &middot; Guide prepared for game day</footer>
 
 </div>
 </body>

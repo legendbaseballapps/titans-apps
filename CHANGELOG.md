@@ -18,8 +18,8 @@ old one — tap the amber stamp to fix it.
 | App | Source & folder | Live on GitHub Pages |
 |---|---|---|
 | **Bullpen Chart** | **v32** | v29 — **v30, v31 and v32 waiting to be pushed** (receiver deployed Oct 15, URL and key in; **push before Jan 8**) |
-| **Pitch Chart** (game) | **v24** | **v20** — **v21 to v24 waiting to be pushed** |
-| **Offense Chart** | **v44** | v40 — **v41 to v44 waiting to be pushed** |
+| **Pitch Chart** (game) | **v25** | **v20** — **v21 to v25 waiting to be pushed** |
+| **Offense Chart** | **v45** | v40 — **v41 to v45 waiting to be pushed** |
 
 **The site moved Oct 14, 2026** to the program-owned account: **legendbaseballapps.github.io/titans-apps** (repo transferred from vaughnzj, so the live files, including the real `roster.js`, moved as they were). Every iPad installs from the new link; History saved under the old address does not carry over. The Coach's Guides in the pending builds (bullpen v31, game v23, offense v42) carry the new address, so pushing those builds is what puts it on the iPads.
 
@@ -340,6 +340,36 @@ execution grading.
 
 ## Pitch Chart (game)
 
+### v25 · Oct 15, 2026
+**Headline:** Every game needs its **level** before charting, and filed games go to the coaching
+dashboard on their own: the pitch log and the inning log.
+
+- **The level, required every game (Jim, Oct 15).** Varsity, JV, Sophomore or Freshman, picked at the
+  top of Setup. It starts blank every game, **charting stays locked until it is picked**, and it goes back
+  to blank when the game is filed. It can be changed any time before filing. It is what puts each game in
+  the right level on the dashboard; the roster can't, because kids move between levels.
+- **Dashboard upload**, the Bullpen Chart's engine and rules: sent at filing, on open, when signal comes
+  back and when the app returns to the front; oldest first, one at a time, stop at the first failure;
+  stamped uploaded only on the receiver's ok; never blocks anything. Same receiver and key as the bullpen,
+  and the receiver needed **no change** (it maps columns by name).
+- **Each game has a permanent id** (`rid`) so a retry can never double it in the Sheet.
+- **Practice game** switch on Setup: charts and files normally, never sent, a bar while charting, off
+  again after filing.
+- **Never sent: games filed before this build.** They have no level, and on a testing iPad they are test
+  games. History marks them *kept here*.
+- **History:** one status line and a pill per game (on dashboard, waiting, practice, kept here). The old
+  "export them" nag only shows when upload is off.
+- **Erase everything is off** (`ALLOW_WIPE = false`).
+- **What is sent:** the PITCH LOG and the INNING LOG, each row stamped with the game's `Level`, `Date`
+  and `Opponent` so the Sheet reads on its own. Both blocks were lifted out of the text export into
+  `pitchLogTable()` and `inningLogTable()`, which the export now prints and the upload sends: one source.
+  The text export was checked byte-identical to v24 on the same game.
+- **The lock is on the Setup screen:** the app opens there with no level; *Charting* refuses and the note
+  turns amber; a zone tap is refused at the source too.
+- **Tests:** `tools/receiver/upload.js` gained a Pitch Chart section (the lock, the level reaching
+  `Records` and every row, the inning log, practice, pre-v25 games). Every existing suite now picks a
+  level first, the way a charter would. Each new guard was proved by breaking it.
+
 ### v24 · Oct 15, 2026
 **Headline:** An at-bat can't end without a pitch on the zone, and **IBB** records the no-pitch
 intentional walk. Same rule as the Offense Chart v44.
@@ -648,6 +678,35 @@ Not logged at the time.
 ---
 
 ## Offense Chart
+
+### v45 · Oct 15, 2026
+**Headline:** Every game needs its **level** before charting, and filed games go to the coaching
+dashboard on their own.
+
+- **The level, required every game (Jim, Oct 15).** Varsity, JV, Sophomore or Freshman, picked at the
+  top of Setup. It starts blank every game, **charting stays locked until it is picked**, and it goes back
+  to blank when the game is filed. It can be changed any time before filing. It is what puts each game in
+  the right level on the dashboard; the roster can't, because kids move between levels.
+- **Dashboard upload**, the Bullpen Chart's engine and rules: sent at filing, on open, when signal comes
+  back and when the app returns to the front; oldest first, one at a time, stop at the first failure;
+  stamped uploaded only on the receiver's ok; never blocks anything. Same receiver and key as the bullpen,
+  and the receiver needed **no change** (it maps columns by name).
+- **Each game has a permanent id** (`rid`) so a retry can never double it in the Sheet.
+- **Practice game** switch on Setup: charts and files normally, never sent, a bar while charting, off
+  again after filing.
+- **Never sent: games filed before this build.** They have no level, and on a testing iPad they are test
+  games. History marks them *kept here*.
+- **History:** one status line and a pill per game (on dashboard, waiting, practice, kept here). The old
+  "export them" nag only shows when upload is off.
+- **Erase everything is off** (`ALLOW_WIPE = false`).
+- **What is sent:** the same rows as the CSV export, built once by `tableOf()` and used by both. The CSV
+  gains two columns at the end, `Level` and `Practice`; every other column is unchanged (checked
+  byte-identical to v44 apart from those two).
+- **The lock is the Chart tab:** a game with no level opens on Setup, the Chart tab sends you back there
+  with an amber note, and a pitch is refused at the source too.
+- **Tests:** an Offense Chart section in `tools/receiver/upload.js` (the lock, the level reaching
+  `Records` and every row, practice, pre-v45 games, no signal then signal). Each new guard was proved by
+  breaking it.
 
 ### v44 · Oct 15, 2026
 **Headline:** An at-bat can't end without a pitch on the grid, and **IBB** records the no-pitch

@@ -27,12 +27,34 @@ async function wipeOn(pg, path) {
   return () => seen;
 }
 
+/* v45 / v25: both game apps lock charting until a level is picked for the game,
+   every game. Every check that charts picks one first, the way a charter would:
+   tap a level on Setup, then go to charting. No-op for the bullpen. */
+async function pickLevel(pg, path) {
+  if (!/\/(offense|game)\//.test(path)) return;
+  await pg.evaluate(() => {
+    const b = document.querySelector('[data-lvl="Varsity"]');
+    if (b && !b.classList.contains("on")) b.click();
+  });
+  await pg.waitForTimeout(150);
+  await pg.evaluate((isGame) => {
+    if (isGame) {
+      const s = document.getElementById("v-setup"), btn = document.getElementById("btnSetup");
+      if (s && !s.hidden && btn) btn.click();
+    } else {
+      const t = document.getElementById("tab-chart"); if (t) t.click();
+    }
+  }, /\/game\//.test(path));
+  await pg.waitForTimeout(150);
+}
+
 async function sweep(b, app, path, controls, opts) {
   const pg = await (await b.newContext({ viewport:{width:1280,height:1100}, serviceWorkers:"block" })).newPage();
   const errs = []; pg.on("pageerror", e => errs.push(String(e)));
   if (opts && opts.wipeOn) await wipeOn(pg, path);
   await pg.goto(BASE + path, { waitUntil:"load" });
   await pg.waitForTimeout(1400);
+  await pickLevel(pg, path);
   console.log("\n" + app);
   for (const [name, sel, probe, setup, expect] of controls) {
     if (setup) { await pg.evaluate(setup); await pg.waitForTimeout(250); }
@@ -169,6 +191,7 @@ async function migration(b) {
   const errs = []; pg.on("pageerror", e => errs.push(String(e)));
   await pg.goto(BASE + "/game/index.html", { waitUntil:"load" });
   await pg.waitForTimeout(1400);
+  await pickLevel(pg, "/game/index.html");
   console.log("\nPITCH CHART · a v5 game on a v23 build");
 
   const probes = [
@@ -278,6 +301,7 @@ async function wipeWarning(b) {
     await wipeOn(pg, app.path);
     await pg.goto(BASE + app.path, { waitUntil:"load" });
     await pg.waitForTimeout(1400);
+    await pickLevel(pg, app.path);
     let got;
     try {
       got = await pg.evaluate(`(function(){
@@ -338,6 +362,7 @@ async function wipeOff(b) {
     });
     await pg.goto(BASE + app.path, { waitUntil:"load" });
     await pg.waitForTimeout(1400);
+    await pickLevel(pg, app.path);
     let got;
     if (!flipped) { got = "the flag was never flipped - anchor missed"; }
     else {
@@ -596,7 +621,8 @@ async function wipeOff(b) {
        'csvOf(O).split("\\n")[0].indexOf("PitcherCarried")>=0)+""', null, "true"],
     /* LAST in this list on purpose: it leaves the Order column hidden, which
        would break any check below it that clicks a lineup spot. */
-    ["order collapses",  "#btnOrder",                     c("#chartCols"), 'showTab("chart");'],
+    /* An earlier check files a game, which clears the level (v45), so pick one. */
+    ["order collapses",  "#btnOrder",                     c("#chartCols"), 'if(!O.level) setLevel("Varsity"); showTab("chart");'],
     /* ---- the released roster (v36) ---- */
     /* Same file, same rule as the bullpen: roster.js ships with the app and is a
        read-out here. window.TITANS_ROSTER is a global set before the app's own

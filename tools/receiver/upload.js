@@ -197,7 +197,7 @@ function serveApp() {
     const file = path.normalize(path.join(ROOT, decodeURIComponent(u.pathname)));
     if (file.indexOf(ROOT) !== 0 || !fs.existsSync(file) || fs.statSync(file).isDirectory()) { res.writeHead(404); res.end(); return; }
     let body = fs.readFileSync(file);
-    if (u.pathname === "/bullpen/index.html") {
+    if (/^\/(bullpen|offense|game)\/index\.html$/.test(u.pathname)) {
       let t = body.toString("utf8");
       const q = u.searchParams;
       /* The shipped build carries the real receiver's URL and key. Every test
@@ -227,7 +227,7 @@ async function openApp(b, rt, opts) {
   const q = new URLSearchParams();
   if (!opts.noUrl) { q.set("u", RURL); q.set("k", opts.key || rt.key); }
   if (opts.wait) q.set("w", String(opts.wait));
-  await pg.goto(APP + "/bullpen/index.html?" + q, { waitUntil: "load" });
+  await pg.goto(APP + (opts.path || "/bullpen/index.html") + "?" + q, { waitUntil: "load" });
   await pg.waitForTimeout(900);
   pg.ctx = ctx;
   return pg;
@@ -417,9 +417,210 @@ async function part2() {
   }
 }
 
+
+/* ================================================================ GAME APPS (v45 / v25)
+   The Offense Chart and the Pitch Chart through the same receiver. Jim's level
+   rule (Oct 15) is proved first: picked every game, no default, cleared when the
+   game is filed, charting locked until it is picked. Then the upload: the level
+   reaches the Sheet, practice games never leave, games filed before the upload
+   existed are never sent, and no signal means it waits. */
+const seedArchive = (key, games) => ({ [key]: JSON.stringify(games) });
+
+async function part3() {
+  console.log("\nOFFENSE CHART v45 · the level");
+  const rt = freshRuntime(), book = rt.book("SEASON1");
+  const { srv, st } = await serve(rt);
+  const asrv = await serveApp();
+  const b = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium",
+    args: ["--host-resolver-rules=MAP script.google.com ~NOTFOUND, MAP *.googleusercontent.com ~NOTFOUND", "--no-proxy-server"] });
+  const AK = "titans-offense-archive-v1";
+  /* one game filed by v44: no rid, no level - a test game on Jim's iPad */
+  const legacy = { v: 1, date: "10-01", opp: "Old Test", who: "", home: "H", lineup: [], pitchers: [{ name: "X", hand: "R" }],
+                   pas: [{ spot: 0, p: 0, pitches: [{ t: "FB", r: 2, c: 2, m: "X", p: 0, call: "S" }], result: "GO" }],
+                   filed: Date.now() - 86400000, sent: false, build: "v44" };
+  try {
+    const pg = await openApp(b, rt, { path: "/offense/index.html", seed: seedArchive(AK, [legacy]) });
+    const tabNow = () => pg.evaluate(() => tab);
+    const offArch = () => pg.evaluate(k => JSON.parse(localStorage.getItem(k) || "[]"), AK);
+    const recs = () => book.getSheetByName("Records").records().filter(r => r.App === "offense");
+    check("a fresh game opens on Setup, not Chart", await tabNow(), "setup");
+    check("no level is picked", await pg.evaluate(() => O.level), "");
+    await pg.click("#tab-chart");
+    check("the Chart tab refuses with no level", await tabNow(), "setup");
+    check("  and says why, in amber", await pg.evaluate(() => { const n = document.getElementById("lvlNote"); return n.classList.contains("needed") && /locked/.test(n.textContent); }), true);
+    check("logging a pitch is refused at the source too", await pg.evaluate(() => { logPitch(2, 2); return countPitches(); }), 0);
+    await pg.click('[data-lvl="JV"]');
+    check("picking JV unlocks the Chart tab", await (async () => { await pg.click("#tab-chart"); return tabNow(); })(), "chart");
+    await pg.evaluate(() => {
+      const set = (id, v) => { const e = document.getElementById(id); e.value = v; e.dispatchEvent(new Event("input", { bubbles: true })); };
+      set("fDate", "4-18"); set("fOpp", "Northview"); set("fWho", "Coach V");
+    });
+    const plot = () => pg.click('#v-chart [data-r="2"][data-c="2"]');
+    const res = k => pg.click('#results [data-res="' + k + '"]');
+    await plot(); await plot(); await res("1B"); await pg.click("#btnNextPA");
+    await plot(); await res("GO"); await pg.click("#btnNextPA");
+    await plot(); await plot(); await plot();               /* K, closes itself */
+    await pg.click("#btnNextPA");
+    /* a mistake can be fixed before filing (Jim) */
+    await pg.click("#tab-setup"); await pg.click('[data-lvl="Varsity"]');
+    check("the level can be changed before filing", await pg.evaluate(() => O.level), "Varsity");
+    await pg.click("#btnArchive"); await pg.click(".askwrap [data-yes]");
+    const a1 = await offArch();
+    check("the filed game keeps its level", a1[0].level, "Varsity");
+    check("after filing, the level is cleared", await pg.evaluate(() => O.level), "");
+    check("  and the app is back on Setup", await tabNow(), "setup");
+    await pg.click("#tab-chart");
+    check("  and charting is locked again", await tabNow(), "setup");
+
+    console.log("\nOFFENSE CHART v45 · the upload");
+    check("the filed game uploads", await until(async () => (await offArch())[0].up > 0), true);
+    const r = recs();
+    check("one offense record, not two", r.length, 1);
+    check("Records carries the level as the team", r[0] && r[0].Team, "Varsity");
+    check("  and the date and charter", r[0] && (r[0].Date + " / " + r[0].Coach), "4-18 / Coach V");
+    const op = book.getSheetByName("Offense_Pitches");
+    check("every pitch reached Offense_Pitches", op.rows().length, 6);
+    const orow = op.records()[0];
+    check("rows carry Level and Opponent", orow.Level + " / " + orow.Opponent, "Varsity / Northview");
+    check("RecordID is column A", op.header()[0], "RecordID");
+    check("the game filed by v44 was never sent", (await offArch()).find(g => g.opp === "Old Test").up || 0, 0);
+    check("nothing was turned away", book.getSheetByName("Log").rows().length, 0);
+
+    /* practice */
+    await pg.click('[data-lvl="Freshman"]');
+    await pg.click("#fPractice");
+    await pg.click("#tab-chart");
+    check("the practice bar shows on the Chart tab", await pg.evaluate(() => !document.getElementById("practiceBar").hidden), true);
+    const before = st.posts;
+    await plot(); await res("FO"); await pg.click("#btnNextPA");
+    await pg.click("#tab-setup"); await pg.click("#btnArchive"); await pg.click(".askwrap [data-yes]");
+    await pg.waitForTimeout(900);
+    check("a practice game is never sent", st.posts - before, 0);
+    check("practice switches itself off after filing", await pg.evaluate(() => O.practice + " " + document.getElementById("fPractice").checked), "false false");
+
+    /* no signal, then signal */
+    st.down = true;
+    await pg.click('[data-lvl="Sophomore"]'); await pg.click("#tab-chart");
+    await plot(); await res("LO"); await pg.click("#btnNextPA");
+    await pg.click("#tab-setup"); await pg.click("#btnArchive"); await pg.click(".askwrap [data-yes]");
+    await pg.waitForTimeout(1200);
+    await pg.click("#tab-history");
+    const ln = await line(pg);
+    check("with no signal it waits, and says so", /upline wait/.test(ln) && /1 game waiting/.test(ln), true);
+    const pills = await pg.evaluate(() => [...document.querySelectorAll("#hist .pill")].map(p => p.textContent)
+      .filter(t => ["waiting", "practice", "on dashboard", "kept here"].indexOf(t) >= 0));
+    check("History pills: waiting, practice, on dashboard, kept here", pills.join(", "), "waiting, practice, on dashboard, kept here");
+    st.down = false;
+    await pg.evaluate(() => window.dispatchEvent(new Event("online")));
+    check("signal back: it goes", await until(async () => recs().length === 2), true);
+    check("  as Sophomore", recs()[1] && recs()[1].Team, "Sophomore");
+    check("no page errors", pg.errs.join(" | "), "");
+    check("no \"Something went wrong\" banner", await pg.evaluate(() => document.getElementById("noJs").hidden), true);
+    await pg.ctx.close();
+  } finally { await b.close(); srv.close(); asrv.close(); }
+}
+
+async function part4() {
+  console.log("\nPITCH CHART v25 · the level");
+  const rt = freshRuntime(), book = rt.book("SEASON1");
+  const { srv, st } = await serve(rt);
+  const asrv = await serveApp();
+  const b = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium",
+    args: ["--host-resolver-rules=MAP script.google.com ~NOTFOUND, MAP *.googleusercontent.com ~NOTFOUND", "--no-proxy-server"] });
+  const KEY = "dugout-pitch-chart-v2", AK = "dugout-pitch-chart-archive-v1";
+  try {
+    const legacy = { v: 7, date: "10-01", opp: "Old Test", filed: Date.now() - 86400000, sent: false, build: "v24",
+                     pitchers: [{ name: "X" }], innings: [], lineup: [{ num: 1, cur: 0, men: [{ num: 1, abs: [{ pitches: [{ t: "X", r: 2, c: 2, k: "FB", p: 0, inn: 1 }], result: "GO" }] }] }] };
+    const pg = await openApp(b, rt, { path: "/game/index.html", seed: seedArchive(AK, [legacy]) });
+    const G = () => pg.evaluate(k => JSON.parse(localStorage.getItem(k) || "null"), KEY);
+    const gArch = () => pg.evaluate(k => JSON.parse(localStorage.getItem(k) || "[]"), AK);
+    const onSetup = () => pg.evaluate(() => !document.getElementById("v-setup").hidden);
+    const recs = () => book.getSheetByName("Records").records().filter(r => r.App === "game");
+    check("a fresh game opens on the Setup screen", await onSetup(), true);
+    await pg.click("#btnSetup");
+    check("Charting refuses with no level", await onSetup(), true);
+    check("  and says why, in amber", await pg.evaluate(() => { const n = document.getElementById("lvlNote"); return n.classList.contains("needed") && /locked/.test(n.textContent); }), true);
+    await pg.evaluate(() => document.querySelector("#zone .cell:nth-child(13)").click());
+    check("a zone tap is refused at the source too", ((await G()) || { lineup: [] }).lineup.some(sp => sp.men.some(m => m.abs.some(a => a.pitches.length))), false);
+    await pg.click('[data-lvl="JV"]');
+    await pg.click("#btnSetup");
+    check("picking JV unlocks charting", await onSetup(), false);
+    await pg.evaluate(() => {
+      const s = document.querySelector("#pitchers select[data-pick]");
+      s.value = window.TITANS_ROSTER[0].id; s.dispatchEvent(new Event("change", { bubbles: true }));
+      const set = (id, v) => { const e = document.getElementById(id); e.value = v; e.dispatchEvent(new Event("input", { bubbles: true })); };
+      set("fDate", "4-18"); set("fOpp", "Rock Canyon");
+    });
+    const zone = () => pg.click("#zone .cell:nth-child(13)");
+    const res = k => pg.click('#results button[data-res="' + k + '"]');
+    await zone(); await zone(); await res("1B"); await pg.click("#nextBtn");
+    await zone(); await res("GO"); await pg.click("#nextBtn");
+    await res("IBB"); await pg.click("#nextBtn");
+    /* fix the level before filing */
+    await pg.click("#btnSetup"); await pg.click('[data-lvl="Varsity"]'); await pg.click("#btnSetup");
+    check("the level can be changed before filing", (await G()).level, "Varsity");
+    /* file: the open inning is asked about first */
+    await pg.click('#tabs button[data-tab="game"]');
+    await pg.click("#btnFinish");
+    if (await pg.$("#innNoRuns")) { await pg.click("#innNoRuns"); await pg.waitForTimeout(200); if (await pg.$("#innOk")) await pg.click("#innOk"); }
+    await pg.waitForTimeout(200);
+    if (await pg.$(".askwrap [data-yes]")) await pg.click(".askwrap [data-yes]");
+    await pg.waitForTimeout(300);
+    const a1 = await gArch();
+    const mine = a1.find(g => g.opp === "Rock Canyon");
+    check("the game was filed with its level", mine && mine.level, "Varsity");
+    check("after filing, the level is cleared", (await G()).level, "");
+    check("  and the Setup screen is up again", await onSetup(), true);
+
+    console.log("\nPITCH CHART v25 · the upload");
+    check("the filed game uploads", await until(async () => ((await gArch()).find(g => g.opp === "Rock Canyon") || {}).up > 0), true);
+    const r = recs();
+    check("one game record", r.length, 1);
+    check("Records carries the level as the team", r[0] && r[0].Team, "Varsity");
+    const gp = book.getSheetByName("Game_Pitches");
+    check("pitch log: 3 pitches plus the no-pitch IBB row", gp.rows().length, 4);
+    check("columns: RecordID, then Level, Date, Opponent", gp.header().slice(0, 4).join(","), "RecordID,Level,Date,Opponent");
+    const g0 = gp.records()[0];
+    check("rows carry the level and opponent", g0.Level + " / " + g0.Opponent, "Varsity / Rock Canyon");
+    const gi = book.getSheetByName("Game_Innings");
+    check("the inning log went too", gi.rows().length >= 1, true);
+    check("  with Runs entered as 0, not blank", gi.records()[0].Runs, 0);
+    check("the game filed by v24 was never sent", (await gArch()).find(g => g.opp === "Old Test").up || 0, 0);
+    check("nothing was turned away", book.getSheetByName("Log").rows().length, 0);
+
+    /* practice */
+    await pg.click('[data-lvl="Freshman"]');
+    await pg.click("#fPractice");
+    await pg.click("#btnSetup");
+    check("the practice bar shows while charting", await pg.evaluate(() => !document.getElementById("practiceBar").hidden), true);
+    const before = st.posts;
+    await zone(); await res("FO"); await pg.click("#nextBtn");
+    await pg.click('#tabs button[data-tab="game"]');
+    await pg.click("#btnFinish");
+    if (await pg.$("#innNoRuns")) { await pg.click("#innNoRuns"); await pg.waitForTimeout(200); if (await pg.$("#innOk")) await pg.click("#innOk"); }
+    await pg.waitForTimeout(200);
+    if (await pg.$(".askwrap [data-yes]")) await pg.click(".askwrap [data-yes]");
+    await pg.waitForTimeout(900);
+    check("a practice game is never sent", st.posts - before, 0);
+    check("practice switches itself off after filing", (await G()).practice, false);
+    await pg.evaluate(() => { const t = document.querySelector('#tabs button[data-tab="hist"]'); if (t) t.click(); });
+    const pills = await pg.evaluate(() => [...document.querySelectorAll("#histList .pill")].map(p => p.textContent));
+    check("History pills: practice, on dashboard, kept here", pills.join(", "), "practice, on dashboard, kept here");
+    check("the status line is green", /upline ok/.test(await line(pg)), true);
+    check("no page errors", pg.errs.join(" | "), "");
+    await pg.ctx.close();
+  } finally { await b.close(); srv.close(); asrv.close(); }
+}
+
 (async () => {
+  /* ONLY=3 or ONLY=4 runs one game-app section (used when mutation-testing). */
+  const only = process.env.ONLY;
+  if (!only) {
   try { part1(); } catch (e) { console.log("  x  part 1 threw: " + e.stack); fails++; }
   try { await part2(); } catch (e) { console.log("  x  part 2 threw: " + e.stack); fails++; }
+  }
+  if (!only || only === "3") try { await part3(); } catch (e) { console.log("  x  offense threw: " + e.stack); fails++; }
+  if (!only || only === "4") try { await part4(); } catch (e) { console.log("  x  pitch chart threw: " + e.stack); fails++; }
   console.log("\n" + checks + " upload checks");
   console.log(fails ? "FAILURES: " + fails : "ALL UPLOAD CHECKS PASS");
   process.exit(fails ? 1 : 0);

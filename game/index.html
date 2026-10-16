@@ -610,6 +610,25 @@ a.topbtn{display:inline-block;text-decoration:none;border:0}
   letter-spacing:.07em;text-transform:uppercase;padding:5px 11px;border-radius:var(--r);
   border:1px solid var(--line);color:var(--text-2);background:var(--surface)}
 .histnag{color:var(--inplay)}
+/* v25: the level this game is played at (required, every game), practice mode,
+   and the dashboard upload's status line. */
+.lvlrow{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.lvlrow button{padding:12px 4px;font-family:var(--cond);font-weight:600;font-size:15px;
+  text-transform:uppercase;letter-spacing:.04em;border:1px solid var(--line);
+  border-radius:var(--r);background:var(--surface);color:var(--text)}
+.lvlrow button.on{background:var(--navy);border-color:var(--navy);color:#fff}
+.lvlrow.needed button{border-color:var(--inplay);color:var(--inplay)}
+.lvlnote.needed{color:var(--inplay);font-weight:600}
+.practice{display:flex;gap:10px;align-items:flex-start;margin-top:10px;padding:10px 12px;
+  border:1px dashed var(--line);border-radius:var(--r);font-size:13px;color:var(--text-2);line-height:1.4;cursor:pointer}
+.practice input{width:22px;height:22px;margin-top:1px;flex:0 0 auto}
+.pracbar{margin:0 0 10px;padding:9px 13px;border:1px solid var(--inplay);border-radius:8px;
+  background:var(--inplay-bg);font-size:13.5px;color:var(--text-2)}
+.pracbar strong{font-family:var(--cond);text-transform:uppercase;letter-spacing:.07em;color:var(--inplay);margin-right:8px}
+.upline{font-size:13px;line-height:1.45;color:var(--text-2);margin:0 0 8px}
+.upline.wait{color:var(--inplay)} .upline.bad{color:var(--strike)} .upline.ok{color:var(--ball)}
+.hrow .pill.up{border-color:var(--ball);color:var(--ball)}
+.hrow .pill.prac{border-color:var(--text-2);color:var(--text-2)}
 /* armed: the at-bat is closed and the app is waiting on you */
 .nextbtn.ready{box-shadow:0 0 0 3px var(--inplay-bg), 0 0 0 4px var(--inplay)}
 
@@ -695,6 +714,25 @@ a.topbtn{display:inline-block;text-decoration:none;border:0}
 <div class="sample" id="netBar" hidden></div>
 
 <section id="v-setup" hidden>
+  <!-- v25. Jim: picked here every game, no default, cleared when the game is
+       filed, and charting stays locked until it is picked. -->
+  <div class="panel">
+    <div class="phead"><span class="lbl">Level for this game</span>
+      <span class="lbl" id="lvlInfo" style="margin-left:auto">&mdash;</span></div>
+    <div class="pbody">
+      <div class="lvlrow" id="lvlRow">
+        <button data-lvl="Varsity">Varsity</button>
+        <button data-lvl="JV">JV</button>
+        <button data-lvl="Sophomore">Sophomore</button>
+        <button data-lvl="Freshman">Freshman</button>
+      </div>
+      <div class="sunote lvlnote" id="lvlNote" style="margin-top:8px">Pick it every game. Charting stays locked until you do, and it clears when the game is filed.</div>
+      <label class="practice" for="fPractice"><input type="checkbox" id="fPractice">
+        <span><b>Practice game</b> &mdash; for training a charter or trying things out. Charted and
+        filed here like any game, but <b>never sent to the dashboard</b>. It switches itself off
+        when you file.</span></label>
+    </div>
+  </div>
   <div class="panel">
     <div class="phead"><span class="lbl">Our pitchers</span></div>
     <div class="pbody">
@@ -730,6 +768,7 @@ a.topbtn{display:inline-block;text-decoration:none;border:0}
   </div>
 </section>
 
+<div class="pracbar" id="practiceBar" hidden><strong>Practice game</strong>Charted and filed on this iPad, never sent to the dashboard. Turn it off on the Setup screen for a real game.</div>
 <div class="wrap">
 
   <!-- ROW 1 — the charting loop -->
@@ -929,6 +968,7 @@ a.topbtn{display:inline-block;text-decoration:none;border:0}
     </div>
 
     <div class="pbody tabpane" id="tab-hist" style="display:none">
+      <p class="upline" id="upLine" hidden></p>
       <div class="lbl histnag" id="histNag" style="margin-bottom:8px"></div>
       <div id="histList"></div>
     </div>
@@ -1542,13 +1582,16 @@ function finishAndFile(){
 function doFile(){
   var filed = JSON.parse(JSON.stringify(G));
   filed.filed = Date.now(); filed.sent = false; filed.build = BUILD;
+  filed.up = 0; filed.upErr = ""; filed.practice = !!filed.practice;   /* v25 */
   A.push(filed); saveArch(A);
   /* The STAFF carries forward, not the lineup: our pitchers are the same next
      week, the other team's hitters are not. The Offense Chart carries ITS lineup
      for the same reason - that one is ours. */
   var keepP = JSON.parse(JSON.stringify(G.pitchers)), spots = G.spots;
-  G = emptyGame(); G.pitchers = keepP; G.spots = spots;
+  G = emptyGame(); G.pitchers = keepP; G.spots = spots;   /* level unpicked, practice off */
   save(); render(); renderFiled();
+  showSetup(true);
+  uploadPending();
   note2("Filed. " + A.length + (A.length===1 ? " game in History." : " games in History."));
 }
 var G = null, confirmClear = false;
@@ -1561,13 +1604,18 @@ var G = null, confirmClear = false;
    there: a version field nobody checks is wrong silently until the first
    migration that gates on it. */
 var SCHEMA = 7;
+function newRid(){ return "g" + Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+var LEVELS = ["Varsity","JV","Sophomore","Freshman"];
 function newAB(){ return {pitches:[], result:null, auto:false, spray:null, traj:null, hard:false}; }
 function newBatter(n){ return {num:n, name:"", jersey:"", pos:"", notes:"", hand:"R", play:null, tags:{}, carried:null, abs:[newAB()], cur:0}; }
 function newSpot(n){ return {num:n, men:[newBatter(n)], cur:0}; }
 function emptyGame(){
   var l=[],i;
   for(i=1;i<=MAXSPOTS;i++) l.push(newSpot(i));
-  return {v:SCHEMA, date:"", opp:"", inning:1, innings:[],
+  /* v25: level starts EMPTY on purpose (Jim) - nothing carries over from the last
+     game. rid is the game's permanent id on the dashboard; the receiver ignores a
+     second copy of the same rid, so a retry can never double a game. */
+  return {v:SCHEMA, date:"", opp:"", inning:1, innings:[], level:"", practice:false, rid:newRid(),
           pitchers:[newGamePitcher(),newGamePitcher(),newGamePitcher(),
                     newGamePitcher(),newGamePitcher()], notes:"",
           curP:0, shown:1, lineup:l, curB:0, liveB:0, lastClosed:null,
@@ -1650,6 +1698,9 @@ function load(){
     p.spots = Math.max(1, Math.min(MAXSPOTS, p.spots));
     if(p.curB>=p.spots) p.curB=0;
     if(p.liveB>=p.spots) p.liveB=0;
+    if(!p.rid) p.rid = newRid();
+    if(p.level == null) p.level = "";
+    p.practice = !!p.practice;
     /* Stamped LAST, once every migration above has run. */
     p.v = SCHEMA;
     return p;
@@ -1745,6 +1796,7 @@ function pendingPitch(a){
 /* A location tap only records where the pitch was. Nothing closes the at-bat
    until Step 2 says what actually happened. */
 function logPitch(t, r, c){
+  if(!G.level){ showSetup(true); return false; }      /* the lock, again, at the source */
   var a = curAB();
   if(a.result) return false;
   var pend = pendingPitch(a);
@@ -2689,6 +2741,8 @@ function resultClass(r){
 /* ===================== pre-game lineup setup ===================== */
 var setupOpen = false;
 function showSetup(on){
+  /* v25, Jim: "You can't go to charting until the level is selected each time." */
+  if(!on && !G.level){ lvlNag = true; on = true; }
   setupOpen = !!on;
   var sec = document.getElementById("v-setup");
   var wrap = document.querySelector(".wrap");
@@ -2697,6 +2751,30 @@ function showSetup(on){
   var b = document.getElementById("btnSetup");
   if(b) b.textContent = setupOpen ? "Charting" : "Setup";
   if(setupOpen) renderSetup();
+  drawLevel(); drawPractice();
+}
+var lvlNag = false;
+function drawLevel(){
+  var row = document.getElementById("lvlRow"); if(!row) return;
+  var bs = row.querySelectorAll("[data-lvl]");
+  for(var i=0;i<bs.length;i++) bs[i].className = (bs[i].getAttribute("data-lvl") === G.level) ? "on" : "";
+  row.classList.toggle("needed", !G.level);
+  document.getElementById("lvlInfo").textContent = G.level || "not picked";
+  var n = document.getElementById("lvlNote");
+  n.classList.toggle("needed", !G.level && lvlNag);
+  n.textContent = G.level
+    ? "Charting " + G.level + ". Tap another level if that is wrong; it is fixed once the game is filed."
+    : (lvlNag ? "Pick the level first. Charting is locked until you do."
+              : "Pick it every game. Charting stays locked until you do, and it clears when the game is filed.");
+  var c = document.getElementById("fPractice"); if(c) c.checked = !!G.practice;
+}
+function drawPractice(){
+  var b = document.getElementById("practiceBar");
+  if(b) b.hidden = !G.practice || setupOpen;
+}
+function setLevel(v){
+  if(LEVELS.indexOf(v) < 0) return;
+  G.level = v; lvlNag = false; save(); drawLevel();
 }
 /* Editing men[0] - the starter. A substitution is a game-time action and stays
    on the charting screen where the Sub button lives. */
@@ -3544,9 +3622,10 @@ function renderFiled(){
   var u = unsentCount();
   /* The nag only speaks when there is a real backlog - one unsent game is the
      normal state on the drive home. */
-  nag.textContent = u > 1
+  nag.textContent = (!UPLOAD_URL && u > 1)
     ? u + " filed games have not been sent yet. Export them and pass them on."
     : "";
+  drawUpload();
   A.slice().reverse().forEach(function(g, idx){
     var i = A.length - 1 - idx;
     var row = el("div","hrow");
@@ -3554,7 +3633,8 @@ function renderFiled(){
     row.appendChild(el("b", null, (g.opp || "Unknown opponent")));
     row.appendChild(el("span","when", (g.date || when.toLocaleDateString()) +
         " \u00b7 " + chartedAnything(g) + "P"));
-    row.appendChild(el("span","pill"+(g.sent?"":" unsent"), g.sent ? "sent" : "not sent"));
+    var hp = histPill(g);
+    row.appendChild(el("span","pill"+(hp[0]?" "+hp[0]:""), hp[1]));
     var b = el("button", null, "Export");
     b.addEventListener("click", function(){ exportFiled(i); });
     row.appendChild(b);
@@ -3570,6 +3650,87 @@ function exportFiled(i){
   A[i].sent = true; saveArch(A); renderFiled();
 }
 
+/* v25: the PITCH LOG as a table - the text export prints it, the dashboard
+   upload sends it. One source, so the two can never disagree. */
+function pitchLogTable(){
+  var head = ["Inning","Spot","Batter","Hand","Pos","PosName","AB","Pitch","Type","Call","ZoneRow","ZoneCol","InZone",
+          "CalledRow","CalledCol","Execution","MissV","MissH",
+          "Pitcher","PitcherID","PitcherLast","PitcherFirst","Class","ClassName","Throws",
+          "ABResult","Traj","HardContact","SprayX","SprayY"];
+  /* pitcherOf() walks the roster on every call and this loop runs per pitch, so
+     memoise it per export rather than per row. */
+  var rows = [];
+  var _pw = {};
+  function pw(i){ if(_pw[i] == null) _pw[i] = pitcherOf(i); return _pw[i]; }
+  G.lineup.slice(0, spots()).forEach(function(sp){
+   sp.men.forEach(function(b){
+    b.abs.forEach(function(a,ai){
+      if(!a.pitches.length && !a.result) return;
+      /* v24: an intentional walk with no pitch still happened. One row, pitch
+         columns blank, so the log does not drop a walk the pitcher lines count. */
+      if(!a.pitches.length && a.result === "IBB" && a.ibbP != null){
+        rows.push([(a.ibbInn == null ? "" : a.ibbInn),
+                b.num, (b.name||"Batter "+b.num), b.hand,
+                posNormal(b.pos), posName(b.pos), ai+1, "",
+                "", "", "", "", "", "", "", "", "", "",
+                pitcherName(a.ibbP), pw(a.ibbP).rid, pw(a.ibbP).last, pw(a.ibbP).first,
+                pw(a.ibbP).cls, classLabel(pw(a.ibbP).cls), pw(a.ibbP).throws,
+                "IBB", "", "", "", ""]);
+        return;
+      }
+      var tj=trajOf(a)||"", pt=a.spray||null;
+      a.pitches.forEach(function(p,pi){
+        var loc = (p.r<0) ? ["","",""] :
+          [p.r+1, p.c+1, inZone(p.r,p.c)?"Y":"N"];
+        var g = gradeCall(p);
+        var cal = (p.cr == null) ? ["","","","",""] : [
+          p.cr+1, p.cc+1, g ? g.toUpperCase() : "",
+          (p.r<0||g==="spot") ? "" : (p.r<p.cr ? "UP" : p.r>p.cr ? "DOWN" : ""),
+          (p.r<0||g==="spot") ? "" : (p.c<p.cc ? "IN"  : p.c>p.cc ? "OUT"  : "")];
+        rows.push([(p.inn == null ? "" : p.inn),
+                b.num, (b.name||"Batter "+b.num), b.hand,
+                posNormal(b.pos), posName(b.pos), ai+1, pi+1,
+                (p.k||"FB"), CALLNAME[p.t]||p.t, loc[0], loc[1], loc[2],
+                cal[0], cal[1], cal[2], cal[3], cal[4],
+                pitcherName(p.p), pw(p.p).rid, pw(p.p).last, pw(p.p).first,
+                pw(p.p).cls, classLabel(pw(p.p).cls), pw(p.p).throws,
+                (a.result||""), tj, (a.hard?"Y":""),
+                pt?Math.round(pt.x):"", pt?Math.round(pt.y):""]);
+      });
+    });
+   });
+  });
+  return {head:head, rows:rows};
+}
+/* v25: the INNING LOG as a table, for the same reason. */
+function inningLogTable(){
+  var head = ["Inning","Partial","Pitcher","PitcherID","PitcherLast","PitcherFirst",
+          "Pitches","Strikes","StrikePct","FirstPitches","FirstPitchStrikes",
+          "BattersFaced","Outs","FreeBases","K","Hits","Runs","Earned","Unearned"];
+  var rows = [];
+  var _pw = {};
+  function pw(i){ if(_pw[i] == null) _pw[i] = pitcherOf(i); return _pw[i]; }
+  var irows = inningRows();
+    irows.forEach(function(r){
+      var e = inningEntry(r.inn), ln = inningLine(r.inn, r.p);
+      /* An inning with no entry at all - the escape hatch, or a game charted on
+         an older build - exports blank rather than 0. A blank says "never
+         entered"; a zero says "entered as none", and the two must not look alike
+         in a spreadsheet anyone is going to total. */
+      var rr = (ln && ln.r != null) ? ln.r : null;
+      var er = (ln && ln.er != null) ? ln.er : null;
+      rows.push([r.inn,
+              (e && e.partial) ? "Y" : "",
+              pitcherName(r.p), pw(r.p).rid, pw(r.p).last, pw(r.p).first,
+              r.tot, r.str, (r.tot ? Math.round(r.str / r.tot * 100) : ""),
+              r.fp, r.fps,
+              r.bf, r.outs, r.fb, r.k, r.h,
+              (rr == null ? "" : rr),
+              (er == null ? "" : er),
+              (rr == null || er == null) ? "" : (rr - er)]);
+    });
+  return {head:head, rows:rows};
+}
 /* ---------- export ---------- */
 function exportText(){
   var L=[], s=gameStats();
@@ -3688,52 +3849,9 @@ function exportText(){
      on the roster - so it is for reading, not grouping, and it can change between
      releases. PitcherID is the join key, and it is what makes the game numbers
      comparable with the bullpen's. */
-  L.push(["Inning","Spot","Batter","Hand","Pos","PosName","AB","Pitch","Type","Call","ZoneRow","ZoneCol","InZone",
-          "CalledRow","CalledCol","Execution","MissV","MissH",
-          "Pitcher","PitcherID","PitcherLast","PitcherFirst","Class","ClassName","Throws",
-          "ABResult","Traj","HardContact","SprayX","SprayY"].join("\t"));
-  /* pitcherOf() walks the roster on every call and this loop runs per pitch, so
-     memoise it per export rather than per row. */
-  var _pw = {};
-  function pw(i){ if(_pw[i] == null) _pw[i] = pitcherOf(i); return _pw[i]; }
-  G.lineup.slice(0, spots()).forEach(function(sp){
-   sp.men.forEach(function(b){
-    b.abs.forEach(function(a,ai){
-      if(!a.pitches.length && !a.result) return;
-      /* v24: an intentional walk with no pitch still happened. One row, pitch
-         columns blank, so the log does not drop a walk the pitcher lines count. */
-      if(!a.pitches.length && a.result === "IBB" && a.ibbP != null){
-        L.push([(a.ibbInn == null ? "" : a.ibbInn),
-                b.num, (b.name||"Batter "+b.num), b.hand,
-                posNormal(b.pos), posName(b.pos), ai+1, "",
-                "", "", "", "", "", "", "", "", "", "",
-                pitcherName(a.ibbP), pw(a.ibbP).rid, pw(a.ibbP).last, pw(a.ibbP).first,
-                pw(a.ibbP).cls, classLabel(pw(a.ibbP).cls), pw(a.ibbP).throws,
-                "IBB", "", "", "", ""].join("\t"));
-        return;
-      }
-      var tj=trajOf(a)||"", pt=a.spray||null;
-      a.pitches.forEach(function(p,pi){
-        var loc = (p.r<0) ? ["","",""] :
-          [p.r+1, p.c+1, inZone(p.r,p.c)?"Y":"N"];
-        var g = gradeCall(p);
-        var cal = (p.cr == null) ? ["","","","",""] : [
-          p.cr+1, p.cc+1, g ? g.toUpperCase() : "",
-          (p.r<0||g==="spot") ? "" : (p.r<p.cr ? "UP" : p.r>p.cr ? "DOWN" : ""),
-          (p.r<0||g==="spot") ? "" : (p.c<p.cc ? "IN"  : p.c>p.cc ? "OUT"  : "")];
-        L.push([(p.inn == null ? "" : p.inn),
-                b.num, (b.name||"Batter "+b.num), b.hand,
-                posNormal(b.pos), posName(b.pos), ai+1, pi+1,
-                (p.k||"FB"), CALLNAME[p.t]||p.t, loc[0], loc[1], loc[2],
-                cal[0], cal[1], cal[2], cal[3], cal[4],
-                pitcherName(p.p), pw(p.p).rid, pw(p.p).last, pw(p.p).first,
-                pw(p.p).cls, classLabel(pw(p.p).cls), pw(p.p).throws,
-                (a.result||""), tj, (a.hard?"Y":""),
-                pt?Math.round(pt.x):"", pt?Math.round(pt.y):""].join("\t"));
-      });
-    });
-   });
-  });
+  var plog = pitchLogTable();
+  L.push(plog.head.join("\t"));
+  plog.rows.forEach(function(r){ L.push(r.join("\t")); });
   L.push("");
   L.push("  ZoneRow/ZoneCol are 1–5 from the catcher's view: row 1 is the top of the grid,");
   L.push("  column 1 is the left edge. Rows and columns 2–4 are the strike zone itself.");
@@ -3753,31 +3871,12 @@ function exportText(){
   L.push("");
   L.push("INNING LOG — tab separated, one row per inning × pitcher");
   L.push("");
-  L.push(["Inning","Partial","Pitcher","PitcherID","PitcherLast","PitcherFirst",
-          "Pitches","Strikes","StrikePct","FirstPitches","FirstPitchStrikes",
-          "BattersFaced","Outs","FreeBases","K","Hits","Runs","Earned","Unearned"].join("\t"));
-  var irows = inningRows();
-  if(!irows.length){
+  var ilog = inningLogTable();
+  L.push(ilog.head.join("\t"));
+  if(!ilog.rows.length){
     L.push("  (nothing charted)");
   } else {
-    irows.forEach(function(r){
-      var e = inningEntry(r.inn), ln = inningLine(r.inn, r.p);
-      /* An inning with no entry at all - the escape hatch, or a game charted on
-         an older build - exports blank rather than 0. A blank says "never
-         entered"; a zero says "entered as none", and the two must not look alike
-         in a spreadsheet anyone is going to total. */
-      var rr = (ln && ln.r != null) ? ln.r : null;
-      var er = (ln && ln.er != null) ? ln.er : null;
-      L.push([r.inn,
-              (e && e.partial) ? "Y" : "",
-              pitcherName(r.p), pw(r.p).rid, pw(r.p).last, pw(r.p).first,
-              r.tot, r.str, (r.tot ? Math.round(r.str / r.tot * 100) : ""),
-              r.fp, r.fps,
-              r.bf, r.outs, r.fb, r.k, r.h,
-              (rr == null ? "" : rr),
-              (er == null ? "" : er),
-              (rr == null || er == null) ? "" : (rr - er)].join("\t"));
-    });
+    ilog.rows.forEach(function(r){ L.push(r.join("\t")); });
     L.push("");
     L.push("  Outs are plate-appearance outs only, so IP from this block can read low if a");
     L.push("  runner was thrown out. Blank Runs/Earned means that inning was never entered.");
@@ -4108,9 +4207,125 @@ function build(){
    control with nothing to put back.
    To delete the feature outright rather than switch it off, remove this flag,
    gateWipe(), wipeEverything(), WIPE_KEYS, the #wipeBox markup and its listener. */
-var ALLOW_WIPE = true;
+var ALLOW_WIPE = false;
 
-var BUILD = "v24";
+var BUILD = "v25";
+
+/* ======================= DASHBOARD UPLOAD (v25) =======================
+   Same receiver as the Bullpen Chart and the Offense Chart. Blank UPLOAD_URL =
+   upload off, and the app says so on History. UPLOAD_KEY is NOT a secret - this
+   page is public; the receiver only writes and never hands data back.
+   Two tables go per game: the PITCH LOG and the INNING LOG, each row stamped with
+   the game's Level, Date and Opponent so the Sheet reads on its own.
+   Rules, same as the bullpen: never blocks, one quiet line on History, stamped
+   uploaded only on the receiver's ok, oldest first, stop at the first failure.
+   Never offered: practice games, and games filed before v25, which have no level
+   (and on a testing iPad are test games). */
+var UPLOAD_URL = "https://script.google.com/macros/s/AKfycbz91-L6Dag2o9HLpvh7ArD26HkotIPy1ZvYIc3OpcktvXfH7ppm8LD9Wu-MUYjBUMSnOw/exec";
+var UPLOAD_KEY = "a14e63e713f34b5f9a9a87daf137e4aef8c564e8";
+var UPLOAD_SCHEMA = 1;
+var UPLOAD_WAIT = 20000;
+var upBusy = false, upLast = "";
+function upQueue(){
+  return A.filter(function(g){ return g.rid && g.level && !g.practice && !g.up && chartedAnything(g) > 0; });
+}
+function upPayload(g){
+  var live = G, pl, il;
+  G = g;
+  try{ pl = pitchLogTable(); il = inningLogTable(); }
+  finally{ G = live; }
+  function stamp(t){
+    return { columns: ["Level","Date","Opponent"].concat(t.head),
+             rows: t.rows.map(function(r){ return [g.level || "", g.date || "", g.opp || ""].concat(r); }) };
+  }
+  var tables = { pitches: stamp(pl) };
+  if(il.rows.length) tables.innings = stamp(il);
+  return {
+    schema: UPLOAD_SCHEMA, key: UPLOAD_KEY, app: "game", build: g.build || BUILD,
+    record: { id: g.rid, mound: "", team: g.level || "", date: g.date || "", coach: "",
+              template: "", scriptId: "", filedAt: g.filed ? new Date(g.filed).toISOString() : "",
+              pitches: chartedAnything(g) },
+    tables: tables
+  };
+}
+function upPost(g){
+  return new Promise(function(resolve){
+    var done = false, ctl = null;
+    try{ ctl = new AbortController(); }catch(e){}
+    function finish(r){ if(done) return; done = true; clearTimeout(timer); resolve(r); }
+    var timer = setTimeout(function(){
+      try{ if(ctl) ctl.abort(); }catch(e){}
+      finish({ok:false, error:"timeout", retry:true});
+    }, UPLOAD_WAIT);
+    var body;
+    try{ body = JSON.stringify(upPayload(g)); }
+    catch(e){ finish({ok:false, error:"could not package this game", retry:false}); return; }
+    /* text/plain, no custom headers: a "simple" request, so no preflight -
+       Apps Script cannot answer one. */
+    var opts = {method:"POST", body:body, cache:"no-store", redirect:"follow",
+                headers:{"Content-Type":"text/plain;charset=utf-8"}};
+    if(ctl) opts.signal = ctl.signal;
+    fetch(UPLOAD_URL, opts).then(function(r){ return r.text(); }).then(function(txt){
+      var j = null;
+      try{ j = JSON.parse(txt); }catch(e){}
+      if(j && j.ok) finish({ok:true, status:j.status || "stored"});
+      else finish({ok:false, error:(j && j.error) || "the dashboard sent back something unexpected",
+                   retry: !(j && j.error) || !!(j && j.retry)});
+    })["catch"](function(){ finish({ok:false, error:"offline", retry:true}); });
+  });
+}
+function uploadPending(){
+  if(!UPLOAD_URL || upBusy){ drawUpload(); return; }
+  var q = upQueue();
+  if(!q.length || navigator.onLine === false){ drawUpload(); return; }
+  upBusy = true; drawUpload();
+  var i = 0;
+  (function next(){
+    if(i >= q.length){ upBusy = false; upLast = ""; renderFiled(); return; }
+    var g = q[i++];
+    upPost(g).then(function(r){
+      if(r.ok){ g.up = Date.now(); g.upErr = ""; }
+      else { g.upErr = r.error; }
+      saveArch(A);
+      if(r.ok){ next(); return; }
+      upBusy = false; upLast = r.retry ? "retry" : "refused:" + r.error;
+      renderFiled();
+    });
+  })();
+}
+/* [class, text] for the History pill. */
+function histPill(g){
+  if(!UPLOAD_URL) return g.sent ? ["", "sent"] : ["unsent", "not sent"];
+  if(g.practice) return ["prac", "practice"];
+  if(!g.rid || !g.level) return ["", "kept here"];
+  if(g.up) return ["up", "on dashboard"];
+  return ["unsent", "waiting"];
+}
+function drawUpload(){
+  var e = document.getElementById("upLine");
+  if(!e) return;
+  var n = UPLOAD_URL ? upQueue().length : 0;
+  var prac = A.filter(function(g){ return g.practice; }).length;
+  var pracNote = prac ? " " + prac + " practice game" + (prac===1?"":"s") + " stay" + (prac===1?"s":"") + " on this iPad." : "";
+  var t, c;
+  if(!UPLOAD_URL){
+    t = "Dashboard upload is not set up on this build. Export each game by hand."; c = "upline";
+  } else if(upBusy){
+    t = "Sending to the dashboard\u2026"; c = "upline";
+  } else if(!n){
+    if(!A.length){ e.hidden = true; return; }
+    t = "Every filed game is on the dashboard." + pracNote; c = "upline ok";
+  } else if(upLast.indexOf("refused:") === 0){
+    t = "The dashboard turned " + (n===1?"a game":"these games") + " away (" + upLast.slice(8) +
+        "). " + (n===1?"It is":"They are") + " safe here. Tell Jim, and export by hand meanwhile." + pracNote;
+    c = "upline bad";
+  } else {
+    t = n + " game" + (n===1?"":"s") + " waiting to upload. " + (n===1?"It goes":"They go") +
+        " the next time the app opens with signal." + pracNote;
+    c = "upline wait";
+  }
+  e.textContent = t; e.className = c; e.hidden = false;
+}
 function stampBuild(){
   var e = document.getElementById("buildStamp");
   if(!e) return;
@@ -4200,6 +4415,20 @@ loadRoster();          /* before the first render - the chips need the list */
 G = load() || emptyGame();
 build();
 render();
+document.getElementById("lvlRow").addEventListener("click", function(e){
+  var b = e.target.closest ? e.target.closest("[data-lvl]") : null;
+  if(b) setLevel(b.getAttribute("data-lvl"));
+});
+document.getElementById("fPractice").addEventListener("change", function(){
+  G.practice = this.checked; save(); drawPractice();
+});
+if(!G.level) showSetup(true); else { drawLevel(); drawPractice(); }
+drawUpload();
+setTimeout(uploadPending, 600);
+window.addEventListener("online", function(){ uploadPending(); });
+document.addEventListener("visibilitychange", function(){
+  if(document.visibilityState === "visible") uploadPending();
+});
 stampBuild();
 initOffline();
 document.addEventListener("pointerdown", function once(){

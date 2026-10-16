@@ -205,6 +205,11 @@ const bannerFull = sel => `(function(){ var b=document.getElementById(${JSON.str
     await ev(`(function(){ var s=document.querySelector('#pitchers select[data-pick]');
       s.value="rel0001"; s.dispatchEvent(new Event("change",{bubbles:true})); })()`);
     await pg.waitForTimeout(300);
+    /* v25: charting is locked until the game's level is picked - pick it the way a
+       charter would, then return to charting. */
+    await ev(`(function(){ document.querySelector('[data-lvl="Varsity"]').click();
+      var s=document.getElementById("v-setup"); if(s && !s.hidden) document.getElementById("btnSetup").click(); })()`);
+    await pg.waitForTimeout(200);
     await ev('(function(){ var z=document.querySelectorAll("#zone button"); z[4].click(); z[12].click(); })()');
     await pg.waitForTimeout(400);
     const gsaved = await ev('localStorage.getItem("dugout-pitch-chart-v2")');

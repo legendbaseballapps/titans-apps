@@ -25,12 +25,33 @@ function check(name, got, want) {
   console.log((ok ? "  ok   " : "  MISS ") + name.padEnd(58) + got + (ok ? "" : "   (expected " + want + ")"));
   if (!ok) fails++;
 }
+/* v45 / v25: both game apps lock charting until a level is picked for the game.
+   Pick one the way a charter would: tap a level on Setup, then go to charting. */
+async function pickLevel(pg, path) {
+  if (!/\/(offense|game)\//.test(path)) return;
+  await pg.evaluate(() => {
+    const b = document.querySelector('[data-lvl="Varsity"]');
+    if (b && !b.classList.contains("on")) b.click();
+  });
+  await pg.waitForTimeout(150);
+  await pg.evaluate((isGame) => {
+    if (isGame) {
+      const s = document.getElementById("v-setup"), btn = document.getElementById("btnSetup");
+      if (s && !s.hidden && btn) btn.click();
+    } else {
+      const t = document.getElementById("tab-chart"); if (t) t.click();
+    }
+  }, /\/game\//.test(path));
+  await pg.waitForTimeout(150);
+}
+
 async function open(b, path) {
   const ctx = await b.newContext({ viewport: { width: 1280, height: 1000 }, serviceWorkers: "block" });
   const pg = await ctx.newPage();
   pg.errs = []; pg.on("pageerror", e => pg.errs.push(String(e)));
   await pg.goto(BASE + path, { waitUntil: "load" });
   await pg.waitForTimeout(900);
+  await pickLevel(pg, path);
   return pg;
 }
 
@@ -201,6 +222,7 @@ async function game(b) {
     localStorage.setItem("dugout-pitch-chart-v2", JSON.stringify(G));
   });
   await pg.reload({ waitUntil: "load" }); await pg.waitForTimeout(800);
+  await pickLevel(pg, "/game/index.html");
   const liveOld = (await st()).live;
   await tap("#nextBtn");
   check("an old pitchless result still cannot go to Next Batter", (await st()).live, liveOld);
