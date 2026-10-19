@@ -258,8 +258,8 @@ async function chartSession(pg, n, opts) {
 }
 async function fileIt(pg) {
   await pg.evaluate(() => {
-    document.getElementById("tab-setup").click();
-    document.getElementById("btnFinish").click();
+    /* v34: Finish & file is the header button, on any tab */
+    document.getElementById("hdrFinish").click();
     document.querySelector(".askwrap [data-yes]").click();
   });
 }
@@ -306,7 +306,8 @@ async function part2() {
     check("a formula-shaped coach name stayed text", pit.records()[0].Coach, "=cmd|' /C calc'!A0");
     check("no cell became a formula or a date", book.flags.formula + book.flags.date, 0);
     const rec = book.getSheetByName("Records").records()[0];
-    check("Records names the app, build and mound", rec.App + " " + rec.Build + " " + rec.Mound, "bullpen v32 Mound 2");
+    const BP_BUILD = (fs.readFileSync(path.join(ROOT, "bullpen/index.html"), "utf8").match(/var BUILD = "(v\d+)"/) || [])[1];
+    check("Records names the app, build and mound", rec.App + " " + rec.Build + " " + rec.Mound, "bullpen " + BP_BUILD + " Mound 2");
     await pg.evaluate(() => document.getElementById("tab-hist").click());
     check("History pill says it is on the dashboard", await pg.evaluate(() => document.querySelector(".hrow .pill").textContent), "on dashboard");
     check("the status line says all done", (await line(pg)).split(" | ")[1], "Every filed session is on the dashboard.");

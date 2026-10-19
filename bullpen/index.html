@@ -122,6 +122,10 @@ button{cursor:pointer}
 .notice strong{font-family:"Avenir Next Condensed","HelveticaNeue-CondensedBold","Arial Narrow",-apple-system,system-ui,sans-serif;text-transform:uppercase;letter-spacing:.05em}
 
 .panel{background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow)}
+/* Ready to chart (v34): green edge once Setup has what charting needs. */
+.panel.ready{border-color:var(--good);box-shadow:inset 6px 0 0 var(--good), var(--shadow)}
+.readymsg{flex:1 1 300px;margin:0;align-self:center}
+.readymsg.ok b{color:var(--good)}
 .panel > h2{
   margin:0;padding:11px 16px;border-bottom:1px solid var(--line);
   font-size:15px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-2);
@@ -237,10 +241,14 @@ table.grid select,table.grid input[type=text],table.grid input[type=number]{
   color:var(--ink-2);padding:2px 2px 4px}
 .striplbl span{font-weight:600;letter-spacing:.04em;text-transform:none;opacity:.8}
 .strip{display:flex;gap:8px;overflow-x:auto;padding:4px 2px 8px;-webkit-overflow-scrolling:touch}
-/* A finished scripted pitcher is dimmed, so the one with work left is the one that
-   draws the eye. */
-.pcard.done{opacity:.6}
-.pcard.done .nm{text-decoration:line-through;text-decoration-thickness:1px}
+/* A finished scripted pitcher gets a green check and a quieter card. It used to be
+   dimmed and struck through, which read as "inactive" or "cut" (Jim, Oct 16). No mark
+   for an arm who hasn't gone yet; "0 thrown" already says it. The check is a ::before
+   so it never lands in the name's text. */
+.pcard.done{background:var(--card-2)}
+.pcard.done .nm::before{content:"\2713";display:inline-block;width:18px;height:18px;line-height:18px;
+  margin-right:6px;border-radius:50%;background:var(--good);color:#fff;font-size:12px;
+  text-align:center;vertical-align:2px}
 .pcard{
   flex:0 0 auto;min-width:132px;text-align:left;border:1px solid var(--line);
   background:var(--card);border-radius:10px;padding:8px 12px;
@@ -433,7 +441,7 @@ footer{max-width:1340px;margin:0 auto;padding:0 16px 30px;color:var(--ink-2);fon
     <button id="tab-hist" role="tab" aria-selected="false" aria-controls="v-hist">History</button>
   </div>
   <a class="barlink" href="./guide.html" target="_blank" rel="noopener">Guide</a>
-  <button class="btn pri" id="expNow" style="margin-left:8px">Export now</button>
+  <button class="btn pri" id="hdrFinish" style="margin-left:8px;display:none">Finish &amp; file</button>
 </div>
 
 <div class="wrap">
@@ -453,13 +461,6 @@ footer{max-width:1340px;margin:0 auto;padding:0 16px 30px;color:var(--ink-2);fon
   <div class="notice" id="practiceBar" hidden>
     <strong>Practice session</strong>
     <span>Charted and filed on this iPad, <b>never sent to the dashboard</b>. Turn it off on the Setup tab for a real pen.</span>
-  </div>
-
-  <div class="notice" id="finishBar" hidden>
-    <strong>Done for today?</strong>
-    <span>Filing moves this session to History and starts a clean one with the same
-      script and the same names. Nothing is deleted.</span>
-    <button class="btn sm pri" id="btnFinish">Finish &amp; file this session</button>
   </div>
 
   <!-- ============ SETUP ============ -->
@@ -580,6 +581,16 @@ footer{max-width:1340px;margin:0 auto;padding:0 16px 30px;color:var(--ink-2);fon
           <p class="tiny" style="margin:12px 0 0">Pick each arm off the roster above. Class and throwing hand come with him, so there is nothing to retype.
             Stretch only rewrites every wind-up call to stretch for that pitcher. <b>Freeform</b> drops the script for him &mdash;
             you call the pitch and the spot on the mound, then tap where it went. <b>Live ABs</b> adds an at-bat around it.</p>
+        </div>
+      </div>
+
+      <div class="panel" id="readyPanel">
+        <h2>Ready to chart</h2>
+        <div class="body">
+          <div class="row">
+            <p class="readymsg" id="readyMsg"></p>
+            <button class="btn pri" id="btnStart" style="flex:0 0 auto">Start charting &rarr;</button>
+          </div>
         </div>
       </div>
 
@@ -1132,6 +1143,47 @@ if(typeof S.practice !== "boolean") S.practice = false;
 
 function save(){
   try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){}
+  /* Every change saves, so this is the one place the header button and the Ready
+     box can never go stale. The old Finish bar was refreshed only when Setup
+     redrew, which in practice meant only after going back to Setup (Jim, Oct 19). */
+  try{ drawHdrFinish(); drawReady(); }catch(e){}
+}
+/* Finish & file lives in the header from v34, on every tab, once a pitch is charted.
+   It still asks before it files, and filing never deletes anything. */
+function drawHdrFinish(){
+  var b = document.getElementById("hdrFinish"); if(!b) return;
+  b.style.display = pitchCount(S) ? "" : "none";
+}
+/* Setup ends with a Ready to chart box: what is set, or what is missing, and a
+   Start charting button that only works once charting can actually start. */
+function namedPitchers(){
+  return S.pitchers.filter(function(p){ return (pname(p)||"").trim(); });
+}
+function readyState(){
+  var named = namedPitchers();
+  if(!named.length) return {ok:false, msg:"Pick at least 1 pitcher above."};
+  var scripted = named.filter(function(p){ return !ppick(p); });
+  if(scripted.length && !S.script.length){
+    var nm = scripted.map(function(p){ return pname(p); });
+    var list = nm.length > 2 ? nm.slice(0,2).join(", ") + " and " + (nm.length-2) + " more" : nm.join(" and ");
+    return {ok:false, msg:"Load a template, or set " + list + " to Freeform or Live ABs."};
+  }
+  var parts = [named.length + " pitcher" + (named.length===1?"":"s")];
+  if(scripted.length) parts.push((S.tpl || "Custom script") + " \u00b7 " + S.script.length + " pitches");
+  var nf = named.filter(function(p){ return pmode(p)==="free"; }).length;
+  var nl = named.filter(function(p){ return plive(p); }).length;
+  if(nf) parts.push(nf + " freeform");
+  if(nl) parts.push(nl + " live ABs");
+  if(S.practice) parts.push("practice session");
+  return {ok:true, msg:parts.join(" \u00b7 ")};
+}
+function drawReady(){
+  var m = document.getElementById("readyMsg"); if(!m) return;
+  var r = readyState();
+  m.className = "readymsg" + (r.ok ? " ok" : "");
+  m.innerHTML = (r.ok ? "<b>\u2713 Ready.</b> " : "<b>Not yet.</b> ") + esc(r.msg);
+  el("readyPanel").className = "panel" + (r.ok ? " ready" : "");
+  el("btnStart").disabled = !r.ok;
 }
 function byId(id){ for(var i=0;i<S.pitchers.length;i++) if(S.pitchers[i].id===id) return S.pitchers[i]; return null; }
 function cur(){ return byId(S.cur); }
@@ -1158,7 +1210,7 @@ function cur(){ return byId(S.cur); }
    gateWipe(), wipeEverything(), WIPE_KEYS, the #wipeBox markup and its listener. */
 var ALLOW_WIPE = false;
 
-var BUILD = "v32";
+var BUILD = "v34";
 
 /* ======================= DASHBOARD UPLOAD =======================
    Where a filed session goes: the Titans Upload Receiver, an Apps Script web app
@@ -1386,8 +1438,7 @@ function drawSetup(){
   el("s-pad").value = S.pad; el("s-date").value = S.date; el("s-coach").value = S.coach;
   el("s-practice").checked = !!S.practice;
   drawPractice();
-  /* Only offer to file once something has actually been charted. */
-  el("finishBar").hidden = !pitchCount(S);
+  drawReady();
 
   var tb = el("scriptTbl").querySelector("tbody"), h="";
   var lk = S.locked ? " disabled" : "";
@@ -1696,7 +1747,8 @@ el("codeCopyBtn").onclick = function(){
   } else codeNote(done ? "Copied." : "Select it and copy by hand.");
 };
 
-el("btnFinish").onclick = finishAndFile;
+el("hdrFinish").onclick = finishAndFile;
+el("btnStart").onclick = function(){ if(readyState().ok) show("chart"); };
 
 /* Reset is the only control in the app that destroys data outright, so the
    dialog has to say exactly what goes and point at the non-destructive way out.
@@ -1840,7 +1892,7 @@ function drawStrip(){
   for(var i=0;i<S.pitchers.length;i++){
     var p = S.pitchers[i], o = stats(p);
     h += '<button class="pcard'+(pitcherDone(p)?" done":"")+'" data-id="'+p.id+
-      '" aria-pressed="'+(p.id===S.cur)+'">'+
+      '" aria-pressed="'+(p.id===S.cur)+'"'+(pitcherDone(p)?' title="Finished his pen"':'')+'>'+
       '<span class="nm">'+esc(pname(p) || ("Pitcher "+(i+1)))+'</span>'+
       '<span class="mt">'+o.n+' thrown'+(o.graded?' &middot; '+pct(o.spot,o.graded)+'% spot':'')+
       (pmode(p)==="free"?' &middot; freeform':'')+(plive(p)?' &middot; live ABs':'')+
@@ -1866,6 +1918,20 @@ function drawCall(){
     var nid = nextUpId(), nxt = null;
     if(nid && nid !== S.cur){
       for(var z=0;z<S.pitchers.length;z++) if(S.pitchers[z].id===nid) nxt = S.pitchers[z];
+    }
+    /* v34: when every named arm has thrown the whole script, the card says so and
+       offers to file - the natural end of a pen, where the charter's eyes already are. */
+    var named = namedPitchers();
+    var allDone = !none && !nxt && named.length && named.every(function(q){ return pitcherDone(q); });
+    if(allDone){
+      el("call").innerHTML = '<div><div class="idx">'+esc(S.pad||"This mound")+'</div>'+
+        '<div class="big">Everyone\u2019s done</div>'+
+        '<div class="spotname">'+pitchCount(S)+' pitches charted. '+(S.practice
+          ? 'Practice session: filing keeps it on this iPad.'
+          : 'Filing sends it to the dashboard.')+' Need more? Add an extra pitch below.</div>'+
+        '<button class="btn pri" id="callFinish" style="margin-top:10px">Finish &amp; file this session</button></div>';
+      el("callFinish").onclick = finishAndFile;
+      return;
     }
     el("call").innerHTML = '<div><div class="idx">'+esc(pname(p)||"This pitcher")+'</div>'+
       '<div class="big">'+(none ? "No script" : "Script complete")+'</div>'+
@@ -2551,7 +2617,6 @@ function doExport(kind){
   offlineSave(name, data, kind==="csv" ? "text/csv" : "text/plain");
 }
 el("expCsv").onclick = function(){ doExport("csv"); };
-el("expNow").onclick = function(){ show("report"); doExport("csv"); };
 el("expTxt").onclick = function(){ doExport("txt"); };
 
 
@@ -2678,7 +2743,7 @@ function storageCheck(){
   if(!works){
     bar.className = "notice bad";
     bar.innerHTML = '<strong>This iPad is not saving anything</strong>'+
-      '<span>Nothing is being stored between screens. Tap <b>Export now</b> after every pitcher, '+
+      '<span>Nothing is being stored between screens. Use <b>Export</b> on the Report tab after every pitcher, '+
       'and do not close this page mid-session.</span>';
     return;
   }
@@ -2731,6 +2796,7 @@ stampBuild();
 initOffline();
 storageCheck();
 drawSetup();
+drawHdrFinish();
 show("setup");
 drawUpload();
 /* After the first paint, so a slow receiver never delays the app opening. */

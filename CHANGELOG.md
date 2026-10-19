@@ -17,9 +17,9 @@ old one — tap the amber stamp to fix it.
 
 | App | Source & folder | Live on GitHub Pages |
 |---|---|---|
-| **Bullpen Chart** | **v32** | v29 — **v30, v31 and v32 waiting to be pushed** (receiver deployed Oct 15, URL and key in; **push before Jan 8**) |
-| **Pitch Chart** (game) | **v25** | **v20** — **v21 to v25 waiting to be pushed** |
-| **Offense Chart** | **v45** | v40 — **v41 to v45 waiting to be pushed** |
+| **Bullpen Chart** | **v34** | v32 (pushed Oct 15; receiver deployed, URL and key in). **v33 and v34 waiting to be pushed.** Real-iPad upload test **passed Oct 19** (practice pen stayed off the Sheet, real pen landed) |
+| **Pitch Chart** (game) | **v26** | **v20** — **v21 to v26 waiting to be pushed** |
+| **Offense Chart** | **v46** | v40 — **v41 to v46 waiting to be pushed** |
 
 **The site moved Oct 14, 2026** to the program-owned account: **legendbaseballapps.github.io/titans-apps** (repo transferred from vaughnzj, so the live files, including the real `roster.js`, moved as they were). Every iPad installs from the new link; History saved under the old address does not carry over. The Coach's Guides in the pending builds (bullpen v31, game v23, offense v42) carry the new address, so pushing those builds is what puts it on the iPads.
 
@@ -43,6 +43,45 @@ is only for app code.
 ---
 
 ## Bullpen Chart
+
+### v34 · Oct 19, 2026
+**Headline:** **Finish & file** moves to the header, a **Ready to chart** box ends Setup, and the Chart tab
+says **Everyone's done** when the whole mound has thrown the script.
+
+- **Why:** Jim, after his first real-iPad pens (Oct 19): *"When I finish charting I'm unlikely to go back to
+  the Setup page to finish and file so maybe there is a better location for that,"* and the header's
+  Export button *"I don't think we are using that."* Since the upload, filing is what sends a session;
+  exporting is a backup.
+- **Header:** *Export now* is gone. **Finish & file** (orange) takes its place on every tab once a pitch is
+  charted, and goes away after filing. It still asks before it files.
+- **Fixed on the way:** the old *Done for today?* bar was meant to show on every tab, but it was only
+  refreshed when Setup redrew, so in practice it appeared only after going back to Setup. Removed; the
+  header button is refreshed on every save, so it cannot go stale.
+- **Ready to chart** (Jim: *"there is nothing that says that it is ready to chart"*), at the bottom of
+  Setup. Ready = at least 1 named pitcher, and a script loaded unless every pitcher is Freeform or Live ABs.
+  Ready shows a green edge, a check and what is set (*1 pitcher · Fastball Command · 25 pitches*) and a
+  **Start charting** button; not ready says what is missing and the button waits.
+- **Everyone's done:** when every named pitcher has thrown the whole script, the call card says so, with a
+  Finish & file button. Freeform and live pens have no end, so they use the header button.
+- Export stays on the Report tab and beside every session in History.
+- **Tests:** new `tools/header-finish.js` (all 3 apps, 42 checks), each new guard proved by breaking it.
+  `tools/receiver/upload.js` now files through the header button.
+
+### v33 · Oct 16, 2026
+**Headline:** A pitcher who has finished his pen gets a **green check**, not a line through his name.
+
+- **Why:** Jim, looking at the deck screenshot: the struck-through names read as *inactive*. They were
+  finished arms. His call: *"How about a checkmark next to them when they are done and a dash (or
+  nothing) if they haven't gone yet?"*
+- **Done:** a green check before the name and a slightly greyer card. No strike-through, no fade, so it
+  reads as finished rather than switched off. Still tappable to look back at his pen.
+- **Not gone yet / in progress:** no mark. The card already says how many he has thrown, and a dash on
+  every waiting arm was noise.
+- The check is drawn by CSS (`::before`), so the name's text is unchanged for the tests and anything
+  that reads it. The card also gets a *Finished his pen* tooltip.
+- Same rule for who counts as finished as before (`pitcherDone`): every pitch in the script thrown.
+  Freeform pens have no script, so nobody gets a check there.
+- Upload, practice mode and everything else unchanged from v32.
 
 ### v32 · Oct 15, 2026
 **Headline:** Filed pens go to the coaching dashboard on their own, a **Practice session** switch
@@ -339,6 +378,19 @@ execution grading.
 ---
 
 ## Pitch Chart (game)
+
+### v26 · Oct 19, 2026
+**Headline:** **Finish & file** moves into the header; **Export** leaves it.
+
+- **Why:** Jim, after his first real-iPad pens (Oct 19): *"When I finish charting I'm unlikely to go back to
+  the Setup page to finish and file so maybe there is a better location for that,"* and the header's
+  Export button *"I don't think we are using that."* Since the upload, filing is what sends a session;
+  exporting is a backup.
+- The header's Export button is replaced by **Finish & file** (orange), shown on every screen once a pitch
+  is charted. It runs the same flow as the Game tab button: the open-inning prompt, then the confirm.
+- Export stays on the **Game** tab (*Export game*) and beside every filed game in History.
+- Same control and wording as the Bullpen Chart v34 and Offense Chart v46.
+- **Tests:** the suites that read the export now open it from the Game tab; `tools/header-finish.js`.
 
 ### v25 · Oct 15, 2026
 **Headline:** Every game needs its **level** before charting, and filed games go to the coaching
@@ -678,6 +730,20 @@ Not logged at the time.
 ---
 
 ## Offense Chart
+
+### v46 · Oct 19, 2026
+**Headline:** **Finish & file** moves into the header; **Export** moves to Setup.
+
+- **Why:** Jim, after his first real-iPad pens (Oct 19): *"When I finish charting I'm unlikely to go back to
+  the Setup page to finish and file so maybe there is a better location for that,"* and the header's
+  Export button *"I don't think we are using that."* Since the upload, filing is what sends a session;
+  exporting is a backup.
+- The header's Export button is replaced by **Finish & file** (orange), on every tab once a pitch is
+  charted. Same confirm as the Setup button, which stays.
+- **Export this game (.csv)** now sits on Setup beside Finish & file (same `btnExport` id), and every
+  filed game keeps its own Export in History.
+- Same control and wording as the Bullpen Chart v34 and Pitch Chart v26.
+- **Tests:** `tools/header-finish.js`.
 
 ### v45 · Oct 15, 2026
 **Headline:** Every game needs its **level** before charting, and filed games go to the coaching

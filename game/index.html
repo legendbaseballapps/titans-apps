@@ -119,6 +119,8 @@ input{font:inherit;color:inherit}
   font-family:var(--cond);font-weight:600;font-size:13px;letter-spacing:.07em;text-transform:uppercase;white-space:nowrap}
 .topbtn.off{background:rgba(255,255,255,.28)}
 a.topbtn{display:inline-block;text-decoration:none;border:0}
+/* v26: Finish & file in the header, the one action every game ends with. */
+.topbtn.go{background:var(--accent);color:var(--accent-ink)}
 .pchip .kill{padding:0 6px;font-size:16px;line-height:1;opacity:.65;color:inherit}
 .addp{padding:5px 9px;border-radius:var(--r);background:rgba(255,255,255,.07);font-family:var(--cond);font-weight:600;font-size:12px;letter-spacing:.08em;text-transform:uppercase;opacity:.75}
 
@@ -699,7 +701,7 @@ a.topbtn{display:inline-block;text-decoration:none;border:0}
     <label class="gf"><span class="lbl">Opponent</span><input id="fOpp" placeholder="—"></label>
     <button class="topbtn" id="btnSetup" title="Enter the opposing lineup before the game">Setup</button>
     <button class="topbtn" id="btnLeft" title="Show or hide the lineup column">◀ Lineup</button>
-    <button class="topbtn" id="btnExport2">Export</button>
+    <button class="topbtn go" id="hdrFinish" style="display:none">Finish &amp; file</button>
     <a class="topbtn" href="./guide.html" target="_blank" rel="noopener">Guide</a>
   </div>
   <div class="pitchers" id="pitchers"></div>
@@ -1634,6 +1636,14 @@ function save(){
      would write demo data over a real saved game. */
   if(G.sample) return;
   try{ localStorage.setItem(KEY, JSON.stringify(G)); }catch(e){}
+  try{ drawHdrFinish(); }catch(e){}
+}
+/* v26: Finish & file sits in the header once anything is charted, on every screen.
+   It runs the same flow as the Game tab's button: the open-inning prompt, then the
+   confirm. Export moved off the header; it stays on the Game tab and in History. */
+function drawHdrFinish(){
+  var b = document.getElementById("hdrFinish"); if(!b) return;
+  b.style.display = chartedAnything(G) ? "" : "none";
 }
 function validMan(b){
   return b && Array.isArray(b.abs) && b.abs.length &&
@@ -4161,7 +4171,8 @@ function build(){
   document.getElementById("btnLeft").addEventListener("click",function(){
     G.hideLeft = !G.hideLeft; render(); save();
   });
-  document.getElementById("btnExport2").addEventListener("click",function(){ openExport(); });
+  document.getElementById("hdrFinish").addEventListener("click", finishAndFile);
+  drawHdrFinish();
   document.getElementById("fNotes2").addEventListener("input",function(){ G.notes=this.value; save(); });
 
   gateWipe(function(){ document.getElementById("btnWipe").addEventListener("click", wipeEverything); });
@@ -4209,7 +4220,7 @@ function build(){
    gateWipe(), wipeEverything(), WIPE_KEYS, the #wipeBox markup and its listener. */
 var ALLOW_WIPE = false;
 
-var BUILD = "v25";
+var BUILD = "v26";
 
 /* ======================= DASHBOARD UPLOAD (v25) =======================
    Same receiver as the Bullpen Chart and the Offense Chart. Blank UPLOAD_URL =

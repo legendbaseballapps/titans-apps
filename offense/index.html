@@ -88,6 +88,8 @@ button{cursor:pointer;border:1px solid var(--line);background:var(--surface);bor
   border:0;font-family:var(--cond);font-weight:600;font-size:12px;letter-spacing:.06em;
   text-transform:uppercase;white-space:nowrap}
 a.topbtn{display:inline-block;text-decoration:none}
+/* v46: Finish & file in the header, the one action every game ends with. */
+.topbtn.go{background:var(--accent);color:var(--accent-ink)}
 .topbar2{display:flex;gap:6px;align-items:center;padding:8px 14px 8px 0}
 
 /* ---------- shared ---------- */
@@ -483,7 +485,7 @@ footer{max-width:1500px;margin:0 auto;padding:0 16px 28px;color:var(--text-3);fo
   </div>
   <div class="topbar2">
     <a class="topbtn" href="./guide.html" target="_blank" rel="noopener">Guide</a>
-    <button class="topbtn" id="btnExport">Export</button>
+    <button class="topbtn go" id="hdrFinish" style="display:none">Finish &amp; file</button>
   </div>
 </div>
 
@@ -585,6 +587,7 @@ footer{max-width:1500px;margin:0 auto;padding:0 16px 28px;color:var(--text-3);fo
               when you file.</span></label>
             <div class="row">
               <button class="btn dk" id="btnArchive">Finish &amp; file this game</button>
+              <button class="btn" id="btnExport">Export this game (.csv)</button>
             </div>
             <div class="read" id="setupNote">Filing a game moves it to <b>History</b> and starts a
               clean one. Nothing is ever overwritten &mdash; an unexported game stays recoverable.</div>
@@ -753,7 +756,7 @@ footer{max-width:1500px;margin:0 auto;padding:0 16px 28px;color:var(--text-3);fo
    gateWipe(), wipeEverything(), WIPE_KEYS, the #wipeBox markup and its listener. */
 var ALLOW_WIPE = false;
 
-var BUILD = "v45";
+var BUILD = "v46";
 
 /* ======================= DASHBOARD UPLOAD (v45) =======================
    Same receiver as the Bullpen Chart: an Apps Script web app on the program
@@ -963,7 +966,15 @@ function newPA(spot, pIdx){
 
 /* ===================== persistence ===================== */
 function save(){ if(O && O.sample) return;
-  try{ localStorage.setItem(KEY, JSON.stringify(O)); }catch(e){} }
+  try{ localStorage.setItem(KEY, JSON.stringify(O)); }catch(e){}
+  try{ drawHdrFinish(); }catch(e){} }
+/* v46: Finish & file sits in the header once anything is charted, on every tab.
+   Same confirm as the Setup button. Export moved off the header to Setup, beside
+   Finish & file, and every filed game still has its own Export in History. */
+function drawHdrFinish(){
+  var b = document.getElementById("hdrFinish"); if(!b) return;
+  b.style.display = (O && countPitches()) ? "" : "none";
+}
 /* Kept as a no-op on purpose. Nothing edits the roster here any more, and a
    function that writes a released roster into local storage is exactly how a stale
    copy would come back to life later. If something still calls this, it is a bug
@@ -3004,6 +3015,8 @@ function render(){
 function wire(){
   TABS.forEach(function(t){ el("tab-"+t).onclick = function(){ showTab(t); }; });
   el("btnExport").onclick = exportNow;
+  el("hdrFinish").onclick = function(){ askFile(function(){ archiveGame(); }); };
+  drawHdrFinish();
   el("btnUndo").onclick   = undoPitch;
   el("hardBtn").onclick   = toggleHard;
   el("btnNextPA").onclick = nextPA;

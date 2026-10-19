@@ -161,7 +161,7 @@ async function game(b) {
              spray: !!(a && a.spray), ibb: a ? a.ibbP + "/" + a.ibbInn : "" };
   });
   const exportTxt = async () => {
-    await tap("#btnExport2");
+    await pg.evaluate(() => document.getElementById("btnExport").click());
     const t = await pg.evaluate(() => document.getElementById("exportText").value);
     await pg.evaluate(() => document.getElementById("exportPanel").classList.add("hidden"));
     return t;

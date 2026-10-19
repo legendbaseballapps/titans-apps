@@ -226,7 +226,7 @@ async function migration(b) {
       '(function(){ var r=document.querySelectorAll("#innSummary tbody tr")[0];'+
       ' return r ? r.cells[2].textContent : "no summary row"; })()', "2"],
     ["the export leaves Inning blank",
-      '(function(){ var b=document.getElementById("btnExport2"); if(b) b.click();'+
+      '(function(){ var b=document.getElementById("btnExport"); if(b) b.click();'+
       ' var t=document.getElementById("exportText"); if(!t) return "no textarea";'+
       ' var L=(t.value||"").split(/\\r?\\n/);'+
       ' var hi=-1; for(var i=0;i<L.length;i++) if(/^Inning\\tSpot\\t/.test(L[i])){ hi=i; break; }'+
@@ -512,7 +512,7 @@ async function wipeOff(b) {
     /* exportText() is inside the IIFE too. Open the export panel and read the
        textarea it fills - the same trick the bullpen suite uses. */
        '(function(){'+
-       ' var b=document.getElementById("btnExport2"); if(b) b.click();'+
+       ' var b=document.getElementById("btnExport"); if(b) b.click();'+
        ' var t=document.getElementById("exportText");'+
        ' if(!t) return "no export textarea";'+
        /* The pitch-log header gained Inning in front of Spot in v19, so this used
@@ -1225,7 +1225,7 @@ async function wipeOff(b) {
        is the wait, and pg.evaluate resolves the promise for us. */
     function after(fn){ return new Promise(function(res){ setTimeout(function(){ res(fn()); }, 60); }); }
     function exported(){
-      var b = q("#btnExport2"); if(b) b.click();
+      var b = q("#btnExport"); if(b) b.click();
       var t = q("#exportText");
       return t ? (t.value || "") : "";
     }
@@ -1622,7 +1622,7 @@ async function wipeOff(b) {
     function pitch(){ q('#zone .cell:nth-child(13)').click(); }
     function res(k){ var b = q('#results button[data-res="' + k + '"]'); if(b) b.click(); }
     function logRow(){
-      var b = q("#btnExport2"); if(b) b.click();
+      var b = q("#btnExport"); if(b) b.click();
       var t = q("#exportText"), L = (t ? (t.value||"") : "").split(/\\r?\\n/);
       for(var i=0;i<L.length;i++){
         if(L[i].indexOf("PITCH LOG") !== 0) continue;

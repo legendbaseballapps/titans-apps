@@ -235,7 +235,7 @@ const bannerFull = sel => `(function(){ var b=document.getElementById(${JSON.str
     /* And the export still carries the ID, so the session joins up with the bullpen
        work he did while he WAS on the roster. */
     is("  the export still has his ID", await ev(
-       '(function(){ var b=document.getElementById("btnExport2"); if(b) b.click();'+
+       '(function(){ var b=document.getElementById("btnExport"); if(b) b.click();'+
        ' var t=document.getElementById("exportText");'+
        ' return (t && (t.value||"").indexOf("rel0001")>=0) ? "yes" : "GONE"; })()'), "yes");
     is("  no page errors", gerrs.join("|"), "");
