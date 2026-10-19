@@ -30,11 +30,11 @@
    - It never touches any other rows, and never touches Coaches or Config.
    - Text is stored as text: nothing an app sends can become a formula. */
 
-var VERSION = "receiver 1 (Oct 2026)";
+var VERSION = "receiver 2 (Oct 2026)";
 
 /* Which tables each app may send, and the tab each one lands on. */
 var APPS = {
-  bullpen: { pitches: "Bullpen_Pitches" },
+  bullpen: { pitches: "Bullpen_Pitches", notes: "Bullpen_Notes" },   /* notes: receiver 2, bullpen v36 */
   game:    { pitches: "Game_Pitches", innings: "Game_Innings" },
   offense: { pitches: "Offense_Pitches" }
 };
@@ -116,8 +116,9 @@ function doPost(e) {
     var tabs = APPS[p.app], total = 0;
     var keys = Object.keys(p.tables);
     for (var i = 0; i < keys.length; i++) {
-      var sh = ss.getSheetByName(tabs[keys[i]]);
-      if (!sh) return fail_(p, "missing tab " + tabs[keys[i]] + " - run setup()");
+      /* receiver 2: a tab added in a later version (Bullpen_Notes) is made on first
+         use, so a Sheet set up by an earlier receiver needs no second setup() run. */
+      var sh = ss.getSheetByName(tabs[keys[i]]) || sheet_(ss, tabs[keys[i]], ["RecordID"]);
       clearOrphans_(sh, rid);
       total += write_(sh, rid, p.tables[keys[i]]);
     }

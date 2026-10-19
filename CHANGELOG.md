@@ -17,7 +17,7 @@ old one — tap the amber stamp to fix it.
 
 | App | Source & folder | Live on GitHub Pages |
 |---|---|---|
-| **Bullpen Chart** | **v35** | **v34** (pushed Oct 19; receiver deployed Oct 15, URL and key in). **v35 waiting to be pushed.** Real-iPad upload test **passed Oct 19** (practice pen stayed off the Sheet, real pen landed) |
+| **Bullpen Chart** | **v36** | **v35** (pushed Oct 19; receiver deployed Oct 15, URL and key in). **v36 waiting: redeploy the receiver (receiver 2) FIRST, then push v36.** Real-iPad upload test **passed Oct 19** (practice pen stayed off the Sheet, real pen landed) |
 | **Pitch Chart** (game) | **v26** | **v20** — **v21 to v26 waiting to be pushed** |
 | **Offense Chart** | **v46** | v40 — **v41 to v46 waiting to be pushed** |
 
@@ -43,6 +43,27 @@ is only for app code.
 ---
 
 ## Bullpen Chart
+
+### v36 · Oct 19, 2026
+**Headline:** Coach's comments split into **To the pitcher** and **Coach only**, and both go to the
+dashboard with the session. First step of E-011, the player feedback loop.
+
+- **Why:** Jim, Oct 19: *"Yes, comments should be split."* Players will get a pen card and their own page
+  (E-011), so the app needs a note meant for the kid and one that never reaches him.
+- **Chart tab:** the panel is now *Coach's notes* with 2 boxes. **To the pitcher** (he will read it) and
+  **Coach only** (never shown to him). Comments typed before v36 were written for coaches, so they stay
+  Coach only (`p.comments` keeps its meaning; the new field is `p.note`).
+- **Report tab and .txt:** both notes, labelled.
+- **Upload:** a second table, `notes`, one row per pitcher who threw or has a note: `SessionID`, `PitcherID`,
+  `Pitcher`, `PitcherLast`, `PitcherFirst`, `Pitches`, `ToPitcher`, `CoachOnly`, `Practice`. Lands on
+  `Bullpen_Notes`. Practice sessions are still never sent.
+- **Receiver 2** (`receiver/Code.gs`): accepts the bullpen `notes` table, and makes a tab it needs on first
+  use, so the season Sheet needs no second `setup()` run. **Redeploy it before pushing v36**: Deploy >
+  Manage deployments > edit (pencil) > Version: New version > Deploy. Same URL, same key. If v36 goes out
+  first, its uploads are refused (red line on History) and simply go through after the redeploy.
+- **Tests:** `tools/receiver/upload.js` (162 checks) covers notes on a Sheet set up by receiver 1, the tab
+  made on first use, formula-shaped notes staying text, and both notes reaching the Sheet in the right
+  columns. Each new guard proved by breaking it.
 
 ### v35 · Oct 19, 2026
 **Headline:** The end-of-pen card says **All Bullpens Complete** (Jim's wording), not *Everyone's done*.

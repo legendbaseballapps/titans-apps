@@ -711,9 +711,17 @@ footer{max-width:1340px;margin:0 auto;padding:0 16px 30px;color:var(--ink-2);fon
             <p class="tiny" style="margin:12px 0 0">Tap a pitch to select it &mdash; velo then goes to that one, and tapping the grid re-places it. Tap it again to let go.</p>
           </div>
         </div>
+        <!-- v36: two notes. "To the pitcher" goes to his pen card and his page
+             (E-011); "Coach only" never reaches him. Comments typed before v36 were
+             written for coaches, so they stay Coach only. -->
         <div class="panel">
-          <h2>Coach's comments</h2>
-          <div class="body"><textarea id="comments" placeholder="What you told him"></textarea></div>
+          <h2>Coach's notes</h2>
+          <div class="body">
+            <label class="fld">To the pitcher &middot; he will read this
+              <textarea id="note" placeholder="What you want him to take from today"></textarea></label>
+            <label class="fld" style="margin-top:12px">Coach only &middot; never shown to him
+              <textarea id="comments" placeholder="For the coaches"></textarea></label>
+          </div>
         </div>
       </div>
     </div>
@@ -1025,7 +1033,7 @@ function pad2(n){ return (n<10?"0":"")+n; }
    and the mode. Those change week to week; the roster holds only what is true all
    winter. Jersey is gone - a bullpen needs a name and nothing else. */
 function newPitcher(nm){
-  return {id:uid(),rid:"",name:nm||"",last:"",first:"",hand:"R",safe:"",stretch:false,comments:"",
+  return {id:uid(),rid:"",name:nm||"",last:"",first:"",hand:"R",safe:"",stretch:false,comments:"",note:"",
           mode:"script", free:{type:"FB",ws:"S",spot:0,sit:""}, pitches:[],over:{},
           /* live AB mode only: one entry per at-bat, in order. A pitch carries the
              index of the AB it belongs to, so p.pitches stays the single flat
@@ -1210,7 +1218,7 @@ function cur(){ return byId(S.cur); }
    gateWipe(), wipeEverything(), WIPE_KEYS, the #wipeBox markup and its listener. */
 var ALLOW_WIPE = false;
 
-var BUILD = "v35";
+var BUILD = "v36";
 
 /* ======================= DASHBOARD UPLOAD =======================
    Where a filed session goes: the Titans Upload Receiver, an Apps Script web app
@@ -2239,12 +2247,14 @@ el("abNew").onclick = function(){
 function drawChart(){
   drawStrip(); drawFree(); drawAB(); drawCall(); drawZone(); drawVelo(); drawLog(); drawKpis();
   var p = cur();
-  el("comments").value = p ? p.comments : "";
+  el("comments").value = p ? (p.comments||"") : "";
+  el("note").value = p ? (p.note||"") : "";
   el("goBack").disabled = !p || !p.pitches.length;
   el("editRow").hidden = true;
   requestAnimationFrame(positionFrame);
 }
 el("comments").oninput = function(){ var p=cur(); if(p){ p.comments=this.value; save(); } };
+el("note").oninput = function(){ var p=cur(); if(p){ p.note=this.value; save(); } };
 el("goBack").onclick = function(){
   var p = cur(); if(!p || !p.pitches.length) return;
   p.pitches.pop(); pending = null; save(); drawChart();
@@ -2360,7 +2370,8 @@ function drawReport(){
         '<div class="read" style="margin-top:12px">'+esc(missRead(oo))+'</div>'+
         (q3 ? ao3Block(q3) : '')+
         (rows ? '<div class="scroller" style="margin-top:12px"><table class="grid"><thead><tr><th>Pitch</th><th>No.</th><th>Spot</th><th>+Close</th><th>Strike</th><th>Velo avg / top</th></tr></thead><tbody>'+rows+'</tbody></table></div>' : '')+
-        (pp.comments ? '<div class="read" style="margin-top:12px;border-left-color:var(--bar-2)"><b class="cond">Coach:</b> '+esc(pp.comments)+'</div>' : '')+
+        (pp.note ? '<div class="read" style="margin-top:12px;border-left-color:var(--good)"><b class="cond">To the pitcher:</b> '+esc(pp.note)+'</div>' : '')+
+        (pp.comments ? '<div class="read" style="margin-top:12px;border-left-color:var(--bar-2)"><b class="cond">Coach only:</b> '+esc(pp.comments)+'</div>' : '')+
       '</div></div>';
   }
   el("rpt").innerHTML = out;
@@ -2426,6 +2437,21 @@ function table(){
   }
   return {head:head, rows:rows};
 }
+/* v36: one row per pitcher who threw or has a note. Uploaded beside the pitch rows
+   so the pen card and the player page (E-011) can show "To the pitcher", and the
+   coaches' dashboard can show both. Joins on SessionID + PitcherID. */
+function notesTable(){
+  var head = ["SessionID","PitcherID","Pitcher","PitcherLast","PitcherFirst","Pitches","ToPitcher","CoachOnly","Practice"];
+  var rows = [];
+  for(var i=0;i<S.pitchers.length;i++){
+    var p = S.pitchers[i], who = moundPerson(p);
+    if(!(who.name||"").trim()) continue;
+    if(!p.pitches.length && !(p.note||"").trim() && !(p.comments||"").trim()) continue;
+    rows.push([S.sid||"", p.rid||"", who.name, who.last, who.first, p.pitches.length,
+               p.note||"", p.comments||"", S.practice?"Y":"N"]);
+  }
+  return {head:head, rows:rows};
+}
 function txt(){
   var L = [];
   L.push("LEGEND TITANS — BULLPEN SESSION");
@@ -2476,7 +2502,8 @@ function txt(){
              "  spot "+pct(b.spot,b.graded)+"%  strike "+pct(b.strike,b.n)+"%"+
              (v?"  velo "+Math.round(v.sum/v.n)+" avg / "+v.top+" top":""));
     }
-    if(p.comments) L.push("  Coach: "+p.comments);
+    if(p.note) L.push("  To the pitcher: "+p.note);
+    if(p.comments) L.push("  Coach only: "+p.comments);
     L.push("");
   }
   return L.join("\n");
@@ -2640,9 +2667,9 @@ function upQueue(){
   return A.filter(function(x){ return !x.practice && !x.up && pitchCount(x) > 0; });
 }
 function upPayload(x){
-  var live = S, t;
+  var live = S, t, nt;
   S = x;
-  try{ t = table(); }
+  try{ t = table(); nt = notesTable(); }
   finally{ S = live; }
   return {
     schema: UPLOAD_SCHEMA, key: UPLOAD_KEY, app: "bullpen", build: x.build || BUILD,
@@ -2650,7 +2677,8 @@ function upPayload(x){
               template: x.tpl || "", scriptId: scriptId(x.script || []),
               filedAt: x.filed ? new Date(x.filed).toISOString() : "",
               pitches: pitchCount(x) },
-    tables: { pitches: { columns: t.head, rows: t.rows } }
+    tables: { pitches: { columns: t.head, rows: t.rows },
+              notes:   { columns: nt.head, rows: nt.rows } }
   };
 }
 function upPost(x){

@@ -65,7 +65,7 @@ function part1() {
   let rt = freshRuntime();
   const b = rt.book("SEASON1");
   check("setup builds every tab", b.order.join(","),
-        "Records,Bullpen_Pitches,Game_Pitches,Game_Innings,Offense_Pitches,Log,Coaches,Config");
+        "Records,Bullpen_Pitches,Bullpen_Notes,Game_Pitches,Game_Innings,Offense_Pitches,Log,Coaches,Config");
   check("setup makes a 40-character key", /^[0-9a-f]{40}$/.test(rt.key), true);
   check("setup prints the key to the log", rt.logs.some(l => l.indexOf(rt.key) >= 0), true);
   const again = rt.sandbox.setup();
@@ -126,6 +126,23 @@ function part1() {
   check("old rows get a blank in the new columns", [undefined, ""].indexOf(pit.records()[0].Count) >= 0, true);
   const nrec = b.getSheetByName("Records").records().find(x => x.RecordID === "nasty01");
   check("a formula-shaped coach name is text in Records", nrec && nrec.Coach, "=HYPERLINK(\"http://x\")");
+
+  console.log("\nRECEIVER 2 · bullpen notes, on a Sheet set up by receiver 1");
+  {
+    const rt4 = freshRuntime(), b4 = rt4.book("SEASON1");
+    /* a Sheet built by receiver 1 has no Bullpen_Notes tab */
+    delete b4.sheets["Bullpen_Notes"]; b4.order = b4.order.filter(n => n !== "Bullpen_Notes");
+    const withNotes = upload(rt4.key, { record: { id: "notes01", date: "2027-01-12" }, tables: {
+      pitches: { columns: ["SessionID", "PitchNo"], rows: [["notes01", 1]] },
+      notes: { columns: ["SessionID", "PitcherID", "ToPitcher", "CoachOnly"], rows: [["notes01", "p0001", "Finish out front", "=watch the elbow"]] } } });
+    const r4 = rt4.post(JSON.stringify(withNotes));
+    check("an upload with notes is stored", r4.ok + " " + r4.status + " " + r4.rows, "true stored 2");
+    check("the missing Bullpen_Notes tab was made on first use", !!b4.getSheetByName("Bullpen_Notes"), true);
+    const n4 = b4.getSheetByName("Bullpen_Notes");
+    check("notes: RecordID first, then the app's columns", n4.header().join(","), "RecordID,SessionID,PitcherID,ToPitcher,CoachOnly");
+    check("a formula-shaped note stayed text", n4.records()[0].CoachOnly, "=watch the elbow");
+    check("the game app still may not send notes", (() => { const x = rt4.post(JSON.stringify(upload(rt4.key, { app: "game", record: { id: "g000001" }, tables: { notes: { columns: ["A"], rows: [] } } }))); return x.ok + " / " + x.error; })(), "false / unknown table notes");
+  }
 
   console.log("\nRECEIVER · a write that dies halfway");
   rt = freshRuntime();
@@ -292,6 +309,10 @@ async function part2() {
     console.log("\nAPP · files and uploads");
     pg = await openApp(b, rt);
     await chartSession(pg, 7, { pad: "Mound 2", coach: "=cmd|' /C calc'!A0" });
+    await pg.evaluate(() => {
+      const set = (id, v) => { const e = document.getElementById(id); e.value = v; e.dispatchEvent(new Event("input", { bubbles: true })); };
+      set("note", "Finish out front. Great 2-strike changeup."); set("comments", "Arm slot dropping late");
+    });
     await fileIt(pg);
     const up = await until(async () => (await arch(pg)).some(x => x.up));
     check("filing uploads straight away", up, true);
@@ -304,6 +325,11 @@ async function part2() {
     check("the pitch tab carries every export column, RecordID first", head[0] + " … " + head.length + " columns, Practice=" + (head.indexOf("Practice") > 0), "RecordID … 39 columns, Practice=true");
     check("the rows join on the session id", pit.records()[0].RecordID === pit.records()[0].SessionID, true);
     check("a formula-shaped coach name stayed text", pit.records()[0].Coach, "=cmd|' /C calc'!A0");
+    const notes = book.getSheetByName("Bullpen_Notes").records();
+    check("v36: one notes row for the pitcher who threw", notes.length, 1);
+    check("  To the pitcher reached the Sheet", notes[0] && notes[0].ToPitcher, "Finish out front. Great 2-strike changeup.");
+    check("  Coach only reached the Sheet, in its own column", notes[0] && notes[0].CoachOnly, "Arm slot dropping late");
+    check("  it joins on the session and the pitcher", notes[0] && (notes[0].RecordID === notes[0].SessionID && !!notes[0].PitcherID && notes[0].Pitches === 7), true);
     check("no cell became a formula or a date", book.flags.formula + book.flags.date, 0);
     const rec = book.getSheetByName("Records").records()[0];
     const BP_BUILD = (fs.readFileSync(path.join(ROOT, "bullpen/index.html"), "utf8").match(/var BUILD = "(v\d+)"/) || [])[1];
