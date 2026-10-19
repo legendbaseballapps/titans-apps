@@ -1210,7 +1210,7 @@ function cur(){ return byId(S.cur); }
    gateWipe(), wipeEverything(), WIPE_KEYS, the #wipeBox markup and its listener. */
 var ALLOW_WIPE = false;
 
-var BUILD = "v34";
+var BUILD = "v35";
 
 /* ======================= DASHBOARD UPLOAD =======================
    Where a filed session goes: the Titans Upload Receiver, an Apps Script web app
@@ -1925,7 +1925,7 @@ function drawCall(){
     var allDone = !none && !nxt && named.length && named.every(function(q){ return pitcherDone(q); });
     if(allDone){
       el("call").innerHTML = '<div><div class="idx">'+esc(S.pad||"This mound")+'</div>'+
-        '<div class="big">Everyone\u2019s done</div>'+
+        '<div class="big">All Bullpens Complete</div>'+
         '<div class="spotname">'+pitchCount(S)+' pitches charted. '+(S.practice
           ? 'Practice session: filing keeps it on this iPad.'
           : 'Filing sends it to the dashboard.')+' Need more? Add an extra pitch below.</div>'+

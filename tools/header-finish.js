@@ -1,5 +1,5 @@
 /* Finish & file in the header (bullpen v34, game v26, offense v46), the bullpen's
-   Ready to chart box, and its "Everyone's done" card.
+   Ready to chart box, and its "All Bullpens Complete" card.
 
      cd titans-apps && python3 -m http.server 8807 &
      node tools/header-finish.js
@@ -29,7 +29,7 @@ const shown = id => `(function(){ var b=document.getElementById(${JSON.stringify
   const ev = (pg, s) => pg.evaluate(s);
 
   /* ------------------------------------------------------------ bullpen */
-  console.log("\nBULLPEN · Ready to chart, header Finish & file, Everyone's done");
+  console.log("\nBULLPEN · Ready to chart, header Finish & file, All Bullpens Complete");
   {
     const pg = await open("/bullpen/index.html");
     is("Export now is gone from the header", await ev(pg, '!document.getElementById("expNow")'), true);
@@ -54,7 +54,7 @@ const shown = id => `(function(){ var b=document.getElementById(${JSON.stringify
     is("  and stays there on the Report tab", await ev(pg, shown("hdrFinish")), true);
     await pg.click("#tab-chart");
     for (let i = 0; i < 24; i++) await ev(pg, 'document.querySelector(\'#zone button[data-r="2"][data-c="2"]\').click()');
-    is("the whole script thrown: Everyone's done", await ev(pg, 'document.querySelector("#call .big").textContent'), "Everyone’s done");
+    is("the whole script thrown: All Bullpens Complete", await ev(pg, 'document.querySelector("#call .big").textContent'), "All Bullpens Complete");
     is("  with a Finish & file button on the card", await ev(pg, '!!document.getElementById("callFinish")'), true);
     await pg.click("#callFinish");
     is("  it asks before it files", await ev(pg, '!!document.querySelector(".askwrap [data-yes]")'), true);

@@ -17,7 +17,7 @@ old one — tap the amber stamp to fix it.
 
 | App | Source & folder | Live on GitHub Pages |
 |---|---|---|
-| **Bullpen Chart** | **v34** | v32 (pushed Oct 15; receiver deployed, URL and key in). **v33 and v34 waiting to be pushed.** Real-iPad upload test **passed Oct 19** (practice pen stayed off the Sheet, real pen landed) |
+| **Bullpen Chart** | **v35** | **v34** (pushed Oct 19; receiver deployed Oct 15, URL and key in). **v35 waiting to be pushed.** Real-iPad upload test **passed Oct 19** (practice pen stayed off the Sheet, real pen landed) |
 | **Pitch Chart** (game) | **v26** | **v20** — **v21 to v26 waiting to be pushed** |
 | **Offense Chart** | **v46** | v40 — **v41 to v46 waiting to be pushed** |
 
@@ -43,6 +43,12 @@ is only for app code.
 ---
 
 ## Bullpen Chart
+
+### v35 · Oct 19, 2026
+**Headline:** The end-of-pen card says **All Bullpens Complete** (Jim's wording), not *Everyone's done*.
+
+- Text only: the card, the guide and `tools/header-finish.js`. v34 was already pushed with the old wording,
+  so this is its own build; a cache bump is the only way an iPad that loaded v34 sees the change.
 
 ### v34 · Oct 19, 2026
 **Headline:** **Finish & file** moves to the header, a **Ready to chart** box ends Setup, and the Chart tab
