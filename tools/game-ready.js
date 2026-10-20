@@ -8,8 +8,7 @@ module.exports.FILL_SETUP = `(function(){
     if(e && !e.value){ e.value = v; e.dispatchEvent(new Event("input", {bubbles:true})); } };
   set("fDate", "4-18"); set("fOpp", "Test Opponent");
   var sp = document.getElementById("suPitcher");
-  var chip = document.querySelector("#pitchers select[data-pick]");
-  if(sp && !(chip && chip.value)){
+  if(sp && !sp.value){
     var opt = [].slice.call(sp.options).find(function(o){ return o.value; });
     if(opt){ sp.value = opt.value; sp.dispatchEvent(new Event("change", {bubbles:true})); }
   }

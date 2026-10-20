@@ -627,7 +627,7 @@ async function part4() {
     await pg.click("#tab-chart");
     check("v29: the level alone does not unlock charting", await onSetup(), true);
     await pg.evaluate(() => {
-      const s = document.querySelector("#pitchers select[data-pick]");
+      const s = document.getElementById("suPitcher");   /* v30: the starter is set on Setup */
       s.value = window.TITANS_ROSTER[0].id; s.dispatchEvent(new Event("change", { bubbles: true }));
       const set = (id, v) => { const e = document.getElementById(id); e.value = v; e.dispatchEvent(new Event("input", { bubbles: true })); };
       set("fDate", "4-18"); set("fOpp", "Rock Canyon");

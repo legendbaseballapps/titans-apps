@@ -137,6 +137,9 @@ a.topbtn{display:inline-block;text-decoration:none;border:0}
 .rossrc.warn{border-color:var(--inplay);background:var(--inplay-bg)}
 .rossrc.bad{border-color:var(--strike);background:var(--strike-bg)}
 /* The pitcher chips hold a picker now, not a text field. */
+.pchip .pstart{display:block;font-weight:600;font-size:16px;line-height:1.2;padding:2px 0;
+  max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pchip .pstart.none{opacity:.6;font-weight:500;font-style:italic}
 .pchip select{font:inherit;color:inherit;background:transparent;border:1px solid var(--line);
   border-radius:4px;padding:1px 4px;max-width:150px}
 .sample{background:var(--inplay-bg);color:var(--inplay);border-bottom:1px solid var(--line);padding:7px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-size:13.5px}
@@ -794,9 +797,9 @@ a.topbtn{display:inline-block;text-decoration:none;border:0}
     <div class="pbody">
       <div class="rossrc" id="rosSrc"></div>
       <label class="sustart" for="suPitcher"><span class="lbl">Starting pitcher</span>
-        <select id="suPitcher"></select></label>
+        <select id="suPitcher" data-pick="0"></select></label>
       <div class="read" style="margin-top:9px">Every arm comes off the released roster: the starter
-        here, relievers on the chips at the top of the chart screen. <b>The roster is a read-out, not
+        here (and only here), relievers with <b>+ Reliever</b> on the chips at the top of the chart screen. <b>The roster is a read-out, not
         a form</b> &mdash; it ships with the app so a pitcher is one pitcher across the bullpen chart,
         the offense chart and this one. Somebody wrong or missing? Tell Jim.</div>
     </div>
@@ -2708,6 +2711,23 @@ function renderPitchers(){
       var b=el("button","pchip"+(i===G.curP?" on":""));
       var left=el("div");
       left.appendChild(el("div","role",ROLES[i]));
+      /* v30: the STARTER is set on Setup (Jim). His chip is a read-out here, so a
+         mid-game tap can never swap who started; it still selects him. */
+      if(i === 0){
+        var who = pitcherName(0) || (p.name || "");
+        var off = p.rid && !rosById(p.rid);
+        var ro = el("div", "pstart" + (who ? "" : " none"),
+                    who ? who + (off ? " (not on the roster)" : "") : "Set on Setup");
+        ro.title = "The starter is set on the Setup tab";
+        left.appendChild(ro); b.appendChild(left);
+        var ct0=el("div"); ct0.style.textAlign="right";
+        ct0.appendChild(el("div","pc",String(pitcherCount(0))));
+        ct0.appendChild(el("div","pcl","pitches"));
+        b.appendChild(ct0);
+        b.addEventListener("click",function(){ G.curP=0; render(); save(); });
+        host.appendChild(b);
+        return;
+      }
       /* A picker, not a text field. Roster-only by Jim's call: "We don't need data
          entry if we have the entire roster available." */
       var nm=document.createElement("select");
@@ -3743,7 +3763,7 @@ function renderMix(){
 
 function render(){
   try{
-    renderPitchers(); renderStats(); renderLineup(); renderMix(); renderAo3(); renderInnings();
+    renderPitchers(); drawSuPitcher(); renderStats(); renderLineup(); renderMix(); renderAo3(); renderInnings();
     renderZone(); renderSeq(); renderBatter(); renderDiamond(); renderHistory(); renderBackBar();
     if(TAB === "report") renderSum();
     hintKeys();
@@ -4506,7 +4526,7 @@ function build(){
    gateWipe(), wipeEverything(), WIPE_KEYS, the #wipeBox markup and its listener. */
 var ALLOW_WIPE = false;
 
-var BUILD = "v29";
+var BUILD = "v30";
 
 /* ======================= DASHBOARD UPLOAD (v25) =======================
    Same receiver as the Bullpen Chart and the Offense Chart. Blank UPLOAD_URL =

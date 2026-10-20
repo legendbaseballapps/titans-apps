@@ -447,14 +447,15 @@ async function wipeOff(b) {
     ["roster.js shipped",  null,
        '(function(){ var r=window.TITANS_ROSTER;'+
        ' return (r && r.length) ? "yes" : "NO ROSTER FILE"; })()', null, "yes"],
+    /* v30: the starter is picked on Setup (#suPitcher); relievers on the chips. */
     ["pitcher chips are pickers", null,
-       '(function(){ var sel=document.querySelectorAll("#pitchers select[data-pick]");'+
+       '(function(){ var sel=document.querySelectorAll("#suPitcher, #pitchers select[data-pick]");'+
        ' var txt=document.querySelectorAll("#pitchers input");'+
        ' if(!sel.length) return "no picker";'+
        ' return txt.length ? "a text field is still there" : "picker only"; })()',
        null, "picker only"],
     ["picker offers the release", null,
-       '(function(){ var sel=document.querySelectorAll("#pitchers select[data-pick]")[0];'+
+       '(function(){ var sel=document.getElementById("suPitcher");'+
        ' if(!sel) return "no picker";'+
        ' var ids={}; for(var i=0;i<sel.options.length;i++) if(sel.options[i].value) ids[sel.options[i].value]=1;'+
        ' var miss=window.TITANS_ROSTER.filter(function(p){ return !ids[p.id]; });'+
@@ -477,7 +478,7 @@ async function wipeOff(b) {
        '   if(!sl) return last;'+
        '   if(!si) return last+", "+first.charAt(0).toUpperCase();'+
        '   return last+", "+first; }'+
-       ' var sel=document.querySelectorAll("#pitchers select[data-pick]")[0];'+
+       ' var sel=document.getElementById("suPitcher");'+
        ' var bad=[];'+
        ' R2.forEach(function(p){'+
        '   var found=null;'+
@@ -486,14 +487,14 @@ async function wipeOff(b) {
        '   if(found.indexOf(want(p))!==0) bad.push(found+" want "+want(p)); });'+
        ' return bad.length ? bad.join(" ; ") : "yes"; })()',
        null, "yes"],
-    ["pitcher pick sticks", null, sticks('#pitchers select[data-pick]'), null, "stuck"],
+    ["pitcher pick sticks", null, sticks('#suPitcher'), null, "stuck"],
     ["no double-booking an arm", null,
        '(function(){'+
        /* "+ Reliever" is the only way to a second chip from out here. */
        ' var add=document.querySelector("#pitchers .addp");'+
        ' if(add) add.click();'+
-       ' var sels=document.querySelectorAll("#pitchers select[data-pick]");'+
-       ' if(sels.length<2) return "need two chips";'+
+       ' var sels=[document.getElementById("suPitcher"), document.querySelector(\'#pitchers select[data-pick="1"]\')];'+
+       ' if(!sels[1]) return "need two chips";'+
        ' var taken=sels[0].value;'+
        ' if(!taken) return "chip 1 is not set";'+
        ' for(var i=0;i<sels[1].options.length;i++)'+
@@ -1142,7 +1143,7 @@ async function wipeOff(b) {
     function q(s){ return document.querySelector(s); }
     function qa(s){ return [].slice.call(document.querySelectorAll(s)); }
     function arm(chip, nth){
-      var s = qa("#pitchers select[data-pick]")[chip];
+      var s = chip ? q('#pitchers select[data-pick="' + chip + '"]') : q("#suPitcher");   /* v30 */
       if(!s) return "no chip " + chip;
       var id = window.TITANS_ROSTER[nth].id;
       s.value = id;
@@ -1615,7 +1616,7 @@ async function wipeOff(b) {
         return o.value + "=" + o.textContent; }).join(",");
     }
     function arm(chip, nth){
-      var s = qa("#pitchers select[data-pick]")[chip];
+      var s = chip ? q('#pitchers select[data-pick="' + chip + '"]') : q("#suPitcher");   /* v30 */
       if(!s) return "no chip " + chip;
       s.value = window.TITANS_ROSTER[nth].id;
       s.dispatchEvent(new Event("change",{bubbles:true}));

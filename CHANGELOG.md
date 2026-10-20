@@ -18,7 +18,7 @@ old one — tap the amber stamp to fix it.
 | App | Source & folder | Live on GitHub Pages |
 |---|---|---|
 | **Bullpen Chart** | **v38** | **v36** (pushed Oct 19, with **receiver 2** redeployed first; same URL and key). **v37 and v38 waiting: redeploy receiver 3 FIRST, then push.** Notes confirmed from a real iPad Oct 19 (`Bullpen_Notes` made on first use, both notes in their columns) | Real-iPad upload test **passed Oct 19** (practice pen stayed off the Sheet, real pen landed) |
-| **Pitch Chart** (game) | **v29** | **v20** — **v21 to v29 waiting to be pushed** (receiver 3 must be deployed before v27+ goes out) |
+| **Pitch Chart** (game) | **v30** | **v20** — **v21 to v30 waiting to be pushed** (receiver 3 must be deployed before v27+ goes out) |
 | **Offense Chart** | **v46** | v40 — **v41 to v46 waiting to be pushed** |
 
 **The site moved Oct 14, 2026** to the program-owned account: **legendbaseballapps.github.io/titans-apps** (repo transferred from vaughnzj, so the live files, including the real `roster.js`, moved as they were). Every iPad installs from the new link; History saved under the old address does not carry over. The Coach's Guides in the pending builds (bullpen v31, game v23, offense v42) carry the new address, so pushing those builds is what puts it on the iPads.
@@ -442,6 +442,18 @@ execution grading.
 ---
 
 ## Pitch Chart (game)
+
+### v30 · Oct 20, 2026
+**Headline:** The **starter is set on Setup only**. On the Chart tab his chip is a read-out (name and pitch
+count, still tappable to put him back on the mound); relievers are added and picked on the chips.
+
+- **Why:** Jim, Oct 20: *"Shouldn't we set our starting pitcher on the setup tab and then add relievers on
+  the charting tab (with the starting still being visible)?"* In v29 the first chip was still a drop-down,
+  so a mid-game tap could swap who started.
+- The Setup picker (`#suPitcher`, `data-pick="0"`) is redrawn on every render, so it stays in step with the
+  relievers already picked. An off-roster starter reads *Name (not on the roster)* on his chip.
+- Tests point at the Setup picker for the starter; 2 new checks (the chip shows the name, and it is not a
+  picker), proved by putting the drop-down back.
 
 ### v29 · Oct 20, 2026
 **Headline:** Charting stays locked until **Setup is finished**, with a **Ready to chart** box on Setup like

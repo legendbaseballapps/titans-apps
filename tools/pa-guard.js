@@ -143,7 +143,7 @@ async function game(b) {
   console.log("\nPITCH CHART v24");
   const pg = await open(b, "/game/index.html");
   await pg.evaluate(() => {
-    const s = document.querySelector("#pitchers select[data-pick]");
+    const s = document.getElementById("suPitcher");   /* v30: the starter is set on Setup */
     s.value = window.TITANS_ROSTER[0].id; s.dispatchEvent(new Event("change", { bubbles: true }));
   });
   await pg.waitForTimeout(200);

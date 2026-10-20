@@ -146,7 +146,7 @@ const bannerFull = sel => `(function(){ var b=document.getElementById(${JSON.str
      parameter on the loop above. Same four states, same four colours. */
   {
     const open = 'document.getElementById("tab-setup").click();';
-    const opts = '(function(){ var s=document.querySelector(\'#pitchers select[data-pick]\');'+
+    const opts = '(function(){ var s=document.getElementById("suPitcher");'+
       ' if(!s) return "no picker";'+
       ' var n=0; for(var i=0;i<s.options.length;i++) if(s.options[i].value) n++;'+
       ' return n; })()';
@@ -203,7 +203,7 @@ const bannerFull = sel => `(function(){ var b=document.getElementById(${JSON.str
        is off the next release. His name stays on the chip; the pitches stay his. */
     console.log("\nGAME — a pitcher dropped from a later release");
     pg = await page(b, "/game/index.html", RELEASED); ev = js => pg.evaluate(js);
-    await ev(`(function(){ var s=document.querySelector('#pitchers select[data-pick]');
+    await ev(`(function(){ var s=document.getElementById("suPitcher");
       s.value="rel0001"; s.dispatchEvent(new Event("change",{bubbles:true})); })()`);
     await pg.waitForTimeout(300);
     /* v25: charting is locked until the game's level is picked - pick it the way a
@@ -229,7 +229,10 @@ const bannerFull = sel => `(function(){ var b=document.getElementById(${JSON.str
     await pg.reload({ waitUntil:"load" }); await pg.waitForTimeout(1200);
     is("he is off the new release", await ev('window.TITANS_ROSTER.length'), 1);
     is("  his name is STILL on the chip", await ev(
-       '(function(){ var s=document.querySelector(\'#pitchers select[data-pick]\');'+
+       '(function(){ var c=document.querySelector("#pitchers .pstart"); return c ? c.textContent : "no chip"; })()'),
+       "Zeb Released (not on the roster)");
+    is("  and on the Setup starter picker", await ev(
+       '(function(){ var s=document.getElementById("suPitcher");'+
        ' return s ? s.options[s.selectedIndex].text.replace(/\\s+/g," ").trim() : "no picker"; })()'),
        "Zeb Released (not on the roster)");
     is("  his pitches are still there", await ev(

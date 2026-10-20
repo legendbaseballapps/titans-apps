@@ -82,7 +82,7 @@ function is(name, got, want) {
   {
     const pg = await open("/game/index.html");
     await pg.click('[data-lvl="JV"]');
-    await ev(pg, '(function(){ var s=document.querySelectorAll("#pitchers select[data-pick]")[0]; s.value=window.TITANS_ROSTER[0].id; s.dispatchEvent(new Event("change",{bubbles:true})); var set=function(id,v){ var e=document.getElementById(id); e.value=v; e.dispatchEvent(new Event("input",{bubbles:true})); }; set("fDate","4-18"); set("fOpp","Ponderosa"); })()');
+    await ev(pg, '(function(){ var s=document.getElementById("suPitcher"); s.value=window.TITANS_ROSTER[0].id; s.dispatchEvent(new Event("change",{bubbles:true})); var set=function(id,v){ var e=document.getElementById(id); e.value=v; e.dispatchEvent(new Event("input",{bubbles:true})); }; set("fDate","4-18"); set("fOpp","Ponderosa"); })()');
     await ev(pg, FILL_SETUP);   /* v29: the lineup too */
     await pg.click("#tab-chart");
     await pg.click("#zone .cell:nth-child(13)"); await pg.click('#results button[data-res="GO"]'); await pg.click("#nextBtn");

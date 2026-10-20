@@ -105,7 +105,8 @@ const shown = id => `(function(){ var b=document.getElementById(${JSON.stringify
     is("  so is a no-pitch IBB", await ev(pg, 'JSON.parse(localStorage.getItem("dugout-pitch-chart-v2")).lineup[0].men[0].abs[0].result || ""'), "");
     await ev(pg, '(function(){ var s=document.getElementById("suPitcher"); s.value=window.TITANS_ROSTER[0].id; s.dispatchEvent(new Event("change",{bubbles:true})); })()');
     is("the starter is picked on Setup", /starting pitcher/.test(await msg()), false);
-    is("  and lands on the mound chip", await ev(pg, 'document.querySelector("#pitchers select[data-pick]").value === window.TITANS_ROSTER[0].id'), true);
+    is("  and shows on the mound chip", await ev(pg, '(document.querySelector("#pitchers .pstart")||{}).textContent === window.TITANS_ROSTER[0].name'), true);
+    is("  v30: as a read-out, not a picker", await ev(pg, '!document.querySelector("#pitchers .pchip select")'), true);
     await ev(pg, '(function(){ var e=document.getElementById("fDate"); e.value="4-18"; e.dispatchEvent(new Event("input",{bubbles:true})); e=document.getElementById("fOpp"); e.value="Ponderosa"; e.dispatchEvent(new Event("input",{bubbles:true})); })()');
     await ev(pg, '(function(){ var x=document.querySelector(\'#suRows tr [data-su="name"]\'); x.dispatchEvent(new Event("focus")); x.value="Lopez"; x.dispatchEvent(new Event("input",{bubbles:true})); x.dispatchEvent(new Event("change",{bubbles:true})); })()');
     is("  counts down as the lineup fills", await msg(), "Not yet. Still needed: 8 hitters' names and 9 jersey numbers. Date and opponent are at the top of the screen.");
