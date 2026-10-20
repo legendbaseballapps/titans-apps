@@ -82,7 +82,7 @@ function is(name, got, want) {
   {
     const pg = await open("/game/index.html");
     await pg.click('[data-lvl="JV"]');
-    await ev(pg, '(function(){ var s=document.getElementById("suPitcher"); s.value=window.TITANS_ROSTER[0].id; s.dispatchEvent(new Event("change",{bubbles:true})); var set=function(id,v){ var e=document.getElementById(id); e.value=v; e.dispatchEvent(new Event("input",{bubbles:true})); }; set("fDate","4-18"); set("fOpp","Ponderosa"); })()');
+    await ev(pg, '(function(){ var s=document.getElementById("suPitcher"); s.value=window.TITANS_ROSTER[0].id; s.dispatchEvent(new Event("change",{bubbles:true})); var set=function(id,v){ var e=document.getElementById(id); e.value=v; e.dispatchEvent(new Event("input",{bubbles:true})); }; set("fOpp","Ponderosa"); var d=document.getElementById("fDate"); d.value="2027-04-18"; d.dispatchEvent(new Event("change",{bubbles:true})); })()');
     await ev(pg, FILL_SETUP);   /* v29: the lineup too */
     await pg.click("#tab-chart");
     await pg.click("#zone .cell:nth-child(13)"); await pg.click('#results button[data-res="GO"]'); await pg.click("#nextBtn");
@@ -90,11 +90,11 @@ function is(name, got, want) {
     await pg.click("#tab-report");
     is("Report tab: full page; charting screen hidden", await ev(pg, '!document.getElementById("v-report").hidden && document.getElementById("v-chart").style.display === "none"'), true);
     is("  pitcher chips and live stats hide off the Chart tab", await ev(pg, 'document.getElementById("chartBar").style.display'), "none");
-    is("  live parts show: AO3+, mix, game note, Finish", await ev(pg, '!document.getElementById("liveReads").hidden && !document.getElementById("liveTools").hidden && !!document.querySelector("#v-report #btnFinish")'), true);
+    is("  live parts show: AO3+, mix, game note; Finish only in the header", await ev(pg, '!document.getElementById("liveReads").hidden && !document.getElementById("liveTools").hidden && !!document.getElementById("fNotes2") && !document.getElementById("btnFinish")'), true);
     is("  no History back button for the live game", await ev(pg, 'document.getElementById("sumBack").hidden'), true);
     is("  the tab lights up", await ev(pg, 'document.getElementById("tab-report").getAttribute("aria-selected")'), "true");
     is("  Export is the last thing on the page", await ev(pg, '(function(){ var b=[...document.querySelectorAll("#v-report button")].filter(function(x){ return x.offsetParent; }); return b[b.length-1].id; })()'), "btnExport");
-    is("  header names the game", await ev(pg, 'document.getElementById("sumSub").textContent'), "vs Ponderosa · 4-18 · JV · 3 pitches");
+    is("  header names the game", await ev(pg, 'document.getElementById("sumSub").textContent'), "vs Ponderosa · 2027-04-18 · JV · 3 pitches");
     is("  card shows counts: first-pitch strikes", await ev(pg, '(function(){ var k=[...document.querySelectorAll("#sumArms .sumkpi")].find(function(x){ return /First-pitch strikes/.test(x.textContent); }); return k ? k.querySelector("b").textContent : "none"; })()'), "2 of 2 100%");
     is("  batters faced", await ev(pg, '(function(){ var k=[...document.querySelectorAll("#sumArms .sumkpi")].find(function(x){ return /Batters/.test(x.textContent); }); return k.querySelector("b").textContent; })()'), "2");
     is("  the live inning ledger is there", await ev(pg, 'document.querySelectorAll("#innLedger tbody tr").length'), 1);

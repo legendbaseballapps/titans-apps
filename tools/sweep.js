@@ -7,7 +7,7 @@
        node tools/sweep.js
    Exits non-zero if anything is dead. */
 const { chromium } = require("playwright");
-const { FILL_SETUP } = require("./game-ready.js");
+const { FILL_SETUP, FILL_OFFENSE } = require("./game-ready.js");
 const BASE = process.env.BASE || "http://localhost:8807";
 let fails = 0, checks = 0;
 
@@ -40,6 +40,8 @@ async function pickLevel(pg, path) {
   await pg.waitForTimeout(150);
   /* v29: the Pitch Chart also needs the rest of Setup finished before it charts. */
   if (/\/game\//.test(path)) await pg.evaluate(FILL_SETUP);
+  /* v48: and so does the Offense Chart. */
+  if (/\/offense\//.test(path)) await pg.evaluate(FILL_OFFENSE);
   await pg.evaluate((isGame) => {
     /* v28: the Pitch Chart has the same Chart tab as the other two apps. */
     const t = document.getElementById("tab-chart"); if (t) t.click();
@@ -431,7 +433,8 @@ async function wipeOff(b) {
     ["chart tab",        "#tab-chart",                    'document.getElementById("v-chart").style.display'],
     ["lineup toggle",    "#btnLeft",                      c(".wrap")],
     ["colour key",       null,                            n(".zonekey span"), null, 4],
-    ["finish & file",    null,                            n("#btnFinish"), null, 1],
+    /* v32: Finish & file is in the header only, like the other 2 apps. */
+    ["finish & file",    null,                            n("#hdrFinish") + '+"/"+' + n("#btnFinish"), null, "1/0"],
     ["history pane",     null,                            n("#v-history #histList"), null, 1],
     /* LAST: the read panel must be checked before Setup hides the charting
        screen, and Setup must be last because it hides it. */
@@ -561,7 +564,7 @@ async function wipeOff(b) {
     /* Two opposing pitchers to switch between. The sample used to supply them;
        now the check builds its own, which is the better test anyway - it no
        longer depends on a demo fixture existing. */
-    ["mound chip",       "#pChips [data-cp='1']",         t("#pChips .pchip.on"),
+    ["mound chip",       "#mChips [data-cp='1']",         t("#mChips .mchip.on"),
        'O.pitchers=[newPitcher("Zed Keller"),newPitcher("Zed Vance")]; O.cp=0; render();'],
     ["tab: report",      "#tab-report",                   'document.getElementById("v-report").hidden+""'],
     ["tab: history",     "#tab-history",                  'document.getElementById("v-history").hidden+""'],
@@ -781,7 +784,7 @@ async function wipeOff(b) {
   await sweep(b, "BULLPEN CHART", "/bullpen/index.html", [
     ["no duplicate fns",  null,              NO_DUPLICATE_FUNCTIONS, null, ""],
     ["no native dialogs", null,              NO_NATIVE_DIALOGS, null, "true"],
-    ["stylesheet",       null,                            styled('.bar'), null, "true"],
+    ["stylesheet",       null,                            styled('.top'), null, "true"],
     ["tab: chart",       "#tab-chart",                    'document.getElementById("v-chart").hidden+""'],
     ["tab: report",      "#tab-report",                   'document.getElementById("v-report").hidden+""'],
     ["tab: history",     "#tab-hist",                     'document.getElementById("v-hist").hidden+""'],
@@ -854,7 +857,7 @@ async function wipeOff(b) {
        the first one's finished card with nothing saying so. The strip is the only
        way across and it reads like a header unless it is labelled. */
     ["strip says it switches", null,
-       '/tap a name to switch/.test((document.querySelector(".striplbl")||{}).textContent||"")+""',
+       '(function(){ var c=document.querySelector("#mChips .mchip"); return (c ? /switch/i.test(c.title) : /Setup tab/.test(document.getElementById("mChips").textContent))+""; })()',
        null, "true"],
     ["ungraded is not a miss", null,
        '(function(){ var t=document.getElementById("liveRead").textContent||"";'+
@@ -1110,8 +1113,8 @@ async function wipeOff(b) {
        ' for(var m=0;m<3;m++){ if(!ms[m]) continue;'+
        '   ms[m].value="script"; ms[m].dispatchEvent(new Event("input",{bubbles:true})); }'+
        ' document.getElementById("tab-chart").click();'+
-       ' function pick(i){ document.querySelectorAll("#strip .pcard")[i].click(); }'+
-       ' function on(){ return document.querySelector("#strip .pcard[aria-pressed=true] .nm").textContent; }'+
+       ' function pick(i){ document.querySelectorAll("#mChips .mchip")[i].click(); }'+
+       ' function on(){ return document.querySelector("#mChips .mchip[aria-pressed=true] .nm").textContent; }'+
        ' pick(0);'+
        ' var n=document.querySelectorAll(\'#scriptTbl tbody [data-f="type"]\').length || 1;'+
        ' for(var i=0;i<=n;i++) document.querySelector(\'#zone button[data-r="2"][data-c="2"]\').click();'+
@@ -1429,7 +1432,7 @@ async function wipeOff(b) {
        that prompt must leave the game unfiled: a half-filed game is worse. */
     ["Finish & file asks about the partial inning", null,
       '(function(){ var before=__T.qa("#histList .hrow").length;'+
-      ' __T.q("#btnFinish").click();'+
+      ' __T.q("#hdrFinish").click();'+
       ' if(!__T.box()) return "no prompt";'+
       ' if(!/Final inning \\(partial\\)/.test(__T.head())) return "headed: "+__T.head();'+
       ' __T.q("#innBack").click();'+

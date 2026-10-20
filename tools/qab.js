@@ -15,7 +15,7 @@
    Exits non-zero if anything fails. */
 "use strict";
 const { chromium } = require("playwright");
-const { FILL_SETUP } = require("./game-ready.js");
+const { FILL_SETUP, FILL_OFFENSE } = require("./game-ready.js");
 const BASE = process.env.BASE || "http://localhost:8807";
 let fails = 0, checks = 0;
 function check(name, got, want) {
@@ -77,6 +77,8 @@ async function pickLevel(pg, path) {
   await pg.waitForTimeout(150);
   /* v29: the Pitch Chart also needs the rest of Setup finished before it charts. */
   if (/\/game\//.test(path)) await pg.evaluate(FILL_SETUP);
+  /* v48: and so does the Offense Chart. */
+  if (/\/offense\//.test(path)) await pg.evaluate(FILL_OFFENSE);
   await pg.evaluate((isGame) => {
     /* v28: the Pitch Chart has the same Chart tab as the other two apps. */
     const t = document.getElementById("tab-chart"); if (t) t.click();

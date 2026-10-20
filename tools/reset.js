@@ -8,7 +8,8 @@
    goes back to a blank Setup. Both ask first and never touch History. Google's
    script hosts are blocked, so nothing here reaches the real receiver. */
 const { chromium } = require("playwright");
-const { FILL_SETUP } = require("./game-ready.js");
+const { FILL_SETUP, FILL_OFFENSE } = require("./game-ready.js");
+const TODAY = (d => d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"))(new Date());
 const BASE = process.env.BASE || "http://localhost:8807";
 let fail = 0, n = 0;
 function is(name, got, want) {
@@ -33,7 +34,7 @@ function is(name, got, want) {
   const no = pg => pg.click(".askwrap [data-no]");
 
   /* ------------------------------------------------------------ Pitch Chart */
-  console.log("\nPITCH CHART v31");
+  console.log("\nPITCH CHART v32");
   {
     const pg = await open("/game/index.html");
     const G = () => ev(pg, 'JSON.parse(localStorage.getItem("dugout-pitch-chart-v2"))');
@@ -41,9 +42,9 @@ function is(name, got, want) {
     is("Discard this game is gone from the Report tab", await ev(pg, '!document.getElementById("btnClear")'), true);
     is("both buttons are on Setup", await ev(pg, '!!document.querySelector("#v-setup #btnClearPitches") && !!document.querySelector("#v-setup #btnReset")'), true);
     await pg.click("#btnClearPitches");
-    is("nothing charted: Clear pitches says so, no dialog", (await asked(pg)) + "|" + await ev(pg, 'document.getElementById("resetNote").textContent'), "|Nothing charted yet, so there is nothing to clear.");
+    is("nothing charted: Clear pitches says so, no dialog", (await asked(pg)) + "|" + await ev(pg, 'document.getElementById("setupNote").textContent'), "|Nothing charted yet, so there is nothing to clear.");
     await pg.click('[data-lvl="JV"]');
-    await ev(pg, '(function(){ var set=function(id,v){ var e=document.getElementById(id); e.value=v; e.dispatchEvent(new Event("input",{bubbles:true})); }; set("fDate","4-18"); set("fOpp","Ponderosa"); })()');
+    await ev(pg, '(function(){ var set=function(id,v){ var e=document.getElementById(id); e.value=v; e.dispatchEvent(new Event("input",{bubbles:true})); }; set("fOpp","Ponderosa"); var d=document.getElementById("fDate"); d.value="2027-04-18"; d.dispatchEvent(new Event("change",{bubbles:true})); })()');
     await ev(pg, FILL_SETUP);
     await pg.click("#fPractice");
     await pg.click("#suDone");
@@ -65,9 +66,9 @@ function is(name, got, want) {
     is("  reliever gone, starter kept", g.shown + " " + (g.pitchers[1].rid || "-") + " " + (g.pitchers[0].rid === await ev(pg, 'window.TITANS_ROSTER[0].id')), "1 - true");
     is("  innings and outs back to the start", g.inning + " " + g.innings.length + " " + g.outs, "1 0 0");
     is("  the pitcher note is cleared", g.pitchers[0].note || "", "");
-    is("  Setup kept: level, date, opponent, practice", [g.level, g.date, g.opp, g.practice].join(" "), "JV 4-18 Ponderosa true");
+    is("  Setup kept: level, date, opponent, practice", [g.level, g.date, g.opp, g.practice].join(" "), "JV 2027-04-18 Ponderosa true");
     is("  Setup kept: the lineup", g.lineup[0].men[0].name + " #" + g.lineup[0].men[0].jersey, "Hitter 1 #40");
-    is("  lands on Setup, says what happened", await ev(pg, '!document.getElementById("v-setup").hidden && /Pitches cleared/.test(document.getElementById("resetNote").textContent)'), true);
+    is("  lands on Setup, says what happened", await ev(pg, '!document.getElementById("v-setup").hidden && /Pitches cleared/.test(document.getElementById("setupNote").textContent)'), true);
     is("  and is ready to chart again", /^✓ Ready/.test(await ev(pg, 'document.getElementById("readyMsg").textContent')), true);
     await pg.click("#suDone"); await pg.click("#zone .cell:nth-child(13)");
     is("  charting works again", pitches(await G()), 1);
@@ -77,7 +78,7 @@ function is(name, got, want) {
     is("Start over asks first", /^Start over\?\s+1 charted pitch will be gone/.test(await asked(pg)), true);
     await yes(pg);
     g = await G();
-    is("  yes: level, date, opponent cleared", JSON.stringify([g.level, g.date, g.opp]), '["","",""]');
+    is("  yes: level and opponent cleared, the date back to today", JSON.stringify([g.level, g.opp, g.date === TODAY]), '["","",true]');
     is("  the lineup cleared", g.lineup[0].men[0].name + "|" + g.lineup[0].men[0].jersey, "|");
     is("  the starter stays", g.pitchers[0].rid === await ev(pg, 'window.TITANS_ROSTER[0].id'), true);
     is("  practice off, no pitches", g.practice + " " + pitches(g), "false 0");
@@ -87,16 +88,16 @@ function is(name, got, want) {
   }
 
   /* ------------------------------------------------------------ Offense Chart */
-  console.log("\nOFFENSE CHART v47");
+  console.log("\nOFFENSE CHART v48");
   {
     const pg = await open("/offense/index.html");
     const O = () => ev(pg, 'JSON.parse(localStorage.getItem("titans-offense-v1"))');
     const pitches = o => o.pas.reduce((t, a) => t + a.pitches.length, 0);
     is("both buttons are on Setup", await ev(pg, '!!document.querySelector("#v-setup #btnClearPitches") && !!document.querySelector("#v-setup #btnReset")'), true);
     await pg.click('[data-lvl="JV"]');
-    await ev(pg, '(function(){ var set=function(id,v){ var e=document.getElementById(id); e.value=v; e.dispatchEvent(new Event("input",{bubbles:true})); }; set("fDate","4-18"); set("fOpp","Ponderosa"); })()');
-    await ev(pg, '(function(){ var s=document.querySelector(\'[data-li="0"] select[data-lf="rid"]\'); s.value=s.options[1].value; s.dispatchEvent(new Event("input",{bubbles:true})); s.dispatchEvent(new Event("change",{bubbles:true})); var p=document.querySelector(\'[data-pi="0"] input[data-pf="name"]\'); p.value="Lefty Starter"; p.dispatchEvent(new Event("input",{bubbles:true})); p.dispatchEvent(new Event("change",{bubbles:true})); })()');
-    await pg.click("#tab-chart");
+    await ev(pg, '(function(){ var set=function(id,v){ var e=document.getElementById(id); e.value=v; e.dispatchEvent(new Event("input",{bubbles:true})); e.dispatchEvent(new Event("change",{bubbles:true})); }; set("fDate","2027-04-18"); set("fOpp","Ponderosa"); var p=document.querySelector(\'[data-pi="0"] input[data-pf="name"]\'); p.value="Lefty Starter"; p.dispatchEvent(new Event("input",{bubbles:true})); })()');
+    await ev(pg, FILL_OFFENSE);   /* v48: all of Setup */
+    await pg.click("#btnStart");
     await pg.click('#v-chart [data-r="2"][data-c="2"]'); await pg.click('#v-chart [data-r="2"][data-c="2"]');
     is("fixture: a real hitter in spot 1, their starter named", !!(await O()).lineup[0].men[0].rid + " " + (await O()).pitchers[0].name, "true Lefty Starter");
     const line0 = JSON.stringify((await O()).lineup.map(sp => sp.men[0]));
@@ -109,18 +110,18 @@ function is(name, got, want) {
     await pg.click("#btnClearPitches"); await yes(pg);
     let o = await O();
     is("  yes: no pitches, one fresh at-bat", pitches(o) + " " + o.pas.length, "0 1");
-    is("  Setup kept: level, date, opponent", [o.level, o.date, o.opp].join(" "), "JV 4-18 Ponderosa");
+    is("  Setup kept: level, date, opponent", [o.level, o.date, o.opp].join(" "), "JV 2027-04-18 Ponderosa");
     is("  Setup kept: our lineup", JSON.stringify(o.lineup.map(sp => sp.men[0])), line0);
     is("  Setup kept: their pitcher", o.pitchers[0].name, "Lefty Starter");
     is("  lands on Setup, says what happened", await ev(pg, '!document.getElementById("v-setup").hidden && /Pitches cleared/.test(document.getElementById("setupNote").textContent)'), true);
-    await pg.click("#tab-chart"); await pg.click('#v-chart [data-r="2"][data-c="2"]');
+    await pg.click("#btnStart"); await pg.click('#v-chart [data-r="2"][data-c="2"]');
     is("  charting works again", pitches(await O()), 1);
     await pg.click("#tab-setup");
     await pg.click("#btnReset");
     is("Start over asks first", /^Start over\?\s+1 charted pitch will be gone/.test(await asked(pg)), true);
     await yes(pg);
     o = await O();
-    is("  yes: level, date, opponent cleared", JSON.stringify([o.level, o.date, o.opp]), '["","",""]');
+    is("  yes: level and opponent cleared, the date back to today", JSON.stringify([o.level, o.opp, o.date === TODAY]), '["","",true]');
     is("  our lineup stays", JSON.stringify(o.lineup.map(sp => sp.men[0])), line0);
     is("  their pitchers cleared", o.pitchers.map(p => p.name).join(",") , "");
     is("  no pitches", pitches(o), 0);
@@ -130,7 +131,7 @@ function is(name, got, want) {
   }
 
   /* ------------------------------------------------------------ Bullpen */
-  console.log("\nBULLPEN v39");
+  console.log("\nBULLPEN v40");
   {
     const pg = await open("/bullpen/index.html");
     const S = () => ev(pg, 'JSON.parse(localStorage.getItem("titans-bullpen-v1"))');

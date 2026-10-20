@@ -24,7 +24,7 @@
 const http = require("http");
 const path = require("path");
 const { chromium } = require("playwright");
-const { FILL_SETUP } = require("../game-ready.js");
+const { FILL_SETUP, FILL_OFFENSE } = require("../game-ready.js");
 const { makeRuntime } = require("./mock-gas");
 
 const ROOT = path.join(__dirname, "..", "..");
@@ -531,11 +531,13 @@ async function part3() {
     check("  and says why, in amber", await pg.evaluate(() => { const n = document.getElementById("lvlNote"); return n.classList.contains("needed") && /locked/.test(n.textContent); }), true);
     check("logging a pitch is refused at the source too", await pg.evaluate(() => { logPitch(2, 2); return countPitches(); }), 0);
     await pg.click('[data-lvl="JV"]');
-    check("picking JV unlocks the Chart tab", await (async () => { await pg.click("#tab-chart"); return tabNow(); })(), "chart");
+    check("v48: the level alone does not unlock the Chart tab", await (async () => { await pg.click("#tab-chart"); return tabNow(); })(), "setup");
     await pg.evaluate(() => {
-      const set = (id, v) => { const e = document.getElementById(id); e.value = v; e.dispatchEvent(new Event("input", { bubbles: true })); };
-      set("fDate", "4-18"); set("fOpp", "Northview"); set("fWho", "Coach V");
+      const set = (id, v) => { const e = document.getElementById(id); e.value = v; e.dispatchEvent(new Event("input", { bubbles: true })); e.dispatchEvent(new Event("change", { bubbles: true })); };
+      set("fDate", "2027-04-18"); set("fOpp", "Northview"); set("fWho", "Coach V");
     });
+    await pg.evaluate(FILL_OFFENSE);
+    check("  a finished Setup does", await (async () => { await pg.click("#tab-chart"); return tabNow(); })(), "chart");
     const plot = () => pg.click('#v-chart [data-r="2"][data-c="2"]');
     const res = k => pg.click('#results [data-res="' + k + '"]');
     await plot(); await plot(); await res("1B"); await pg.click("#btnNextPA");
@@ -545,7 +547,7 @@ async function part3() {
     /* a mistake can be fixed before filing (Jim) */
     await pg.click("#tab-setup"); await pg.click('[data-lvl="Varsity"]');
     check("the level can be changed before filing", await pg.evaluate(() => O.level), "Varsity");
-    await pg.click("#btnArchive"); await pg.click(".askwrap [data-yes]");
+    await pg.click("#hdrFinish"); await pg.click(".askwrap [data-yes]");
     const a1 = await offArch();
     check("the filed game keeps its level", a1[0].level, "Varsity");
     check("after filing, the level is cleared", await pg.evaluate(() => O.level), "");
@@ -558,7 +560,7 @@ async function part3() {
     const r = recs();
     check("one offense record, not two", r.length, 1);
     check("Records carries the level as the team", r[0] && r[0].Team, "Varsity");
-    check("  and the date and charter", r[0] && (r[0].Date + " / " + r[0].Coach), "4-18 / Coach V");
+    check("  and the date and charter", r[0] && (r[0].Date + " / " + r[0].Coach), "2027-04-18 / Coach V");
     const op = book.getSheetByName("Offense_Pitches");
     check("every pitch reached Offense_Pitches", op.rows().length, 6);
     const orow = op.records()[0];
@@ -570,20 +572,21 @@ async function part3() {
     /* practice */
     await pg.click('[data-lvl="Freshman"]');
     await pg.click("#fPractice");
+    await pg.evaluate(FILL_OFFENSE);
     await pg.click("#tab-chart");
     check("the practice bar shows on the Chart tab", await pg.evaluate(() => !document.getElementById("practiceBar").hidden), true);
     const before = st.posts;
     await plot(); await res("FO"); await pg.click("#btnNextPA");
-    await pg.click("#tab-setup"); await pg.click("#btnArchive"); await pg.click(".askwrap [data-yes]");
+    await pg.click("#hdrFinish"); await pg.click(".askwrap [data-yes]");
     await pg.waitForTimeout(900);
     check("a practice game is never sent", st.posts - before, 0);
     check("practice switches itself off after filing", await pg.evaluate(() => O.practice + " " + document.getElementById("fPractice").checked), "false false");
 
     /* no signal, then signal */
     st.down = true;
-    await pg.click('[data-lvl="Sophomore"]'); await pg.click("#tab-chart");
+    await pg.click('[data-lvl="Sophomore"]'); await pg.evaluate(FILL_OFFENSE); await pg.click("#tab-chart");
     await plot(); await res("LO"); await pg.click("#btnNextPA");
-    await pg.click("#tab-setup"); await pg.click("#btnArchive"); await pg.click(".askwrap [data-yes]");
+    await pg.click("#hdrFinish"); await pg.click(".askwrap [data-yes]");
     await pg.waitForTimeout(1200);
     await pg.click("#tab-history");
     const ln = await line(pg);
@@ -630,7 +633,7 @@ async function part4() {
       const s = document.getElementById("suPitcher");   /* v30: the starter is set on Setup */
       s.value = window.TITANS_ROSTER[0].id; s.dispatchEvent(new Event("change", { bubbles: true }));
       const set = (id, v) => { const e = document.getElementById(id); e.value = v; e.dispatchEvent(new Event("input", { bubbles: true })); };
-      set("fDate", "4-18"); set("fOpp", "Rock Canyon");
+      set("fOpp", "Rock Canyon");
     });
     await pg.evaluate(FILL_SETUP);
     await pg.click("#tab-chart");
@@ -654,7 +657,7 @@ async function part4() {
     check("  the notes are saved with the game", (await G()).pitchers[0].note, "Attack early. Great 2-strike slider.");
     /* file from the Report tab: the open inning is asked about first */
     await pg.click("#tab-report");
-    await pg.click("#btnFinish");
+    await pg.click("#hdrFinish");
     if (await pg.$("#innNoRuns")) { await pg.click("#innNoRuns"); await pg.waitForTimeout(200); if (await pg.$("#innOk")) await pg.click("#innOk"); }
     await pg.waitForTimeout(200);
     if (await pg.$(".askwrap [data-yes]")) await pg.click(".askwrap [data-yes]");
@@ -713,7 +716,7 @@ async function part4() {
     const before = st.posts;
     await zone(); await res("FO"); await pg.click("#nextBtn");
     await pg.click("#tab-report");
-    await pg.click("#btnFinish");
+    await pg.click("#hdrFinish");
     if (await pg.$("#innNoRuns")) { await pg.click("#innNoRuns"); await pg.waitForTimeout(200); if (await pg.$("#innOk")) await pg.click("#innOk"); }
     await pg.waitForTimeout(200);
     if (await pg.$(".askwrap [data-yes]")) await pg.click(".askwrap [data-yes]");

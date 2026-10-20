@@ -17,9 +17,9 @@ old one — tap the amber stamp to fix it.
 
 | App | Source & folder | Live on GitHub Pages |
 |---|---|---|
-| **Bullpen Chart** | **v39** | **v36** (pushed Oct 19, with **receiver 2** redeployed first; same URL and key). **v37 to v39 waiting: redeploy receiver 3 FIRST, then push.** Notes confirmed from a real iPad Oct 19 (`Bullpen_Notes` made on first use, both notes in their columns) | Real-iPad upload test **passed Oct 19** (practice pen stayed off the Sheet, real pen landed) |
-| **Pitch Chart** (game) | **v31** | **v20** — **v21 to v31 waiting to be pushed** (receiver 3 must be deployed before v27+ goes out) |
-| **Offense Chart** | **v47** | v40 — **v41 to v47 waiting to be pushed** |
+| **Bullpen Chart** | **v41** | **v36** (pushed Oct 19, with **receiver 2** redeployed first; same URL and key). **v37 to v41 waiting: redeploy receiver 3 FIRST, then push.** Notes confirmed from a real iPad Oct 19 (`Bullpen_Notes` made on first use, both notes in their columns) | Real-iPad upload test **passed Oct 19** (practice pen stayed off the Sheet, real pen landed) |
+| **Pitch Chart** (game) | **v32** | **v20** — **v21 to v32 waiting to be pushed** (receiver 3 must be deployed before v27+ goes out) |
+| **Offense Chart** | **v49** | v40 — **v41 to v49 waiting to be pushed** |
 
 **The site moved Oct 14, 2026** to the program-owned account: **legendbaseballapps.github.io/titans-apps** (repo transferred from vaughnzj, so the live files, including the real `roster.js`, moved as they were). Every iPad installs from the new link; History saved under the old address does not carry over. The Coach's Guides in the pending builds (bullpen v31, game v23, offense v42) carry the new address, so pushing those builds is what puts it on the iPads.
 
@@ -43,6 +43,34 @@ is only for app code.
 ---
 
 ## Bullpen Chart
+
+### v41 · Oct 20, 2026
+**Headline:** The arms on this mound move to the header strip, the same as the Pitch Chart's.
+
+- **Why:** Bundle D of the consistency review. Jim approved the mockup and the 4 numbers (*"Those look
+  right"*): one "who's pitching" strip in all 3 apps, the Pitch Chart's header row.
+- **Tests:** `tools/consistency.js` (42 checks) now checks the strip in all 3: under the header, Chart tab
+  only, the one throwing in white, 4 numbers in the same style. Proved by hiding it in one app.
+- A chip per named arm (slot, name, pitches as *4 of 25* on a script; the one throwing in white; a finished
+  card dimmed with a check), then 4 numbers for the one throwing: **Pitches**, **On the spot**,
+  **Spot+close**, **Strikes**. Replaces the *Who's throwing* strip. Chart tab only.
+
+### v40 · Oct 20, 2026
+**Headline:** Bundle C: the bullpen moves onto the design the other 2 apps share.
+
+- **Why:** Jim, Oct 20, after the consistency review (`claude/consistency-review.md`): *"All four bundles"*,
+  pitch types *"FB CT SL CB CH SP"*, *"Next Hitter"*, Delete gone (*"we don't want to delete anything from the
+  iPad"*), and the Offense Ready list. Bundle D (one "who's pitching" strip) is a mockup first.
+- **Header:** the shared top bar. *LEGEND TITANS / Bullpen Chart · v40*, then **Date** and **Mound** (moved up
+  from Setup, where the other 2 keep date and opponent), the 4 tabs, Guide and Finish & file.
+- **Setup:** the Session panel is **This session** (who's charting and the practice switch).
+- **Look:** the shared palette (navy, greens, reds, ambers), grey panel header bands, 10px corners, the shared
+  button size, notice boxes, footer line; dark mode keeps working.
+- **Wording:** pitch types **FB CT SL CB CH SP**, renumbered 1 to 6 in that order (scripts and exports store
+  the letters, so nothing saved changes); *Go back* is **Undo last pitch**; offline wording matches.
+- **Tests:** new `tools/consistency.js` (37 checks) reads the same thing out of all 3 apps and expects one
+  answer: header, Setup order, notices, buttons, pitch-type order, Export, dialogs, Filed note, History,
+  footer, title. Proved by drifting one app at a time. `tools/game-ready.js` gains `FILL_OFFENSE`.
 
 ### v39 · Oct 20, 2026
 **Headline:** *Reset this session* becomes **Start over** (same behavior), with **Clear pitches** beside it.
@@ -455,6 +483,28 @@ execution grading.
 ---
 
 ## Pitch Chart (game)
+
+### v32 · Oct 20, 2026
+**Headline:** Bundles A to C of the consistency review: bug fixes, one vocabulary, and the shared workflow.
+
+- **Why:** Jim, Oct 20, after the consistency review (`claude/consistency-review.md`): *"All four bundles"*,
+  pitch types *"FB CT SL CB CH SP"*, *"Next Hitter"*, Delete gone (*"we don't want to delete anything from the
+  iPad"*), and the Offense Ready list. Bundle D (one "who's pitching" strip) is a mockup first.
+- **Bugs:** the step label read 1, 2, 3, 3 (now 4 · What happened); the **storage check** the other 2 apps run
+  was missing (*Storage not proven yet* until a close and reopen proves the iPad keeps data); with workers
+  blocked it said *Saving an offline copy* forever (now *No offline copy*, in all 3).
+- **Wording:** pitch types **FB CT SL CB CH SP**; **SF** added (an out, a fly, in play); **Next hitter**;
+  title *Titans Pitch Chart*.
+- **Workflow:** **Date is a date picker** that starts on today (stored 2026-10-20 style, like the bullpen);
+  a **This game** panel under Level with **Who's charting** (goes to the dashboard as Coach), **Home or away**
+  (in the export) and the practice switch; **Finish & file in the header only** (the Report button is gone);
+  **Export game (.txt)** at the bottom of Report in the shared orange; a **Filed** note at the top of Setup;
+  the charter carries over to the next game.
+- **Look:** notices are the shared boxes; buttons and the dialog's main button match (orange); Setup, Report
+  and History use the shared width; the live footer line; the long help paragraph on Report moved to the guide.
+- **Tests:** new `tools/consistency.js` (37 checks) reads the same thing out of all 3 apps and expects one
+  answer: header, Setup order, notices, buttons, pitch-type order, Export, dialogs, Filed note, History,
+  footer, title. Proved by drifting one app at a time. `tools/game-ready.js` gains `FILL_OFFENSE`.
 
 ### v31 · Oct 20, 2026
 **Headline:** **Clear pitches** and **Start over** on Setup replace *Discard this game* (bottom of the Report tab, tap twice).
@@ -896,6 +946,38 @@ Not logged at the time.
 ---
 
 ## Offense Chart
+
+### v49 · Oct 20, 2026
+**Headline:** Their pitchers move to the header strip, the same as the Pitch Chart's.
+
+- **Why:** Bundle D of the consistency review. Jim approved the mockup and the 4 numbers (*"Those look
+  right"*): one "who's pitching" strip in all 3 apps, the Pitch Chart's header row.
+- **Tests:** `tools/consistency.js` (42 checks) now checks the strip in all 3: under the header, Chart tab
+  only, the one throwing in white, 4 numbers in the same style. Proved by hiding it in one app.
+- A chip per pitcher (*Their starter* / *Relief 1*, name and hand, pitches; the one on the mound in white) and
+  **+ Reliever**, then 4 numbers for him: **Pitches**, **Strike %**, **1st-pitch strike**, **Our whiff %**.
+  Replaces the *On the mound* panel. Chart tab only.
+
+### v48 · Oct 20, 2026
+**Headline:** Bundles A to C: the **Ready to chart** lock, the shared Setup order, and History without Delete.
+
+- **Why:** Jim, Oct 20, after the consistency review (`claude/consistency-review.md`): *"All four bundles"*,
+  pitch types *"FB CT SL CB CH SP"*, *"Next Hitter"*, Delete gone (*"we don't want to delete anything from the
+  iPad"*), and the Offense Ready list. Bundle D (one "who's pitching" strip) is a mockup first.
+- **Ready to chart** (the Pitch Chart's box and lock): the level, the date, the opponent, **their starter**,
+  and a hitter in **every spot of our lineup**. Checked at the Chart tab, a pitch, and a no-pitch IBB, only
+  before the game starts.
+- **Setup order:** Level, **This game** (who's charting, home or away, practice), lineup and their pitchers,
+  roster, Ready to chart, **Start over** in its own panel at the bottom.
+- **Finish & file in the header only** (the Setup button and the History button are gone); **Export pitch log
+  (.csv)** at the bottom of Report; a **Filed** note at the top of Setup.
+- **History:** the filed list comes first; **no Delete** (Jim: nothing gets deleted from the iPad); upload
+  pills in the shared condensed caps.
+- **Also:** pitch types **FB CT SL CB CH SP**; the date is a picker on today; the Lineup button only shows on
+  the Chart tab; shared width, buttons and panel labels; offline wording matches.
+- **Tests:** new `tools/consistency.js` (37 checks) reads the same thing out of all 3 apps and expects one
+  answer: header, Setup order, notices, buttons, pitch-type order, Export, dialogs, Filed note, History,
+  footer, title. Proved by drifting one app at a time. `tools/game-ready.js` gains `FILL_OFFENSE`.
 
 ### v47 · Oct 20, 2026
 **Headline:** **Clear pitches** and **Start over** on Setup. Before this the only way to clear a practice game was to file it.
