@@ -605,11 +605,13 @@ footer{max-width:1340px;margin:0 auto;padding:0 16px 30px;color:var(--ink-2);fon
         <h2>Start over</h2>
         <div class="body">
           <div class="row">
-            <button class="btn" id="btnReset" style="flex:0 0 auto">Reset this session</button>
+            <button class="btn" id="btnClearPitches" style="flex:0 0 auto">Clear pitches</button>
+            <button class="btn" id="btnReset" style="flex:0 0 auto;color:var(--miss);border-color:var(--miss)">Start over</button>
             <p class="tiny" style="flex:1 1 240px;align-self:center;margin:0">
-              Wipes the script, the template, the names and anything charted, and keeps the
-              mound name. Use it when the iPad was set up wrong &mdash; not to end a real
-              session, which is what <b>Finish &amp; file</b> is for.
+              <b>Clear pitches</b> keeps everything on this tab (script, names, modes) and clears
+              everything charted: pitches, at-bats, call changes and notes. Chart the same session
+              again. <b>Start over</b> clears this tab too (the mound name stays). Neither one is how a
+              real session ends; that's <b>Finish &amp; file</b>.
               <b>Sessions already in History are never touched.</b>
             </p>
           </div>
@@ -1236,7 +1238,7 @@ function cur(){ return byId(S.cur); }
    gateWipe(), wipeEverything(), WIPE_KEYS, the #wipeBox markup and its listener. */
 var ALLOW_WIPE = false;
 
-var BUILD = "v38";
+var BUILD = "v39";
 
 /* ======================= DASHBOARD UPLOAD =======================
    Where a filed session goes: the Titans Upload Receiver, an Apps Script web app
@@ -1812,25 +1814,41 @@ el("sumBack").onclick = closeSum;
    dialog has to say exactly what goes and point at the non-destructive way out.
    The mound name survives - that is the iPad's identity, not session data. */
 gateWipe(function(){ el("btnWipe").onclick = wipeEverything; });
+/* v39: Clear pitches and Start over, the same pair as the other 2 apps. */
+el("btnClearPitches").onclick = function(){
+  var n = pitchCount(S);
+  if(!n){ noteSetup("Nothing charted yet, so there is nothing to clear."); return; }
+  ask("Clear the pitches?\n\n" + n + " charted pitch" + (n===1 ? "" : "es") +
+      " (and the at-bats, call changes and notes that came with them) will be gone for good.\n\n" +
+      "Everything on Setup stays, so you can chart the same session again.\n\n" +
+      "Want to keep them? Tap Cancel and use Finish & file. Sessions already in History are not touched.",
+      "Clear pitches", function(){
+    S.pitchers.forEach(function(p){ p.pitches = []; p.abs = []; p.over = {}; p.note = ""; p.comments = ""; });
+    S.sid = uid();                       /* a new session as far as the dashboard is concerned */
+    S.cur = S.pitchers[0].id;
+    save(); drawSetup(); show("setup");
+    noteSetup("Pitches cleared. Setup is as you left it, ready to chart again.");
+  });
+};
 el("btnReset").onclick = function(){
   var n = pitchCount(S), msg;
   if(n){
-    msg = "Reset this session?\n\n" + n + " charted pitch" + (n===1 ? "" : "es") +
-          " will be gone for good.\n\nIf you want to keep them, tap Cancel and use " +
-          "Finish & file instead - that moves them to History.\n\n" +
-          "Either way, sessions already in History are not touched.";
+    msg = "Start over?\n\n" + n + " charted pitch" + (n===1 ? "" : "es") +
+          " will be gone for good, and Setup goes back to blank: the script, the template and the names.\n\n" +
+          "Want to keep them? Tap Cancel and use Finish & file. " +
+          "Sessions already in History are not touched.";
   } else {
-    msg = "Reset this session?\n\nClears the script, the template and the names. " +
+    msg = "Start over?\n\nClears the script, the template and the names. " +
           "Nothing is charted yet, so there is nothing to lose.\n\n" +
           "Sessions already in History are not touched.";
   }
-  ask(msg, "Reset", function(){
+  ask(msg, "Start over", function(){
     var pad = S.pad;
     S = blank();
     S.pad = pad;
     S.cur = S.pitchers[0].id;
     save(); drawSetup(); show("setup");
-    noteSetup("Session reset. Load a routine and put your arms in.");
+    noteSetup("Started over. Load a routine and put your arms in.");
   });
 };
 

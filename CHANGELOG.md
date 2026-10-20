@@ -17,9 +17,9 @@ old one — tap the amber stamp to fix it.
 
 | App | Source & folder | Live on GitHub Pages |
 |---|---|---|
-| **Bullpen Chart** | **v38** | **v36** (pushed Oct 19, with **receiver 2** redeployed first; same URL and key). **v37 and v38 waiting: redeploy receiver 3 FIRST, then push.** Notes confirmed from a real iPad Oct 19 (`Bullpen_Notes` made on first use, both notes in their columns) | Real-iPad upload test **passed Oct 19** (practice pen stayed off the Sheet, real pen landed) |
-| **Pitch Chart** (game) | **v30** | **v20** — **v21 to v30 waiting to be pushed** (receiver 3 must be deployed before v27+ goes out) |
-| **Offense Chart** | **v46** | v40 — **v41 to v46 waiting to be pushed** |
+| **Bullpen Chart** | **v39** | **v36** (pushed Oct 19, with **receiver 2** redeployed first; same URL and key). **v37 to v39 waiting: redeploy receiver 3 FIRST, then push.** Notes confirmed from a real iPad Oct 19 (`Bullpen_Notes` made on first use, both notes in their columns) | Real-iPad upload test **passed Oct 19** (practice pen stayed off the Sheet, real pen landed) |
+| **Pitch Chart** (game) | **v31** | **v20** — **v21 to v31 waiting to be pushed** (receiver 3 must be deployed before v27+ goes out) |
+| **Offense Chart** | **v47** | v40 — **v41 to v47 waiting to be pushed** |
 
 **The site moved Oct 14, 2026** to the program-owned account: **legendbaseballapps.github.io/titans-apps** (repo transferred from vaughnzj, so the live files, including the real `roster.js`, moved as they were). Every iPad installs from the new link; History saved under the old address does not carry over. The Coach's Guides in the pending builds (bullpen v31, game v23, offense v42) carry the new address, so pushing those builds is what puts it on the iPads.
 
@@ -43,6 +43,19 @@ is only for app code.
 ---
 
 ## Bullpen Chart
+
+### v39 · Oct 20, 2026
+**Headline:** *Reset this session* becomes **Start over** (same behavior), with **Clear pitches** beside it.
+
+- **Why:** Jim, Oct 20: *"Should we add the 'Reset this session' functionality to the pitch and offense
+  charts? Would definitely be helpful in Practice mode."* He chose to offer both kinds of reset, and to
+  make all 3 apps match.
+- **Clear pitches** keeps everything on Setup and clears everything charted, so the same session can be
+  charted again. **Start over** takes Setup back to blank. Both on the Setup tab, both ask first with the
+  pitch count and point to Finish & file, neither touches History. Same pair, same place, all 3 apps.
+- Tests: `tools/reset.js` (56 checks across the 3 apps), each app's clear proved by breaking it.
+- Clear pitches keeps the script, template, names and modes; clears pitches, at-bats, call changes and
+  notes, and gives the session a new id (a new session to the dashboard).
 
 ### v38 · Oct 20, 2026
 **Headline:** The **Report tab is the Session summary**, the same as the Pitch Chart's Report tab (v28).
@@ -442,6 +455,19 @@ execution grading.
 ---
 
 ## Pitch Chart (game)
+
+### v31 · Oct 20, 2026
+**Headline:** **Clear pitches** and **Start over** on Setup replace *Discard this game* (bottom of the Report tab, tap twice).
+
+- **Why:** Jim, Oct 20: *"Should we add the 'Reset this session' functionality to the pitch and offense
+  charts? Would definitely be helpful in Practice mode."* He chose to offer both kinds of reset, and to
+  make all 3 apps match.
+- **Clear pitches** keeps everything on Setup and clears everything charted, so the same game can be
+  charted again. **Start over** takes Setup back to blank. Both on the Setup tab, both ask first with the
+  pitch count and point to Finish & file, neither touches History. Same pair, same place, all 3 apps.
+- Tests: `tools/reset.js` (56 checks across the 3 apps), each app's clear proved by breaking it.
+- Clear pitches also drops relievers, subs, innings, outs, notes and tags; the lineup, starter, level, date,
+  opponent and practice switch stay. Start over keeps the starter (as filing does).
 
 ### v30 · Oct 20, 2026
 **Headline:** The **starter is set on Setup only**. On the Chart tab his chip is a read-out (name and pitch
@@ -870,6 +896,19 @@ Not logged at the time.
 ---
 
 ## Offense Chart
+
+### v47 · Oct 20, 2026
+**Headline:** **Clear pitches** and **Start over** on Setup. Before this the only way to clear a practice game was to file it.
+
+- **Why:** Jim, Oct 20: *"Should we add the 'Reset this session' functionality to the pitch and offense
+  charts? Would definitely be helpful in Practice mode."* He chose to offer both kinds of reset, and to
+  make all 3 apps match.
+- **Clear pitches** keeps everything on Setup and clears everything charted, so the same game can be
+  charted again. **Start over** takes Setup back to blank. Both on the Setup tab, both ask first with the
+  pitch count and point to Finish & file, neither touches History. Same pair, same place, all 3 apps.
+- Tests: `tools/reset.js` (56 checks across the 3 apps), each app's clear proved by breaking it.
+- Clear pitches keeps level, date, opponent, our lineup and their pitchers; drops subs and every at-bat.
+  Start over keeps our lineup and the charter's name (as filing does).
 
 ### v46 · Oct 19, 2026
 **Headline:** **Finish & file** moves into the header; **Export** moves to Setup.

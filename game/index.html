@@ -835,6 +835,21 @@ a.topbtn{display:inline-block;text-decoration:none;border:0}
       </div>
     </div>
   </div>
+  <!-- v31: the same pair on the Setup tab of all 3 apps. -->
+  <div class="panel" id="resetPanel">
+    <div class="phead"><span class="lbl">Start over</span></div>
+    <div class="pbody">
+      <div class="rowsplit">
+        <button class="ghost" id="btnClearPitches">Clear pitches</button>
+        <button class="ghost danger" id="btnReset">Start over</button>
+      </div>
+      <div class="sunote" style="margin-top:8px"><b>Clear pitches</b> keeps everything on this tab and
+        clears everything charted: pitches, at-bats, innings, notes, tags and relievers. Chart the same
+        game again. <b>Start over</b> clears this tab too (the starter stays). Neither one is how a real
+        game ends; that's <b>Finish &amp; file</b>. <b>Games in History are never touched.</b></div>
+      <div class="sunote" id="resetNote" style="margin-top:6px;font-weight:600" hidden></div>
+    </div>
+  </div>
 </section>
 
 <!-- v28: the REPORT tab. For the game in progress it is the Game summary plus the
@@ -884,9 +899,6 @@ a.topbtn{display:inline-block;text-decoration:none;border:0}
       <button class="finishbtn" id="btnFinish">Finish &amp; file this game</button>
       <div class="lbl" style="margin:4px 0 10px;text-transform:none;letter-spacing:0;font-size:11.5px">
         Moves it to History and starts a clean one. Nothing is deleted.</div>
-      <div class="rowsplit" style="margin-bottom:8px">
-        <button class="ghost danger" id="btnClear">Discard this game</button>
-      </div>
       <div id="wipeBox" style="margin:10px 0 8px;padding-top:10px;border-top:1px solid var(--line-soft)">
         <button class="ghost danger" id="btnWipe" style="width:100%">Erase everything on this iPad</button>
         <div class="lbl" style="margin-top:5px;text-transform:none;letter-spacing:0;font-size:11.5px;line-height:1.4">Puts this iPad back to how the app ships: the game in progress <b>and everything in History</b>, gone for good. For testing &mdash; <b>Finish &amp; file</b> is how a real game ends. The roster is not affected.</div>
@@ -1678,7 +1690,7 @@ function doFile(){
   uploadPending();
   note2("Filed. " + A.length + (A.length===1 ? " game in History." : " games in History."));
 }
-var G = null, confirmClear = false;
+var G = null;
 
 /* ---------- model ---------- */
 /* The schema stamp, in ONE place. It was two - emptyGame() wrote the current
@@ -1760,6 +1772,53 @@ function drawSuPitcher(){
   var s = document.getElementById("suPitcher"); if(!s) return;
   if(document.activeElement === s) return;
   s.innerHTML = pitcherOptions(0);
+}
+/* v31: Clear pitches and Start over. */
+function resetNote(msg){
+  var e = document.getElementById("resetNote"); if(!e) return;
+  e.textContent = msg || ""; e.hidden = !msg;
+  clearTimeout(resetNote.t);
+  if(msg) resetNote.t = setTimeout(function(){ e.hidden = true; }, 8000);
+}
+function chartedWords(){
+  var n = chartedAnything(G);
+  return n ? (n + " charted pitch" + (n === 1 ? "" : "es")) : "";
+}
+function clearPitches(){
+  if(!gameStarted(G)){ resetNote("Nothing charted yet, so there is nothing to clear."); return; }
+  ask("Clear the pitches?\n\n" + (chartedWords() || "The charted at-bats") +
+      " (and the at-bats, innings, runs, notes, tags and relievers that came with them) will be gone for good.\n\n" +
+      "Everything on Setup stays, so you can chart the same game again.\n\n" +
+      "Want to keep them? Tap Cancel and use Finish & file. Games already in History are not touched.",
+      "Clear pitches", function(){
+    G.lineup.forEach(function(sp){
+      sp.men = [sp.men[0]]; sp.cur = 0;               /* subs came in during the game */
+      var b = sp.men[0];
+      b.abs = [newAB()]; b.cur = 0; b.tags = {}; b.notes = ""; b.play = null;
+    });
+    for(var i = 1; i < G.pitchers.length; i++) G.pitchers[i] = newGamePitcher();
+    G.pitchers[0].note = ""; G.pitchers[0].comments = "";
+    G.shown = 1; G.curP = 0;
+    G.inning = 1; G.innings = []; G.outs = 0; G.notes = "";
+    G.curB = 0; G.liveB = 0; G.lastClosed = null;
+    save(); showTab("setup"); render();
+    resetNote("Pitches cleared. Setup is as you left it, ready to chart again.");
+  });
+}
+function startOver(){
+  var w = chartedWords();
+  ask("Start over?\n\n" + (w ? w + " will be gone for good, and " : "") +
+      "Setup goes back to blank: level, date, opponent and lineup. The starter stays.\n\n" +
+      (w ? "Want to keep them? Tap Cancel and use Finish & file. " : "") +
+      "Games already in History are not touched.",
+      "Start over", function(){
+    var p0 = G.pitchers[0];
+    G = emptyGame();
+    ["rid","name","last","first","cls","hand"].forEach(function(k){ if(p0[k] != null) G.pitchers[0][k] = p0[k]; });
+    readyNag = false; lvlNag = false;
+    save(); showTab("setup"); render();
+    resetNote("Started over. Pick the level and fill in Setup.");
+  });
 }
 function emptyGame(){
   var l=[],i;
@@ -4482,18 +4541,8 @@ function build(){
   document.getElementById("fNotes2").addEventListener("input",function(){ G.notes=this.value; save(); });
 
   gateWipe(function(){ document.getElementById("btnWipe").addEventListener("click", wipeEverything); });
-  var clearBtn=document.getElementById("btnClear");
-  clearBtn.addEventListener("click",function(){
-    if(!confirmClear){
-      confirmClear=true;
-      clearBtn.textContent="Tap again to discard \u2014 this one is NOT filed";
-      setTimeout(function(){ confirmClear=false; clearBtn.textContent="Discard this game"; },3000);
-      return;
-    }
-    confirmClear=false; clearBtn.textContent="Discard this game";
-    G=emptyGame(); render(); save();
-    note2("Discarded. Filed games in History are untouched.");
-  });
+  document.getElementById("btnClearPitches").addEventListener("click", clearPitches);
+  document.getElementById("btnReset").addEventListener("click", startOver);
 
   document.getElementById("btnFinish").addEventListener("click", finishAndFile);
   document.getElementById("btnExport").addEventListener("click", exportReport);
@@ -4526,7 +4575,7 @@ function build(){
    gateWipe(), wipeEverything(), WIPE_KEYS, the #wipeBox markup and its listener. */
 var ALLOW_WIPE = false;
 
-var BUILD = "v30";
+var BUILD = "v31";
 
 /* ======================= DASHBOARD UPLOAD (v25) =======================
    Same receiver as the Bullpen Chart and the Offense Chart. Blank UPLOAD_URL =
