@@ -37,11 +37,19 @@ const shown = id => `(function(){ var b=document.getElementById(${JSON.stringify
     is("Export now is gone from the header", await ev(pg, '!document.getElementById("expNow")'), true);
     is("the old Finish bar is gone", await ev(pg, '!document.getElementById("finishBar")'), true);
     is("a fresh iPad: no Finish & file in the header", await ev(pg, shown("hdrFinish")), false);
-    is("Ready box: not yet, pick a pitcher", await ev(pg, 'document.getElementById("readyMsg").textContent'), "Not yet. Pick at least 1 pitcher above.");
+    is("Ready box: not yet, a pitcher needed", await ev(pg, 'document.getElementById("readyMsg").textContent'), "Not yet. Still needed: at least 1 pitcher.");
     is("  and Start charting waits", await ev(pg, 'document.getElementById("btnStart").disabled'), true);
+    /* v42: the same lock as the Pitch Chart and Offense Chart */
+    await pg.click("#tab-chart");
+    is("the Chart tab opens to the not-ready screen", await ev(pg, '!document.getElementById("v-gate").hidden && document.getElementById("v-chart").hidden && document.getElementById("v-setup").hidden'), true);
+    is("  it says Complete Setup", await ev(pg, 'document.querySelector("#v-gate p").textContent'), "Still needed: Complete Setup");
+    is("  the Chart tab is lit", await ev(pg, 'document.getElementById("tab-chart").getAttribute("aria-selected")'), "true");
+    await pg.click("#gateBack");
+    is("  Back to Setup goes there, and the box is amber", await ev(pg, '!document.getElementById("v-setup").hidden && document.getElementById("readyPanel").classList.contains("nag")'), true);
+
     await ev(pg, '(function(){ var s=document.querySelectorAll(\'#rosterTbl select[data-f="rid"]\')[0]; var R=window.TITANS_ROSTER; s.value=R[0].id; s.dispatchEvent(new Event("input",{bubbles:true})); s.dispatchEvent(new Event("change",{bubbles:true})); })()');
     const who = await ev(pg, '(function(){ var s=document.querySelectorAll(\'#rosterTbl select[data-f="rid"]\')[0]; return s.options[s.selectedIndex].text; })()');
-    is("a pitcher with no script: says to load a template", await ev(pg, '/^Not yet\\. Load a template, or set .+ to Freeform or Live ABs\\.$/.test(document.getElementById("readyMsg").textContent)'), true);
+    is("a pitcher with no script: says to load a template", await ev(pg, '/^Not yet\\. Still needed: a script\\. Load a template, or set .+ to Freeform or Live ABs\\.$/.test(document.getElementById("readyMsg").textContent)'), true);
     is("  still waiting", await ev(pg, 'document.getElementById("btnStart").disabled'), true);
     await ev(pg, '(function(){ var t=document.getElementById("tplPick"); t.value=t.options[1].value; t.dispatchEvent(new Event("change",{bubbles:true})); document.getElementById("tplLoad").click(); var y=document.querySelector(".askwrap [data-yes]"); if(y) y.click(); })()');
     is("with a template: ready, and says what is set", await ev(pg, 'document.getElementById("readyMsg").textContent'), "✓ Ready. 1 pitcher · Fastball Command · 25 pitches");
@@ -50,6 +58,7 @@ const shown = id => `(function(){ var b=document.getElementById(${JSON.stringify
     await pg.click("#btnStart");
     is("Start charting opens the Chart tab", await ev(pg, '!document.getElementById("v-chart").hidden'), true);
     is("still no header button before a pitch", await ev(pg, shown("hdrFinish")), false);
+    is("  the Ready box is green again once ready", await ev(pg, 'document.getElementById("readyPanel").className'), "panel ready");
     await ev(pg, 'document.querySelector(\'#zone button[data-r="2"][data-c="2"]\').click()');
     is("1 pitch: Finish & file appears in the header", await ev(pg, shown("hdrFinish")), true);
     await pg.click("#tab-report");
@@ -97,8 +106,9 @@ const shown = id => `(function(){ var b=document.getElementById(${JSON.stringify
     is("v29 Ready box lists what is missing", await msg(), "Not yet. Still needed: the opponent, the starting pitcher, 9 hitters' names and 9 jersey numbers. Date and opponent are at the top of the screen.");
     is("  Start charting waits", await ev(pg, 'document.getElementById("suDone").disabled'), true);
     await pg.click("#tab-chart");
-    is("  the Chart tab sends you back to Setup", await onSetup(), true);
-    is("  and the box turns amber", await ev(pg, 'document.getElementById("readyPanel").classList.contains("nag")'), true);
+    is("  the Chart tab opens to the not-ready screen", await ev(pg, '!document.getElementById("v-gate").hidden && document.getElementById("v-chart").style.display === "none"'), true);
+    await pg.click("#gateBack");
+    is("  Back to Setup goes there, and the box is amber", await ev(pg, '!document.getElementById("v-setup").hidden && document.getElementById("readyPanel").classList.contains("nag")'), true);
     await ev(pg, 'document.querySelector("#zone .cell:nth-child(13)").click()');
     is("  a zone tap is refused at the source", await ev(pg, 'JSON.parse(localStorage.getItem("dugout-pitch-chart-v2")).lineup[0].men[0].abs[0].pitches.length'), 0);
     await ev(pg, 'document.querySelector(\'#results button[data-res="IBB"]\').click()');
@@ -159,8 +169,9 @@ const shown = id => `(function(){ var b=document.getElementById(${JSON.stringify
     is("v48 Ready box lists what is missing", await msg(), "Not yet. Still needed: the opponent, their starting pitcher and 9 spots in our lineup. Date and opponent are at the top of the screen.");
     is("  Start charting waits", await ev(pg, 'document.getElementById("btnStart").disabled'), true);
     await pg.click("#tab-chart");
-    is("  the Chart tab sends you back to Setup", await tabNow(), "setup");
-    is("  and the box turns amber", await ev(pg, 'document.getElementById("readyPanel").classList.contains("nag")'), true);
+    is("  the Chart tab opens to the not-ready screen", await ev(pg, '!document.getElementById("v-gate").hidden && document.getElementById("v-chart").hidden'), true);
+    await pg.click("#gateBack");
+    is("  Back to Setup goes there, and the box is amber", await ev(pg, '!document.getElementById("v-setup").hidden && document.getElementById("readyPanel").classList.contains("nag")'), true);
     is("  a pitch is refused at the source", await ev(pg, '(function(){ logPitch(2,2); return countPitches(); })()'), 0);
     is("  so is a no-pitch IBB", await ev(pg, '(function(){ setResult("IBB"); return curPA().result || ""; })()'), "");
     await ev(pg, FILL_OFFENSE);

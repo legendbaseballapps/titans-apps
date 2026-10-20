@@ -61,6 +61,12 @@ function is(name, got, want) {
   same("Start over offers Clear pitches and Start over", await each('[...document.querySelectorAll("#btnClearPitches, #btnReset")].map(function(e){ return e.textContent.trim(); }).join(",")'));
   same("panel header look (font size, color, background)", await each('(function(){ var h=document.querySelector("#v-setup .panel .phead .lbl, #v-setup .panel > h2"); var c=getComputedStyle(h), bg=getComputedStyle(h.closest(".phead") || h).backgroundColor; return [c.fontSize, c.color, bg].join(" "); })()'));
   same("Start charting waits until Setup is done", await each('(function(){ var b=document.getElementById("btnStart")||document.getElementById("suDone"); return b.disabled; })()'));
+  for (const a of APPS) await pages[a.name].click("#tab-chart");
+  /* Oct 20: before Setup is done, the Chart tab opens to the same "not ready" screen. */
+  same("before Setup is done, the Chart tab says Complete Setup", await each('(function(){ var g=document.getElementById("v-gate"); return !g.hidden && getComputedStyle(document.getElementById("chartBar")).display === "none" && g.querySelector("h2").textContent + " / " + g.querySelector("p").textContent; })()'));
+  same("  with the Chart tab lit", await each('document.getElementById("tab-chart").getAttribute("aria-selected")'));
+  for (const a of APPS) await pages[a.name].click("#gateBack");
+  same("  Back to Setup goes there, and the Ready box is amber", await each('!document.getElementById("v-setup").hidden && document.getElementById("v-gate").hidden && document.getElementById("readyPanel").classList.contains("nag")'));
   same("no Finish & file on Setup", await each('!document.querySelector("#v-setup #btnArchive, #v-setup .finishbtn")'));
 
   console.log("\nNOTICES, BUTTONS, DIALOGS, FOOTER");

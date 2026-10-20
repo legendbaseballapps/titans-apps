@@ -527,11 +527,13 @@ async function part3() {
     check("a fresh game opens on Setup, not Chart", await tabNow(), "setup");
     check("no level is picked", await pg.evaluate(() => O.level), "");
     await pg.click("#tab-chart");
-    check("the Chart tab refuses with no level", await tabNow(), "setup");
+    check("the Chart tab opens the not-ready screen with no level", await pg.evaluate(() => !document.getElementById("v-gate").hidden && document.getElementById("v-chart").hidden), true);
+    await pg.click("#gateBack");
     check("  and says why, in amber", await pg.evaluate(() => { const n = document.getElementById("lvlNote"); return n.classList.contains("needed") && /locked/.test(n.textContent); }), true);
     check("logging a pitch is refused at the source too", await pg.evaluate(() => { logPitch(2, 2); return countPitches(); }), 0);
     await pg.click('[data-lvl="JV"]');
-    check("v48: the level alone does not unlock the Chart tab", await (async () => { await pg.click("#tab-chart"); return tabNow(); })(), "setup");
+    check("v48: the level alone does not unlock the Chart tab", await (async () => { await pg.click("#tab-chart"); return pg.evaluate(() => !document.getElementById("v-gate").hidden); })(), true);
+    await pg.click("#gateBack");
     await pg.evaluate(() => {
       const set = (id, v) => { const e = document.getElementById(id); e.value = v; e.dispatchEvent(new Event("input", { bubbles: true })); e.dispatchEvent(new Event("change", { bubbles: true })); };
       set("fDate", "2027-04-18"); set("fOpp", "Northview"); set("fWho", "Coach V");
@@ -553,7 +555,8 @@ async function part3() {
     check("after filing, the level is cleared", await pg.evaluate(() => O.level), "");
     check("  and the app is back on Setup", await tabNow(), "setup");
     await pg.click("#tab-chart");
-    check("  and charting is locked again", await tabNow(), "setup");
+    check("  and charting is locked again", await pg.evaluate(() => !document.getElementById("v-gate").hidden), true);
+    await pg.click("#gateBack");
 
     console.log("\nOFFENSE CHART v45 · the upload");
     check("the filed game uploads", await until(async () => (await offArch())[0].up > 0), true);
@@ -622,13 +625,15 @@ async function part4() {
     const recs = () => book.getSheetByName("Records").records().filter(r => r.App === "game");
     check("a fresh game opens on the Setup screen", await onSetup(), true);
     await pg.click("#tab-chart");
-    check("Charting refuses with no level", await onSetup(), true);
+    check("Charting refuses with no level (the not-ready screen)", await pg.evaluate(() => !document.getElementById("v-gate").hidden), true);
+    await pg.click("#gateBack");
     check("  and says why, in amber", await pg.evaluate(() => { const n = document.getElementById("lvlNote"); return n.classList.contains("needed") && /locked/.test(n.textContent); }), true);
     await pg.evaluate(() => document.querySelector("#zone .cell:nth-child(13)").click());
     check("a zone tap is refused at the source too", ((await G()) || { lineup: [] }).lineup.some(sp => sp.men.some(m => m.abs.some(a => a.pitches.length))), false);
     await pg.click('[data-lvl="JV"]');
     await pg.click("#tab-chart");
-    check("v29: the level alone does not unlock charting", await onSetup(), true);
+    check("v29: the level alone does not unlock charting", await pg.evaluate(() => !document.getElementById("v-gate").hidden), true);
+    await pg.click("#gateBack");
     await pg.evaluate(() => {
       const s = document.getElementById("suPitcher");   /* v30: the starter is set on Setup */
       s.value = window.TITANS_ROSTER[0].id; s.dispatchEvent(new Event("change", { bubbles: true }));

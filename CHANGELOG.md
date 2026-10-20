@@ -17,9 +17,9 @@ old one — tap the amber stamp to fix it.
 
 | App | Source & folder | Live on GitHub Pages |
 |---|---|---|
-| **Bullpen Chart** | **v41** | **v36** (pushed Oct 19, with **receiver 2** redeployed first; same URL and key). **v37 to v41 waiting: redeploy receiver 3 FIRST, then push.** Notes confirmed from a real iPad Oct 19 (`Bullpen_Notes` made on first use, both notes in their columns) | Real-iPad upload test **passed Oct 19** (practice pen stayed off the Sheet, real pen landed) |
-| **Pitch Chart** (game) | **v32** | **v20** — **v21 to v32 waiting to be pushed** (receiver 3 must be deployed before v27+ goes out) |
-| **Offense Chart** | **v49** | v40 — **v41 to v49 waiting to be pushed** |
+| **Bullpen Chart** | **v43** | **v36** (pushed Oct 19, with **receiver 2** redeployed first; same URL and key). **v37 to v43 waiting: redeploy receiver 3 FIRST, then push.** Notes confirmed from a real iPad Oct 19 (`Bullpen_Notes` made on first use, both notes in their columns) | Real-iPad upload test **passed Oct 19** (practice pen stayed off the Sheet, real pen landed) |
+| **Pitch Chart** (game) | **v33** | **v20** — **v21 to v33 waiting to be pushed** (receiver 3 must be deployed before v27+ goes out) |
+| **Offense Chart** | **v50** | v40 — **v41 to v50 waiting to be pushed** |
 
 **The site moved Oct 14, 2026** to the program-owned account: **legendbaseballapps.github.io/titans-apps** (repo transferred from vaughnzj, so the live files, including the real `roster.js`, moved as they were). Every iPad installs from the new link; History saved under the old address does not carry over. The Coach's Guides in the pending builds (bullpen v31, game v23, offense v42) carry the new address, so pushing those builds is what puts it on the iPads.
 
@@ -43,6 +43,30 @@ is only for app code.
 ---
 
 ## Bullpen Chart
+
+### v43 · Oct 20, 2026
+**Headline:** Before Setup is done, the Chart tab opens to a **Not ready to chart yet** screen instead of
+bouncing back to Setup. The same in all 3 apps (Bullpen v43, Pitch Chart v33, Offense v50).
+
+- **Why:** Jim, Oct 20: *"It feels a little clumsy to not be able to select one of the tabs, but being able to
+  select a tab and not do anything seems weird too."* He chose the screen that says what to do, with
+  generic wording: *"Still Needed - Complete Setup"*.
+- The screen: **Not ready to chart yet** / *Still needed: Complete Setup* / **← Back to Setup**. The Chart tab
+  stays lit; the strip and the Lineup button stay hidden. Back to Setup lands on Setup with the Ready box
+  amber and its full list of what is missing. Only before the first pitch, as before.
+- Tests: `tools/consistency.js` 45 checks (the screen, its words, the lit tab and Back to Setup in all 3;
+  proved by putting the old bounce back in one app); `header-finish.js` 87.
+
+### v42 · Oct 20, 2026
+**Headline:** The Chart tab waits for Setup, the same as the Pitch Chart and Offense Chart.
+
+- **Why:** Jim, Oct 20: *"The Bullpen Chart lets me flip between Setup and Chart without entering any setup
+  information, but the Pitch and Offensive charts do not."*
+- Until the Ready box is green (at least 1 pitcher, and a script unless every arm is freeform or live), the
+  Chart tab and a zone tap bring you back to Setup and the box turns amber. Only before the first pitch.
+- The Ready box wording matches the others: *Not yet. Still needed: at least 1 pitcher.* Once the session
+  is under way it says so and the button reads *Back to charting*.
+- Tests: `tools/consistency.js` (44 checks) now checks the lock in all 3; `header-finish.js` 86.
 
 ### v41 · Oct 20, 2026
 **Headline:** The arms on this mound move to the header strip, the same as the Pitch Chart's.
@@ -483,6 +507,19 @@ execution grading.
 ---
 
 ## Pitch Chart (game)
+
+### v33 · Oct 20, 2026
+**Headline:** Before Setup is done, the Chart tab opens to a **Not ready to chart yet** screen instead of
+bouncing back to Setup. The same in all 3 apps (Bullpen v43, Pitch Chart v33, Offense v50).
+
+- **Why:** Jim, Oct 20: *"It feels a little clumsy to not be able to select one of the tabs, but being able to
+  select a tab and not do anything seems weird too."* He chose the screen that says what to do, with
+  generic wording: *"Still Needed - Complete Setup"*.
+- The screen: **Not ready to chart yet** / *Still needed: Complete Setup* / **← Back to Setup**. The Chart tab
+  stays lit; the strip and the Lineup button stay hidden. Back to Setup lands on Setup with the Ready box
+  amber and its full list of what is missing. Only before the first pitch, as before.
+- Tests: `tools/consistency.js` 45 checks (the screen, its words, the lit tab and Back to Setup in all 3;
+  proved by putting the old bounce back in one app); `header-finish.js` 87.
 
 ### v32 · Oct 20, 2026
 **Headline:** Bundles A to C of the consistency review: bug fixes, one vocabulary, and the shared workflow.
@@ -946,6 +983,19 @@ Not logged at the time.
 ---
 
 ## Offense Chart
+
+### v50 · Oct 20, 2026
+**Headline:** Before Setup is done, the Chart tab opens to a **Not ready to chart yet** screen instead of
+bouncing back to Setup. The same in all 3 apps (Bullpen v43, Pitch Chart v33, Offense v50).
+
+- **Why:** Jim, Oct 20: *"It feels a little clumsy to not be able to select one of the tabs, but being able to
+  select a tab and not do anything seems weird too."* He chose the screen that says what to do, with
+  generic wording: *"Still Needed - Complete Setup"*.
+- The screen: **Not ready to chart yet** / *Still needed: Complete Setup* / **← Back to Setup**. The Chart tab
+  stays lit; the strip and the Lineup button stay hidden. Back to Setup lands on Setup with the Ready box
+  amber and its full list of what is missing. Only before the first pitch, as before.
+- Tests: `tools/consistency.js` 45 checks (the screen, its words, the lit tab and Back to Setup in all 3;
+  proved by putting the old bounce back in one app); `header-finish.js` 87.
 
 ### v49 · Oct 20, 2026
 **Headline:** Their pitchers move to the header strip, the same as the Pitch Chart's.

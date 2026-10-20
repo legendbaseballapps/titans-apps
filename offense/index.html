@@ -39,6 +39,16 @@ img{max-width:100%}
 .mstat b{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-weight:600;font-size:21px;line-height:1.1}
 .mstat span{font-family:"Avenir Next Condensed","HelveticaNeue-CondensedBold","Arial Narrow",-apple-system,system-ui,sans-serif;
   font-size:11px;letter-spacing:.11em;text-transform:uppercase;opacity:.6}
+
+/* The Chart tab before Setup is done (Oct 20): the same screen in all 3 apps. */
+.gate{max-width:640px;margin:48px auto;padding:30px 24px;text-align:center;
+  background:var(--surface, var(--card));border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow)}
+.gate h2{margin:0 0 8px;font-family:"Avenir Next Condensed","HelveticaNeue-CondensedBold","Arial Narrow",-apple-system,system-ui,sans-serif;
+  font-weight:700;font-size:24px;letter-spacing:.05em;text-transform:uppercase;color:var(--text, var(--ink))}
+.gate p{margin:0 0 20px;font-size:16px;color:var(--text-2, var(--ink-2))}
+.gateback{padding:12px 20px;border-radius:6px;background:var(--accent);color:var(--accent-ink);border:0;cursor:pointer;
+  font-family:"Avenir Next Condensed","HelveticaNeue-CondensedBold","Arial Narrow",-apple-system,system-ui,sans-serif;
+  font-weight:700;font-size:14px;letter-spacing:.07em;text-transform:uppercase}
 </style>
 </head>
 <body>
@@ -772,6 +782,13 @@ footer{max-width:1340px;margin:0 auto;padding:14px 16px 30px;color:var(--text-3)
   </section>
 
   <!-- ===================== REPORT ===================== -->
+  <section id="v-gate" hidden>
+  <div class="gate">
+    <h2>Not ready to chart yet</h2>
+    <p>Still needed: Complete Setup</p>
+    <button class="gateback" id="gateBack">&larr; Back to Setup</button>
+  </div>
+</section>
   <section id="v-report" role="tabpanel" hidden>
     <div id="rpt" class="stack"></div>
     <!-- v48: Export at the bottom of Report, like the other 2 apps. -->
@@ -816,7 +833,7 @@ footer{max-width:1340px;margin:0 auto;padding:14px 16px 30px;color:var(--text-3)
    gateWipe(), wipeEverything(), WIPE_KEYS, the #wipeBox markup and its listener. */
 var ALLOW_WIPE = false;
 
-var BUILD = "v49";
+var BUILD = "v50";
 
 /* ======================= DASHBOARD UPLOAD (v45) =======================
    Same receiver as the Bullpen Chart: an Apps Script web app on the program
@@ -1018,7 +1035,7 @@ function readyState(){
   return {ok: !miss.length, miss: miss};
 }
 function chartLocked(){ return !O.level || (!gameStarted() && !readyState().ok); }
-var readyNag = false;
+var readyNag = false, gated = false;
 function drawReady(){
   var m = el("readyMsg"); if(!m) return;
   var st = readyState(), go = el("btnStart"), panel = el("readyPanel");
@@ -3121,12 +3138,15 @@ function drawPractice(){
 }
 function showTab(t){
   /* v45, Jim: "You can't go to charting until the level is selected each time." */
-  if(t === "chart" && chartLocked()){ t = "setup"; lvlNag = !O.level; readyNag = true; }
+  /* Oct 20: before Setup is done the Chart tab opens to the "not ready" screen. */
+  gated = (t === "chart" && chartLocked());
+  if(gated){ lvlNag = !O.level; readyNag = true; }
   tab = t;
   TABS.forEach(function(x){
     el("tab-"+x).setAttribute("aria-selected", x===t ? "true" : "false");
-    el("v-"+x).hidden = (x!==t);
+    el("v-"+x).hidden = (x!==t) || (x === "chart" && gated);
   });
+  el("v-gate").hidden = !gated;
   render();
 }
 function render(){
@@ -3135,8 +3155,8 @@ function render(){
     el("fWho").value = O.who;  el("fHome").value = O.home;
     drawLevel(); drawPractice(); drawReady();
     /* v48: the Lineup button only does anything on the Chart tab. */
-    el("btnOrder").style.visibility = (tab === "chart") ? "" : "hidden";
-    el("chartBar").style.display = (tab === "chart") ? "" : "none";   /* Bundle D */
+    el("btnOrder").style.visibility = (tab === "chart" && !gated) ? "" : "hidden";
+    el("chartBar").style.display = (tab === "chart" && !gated) ? "" : "none";   /* Bundle D */
     if(tab==="setup"){ drawRoster(); drawLineupSetup(); drawPitchersSetup(); }
     if(tab==="chart"){
       drawPChips(); drawTypes(); drawZone(); drawSeq(); drawMods();
@@ -3176,6 +3196,7 @@ function wire(){
   TABS.forEach(function(t){ el("tab-"+t).onclick = function(){ showTab(t); }; });
   el("btnExport").onclick = exportNow;
   el("btnStart").onclick = function(){ showTab("chart"); };
+  el("gateBack").onclick = function(){ showTab("setup"); };
   el("hdrFinish").onclick = function(){ askFile(function(){ archiveGame(); }); };
   drawHdrFinish();
   el("btnUndo").onclick   = undoPitch;

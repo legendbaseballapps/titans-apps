@@ -169,6 +169,9 @@ a.topbtn{display:inline-block;text-decoration:none}
 .panel{background:var(--card);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);overflow:hidden}
 /* Ready to chart (v34): green edge once Setup has what charting needs. */
 .panel.ready{border-color:var(--good);box-shadow:inset 6px 0 0 var(--good), var(--shadow)}
+/* v42: amber when someone tries to chart before Setup is done, like the other 2 apps. */
+.panel.notready.nag{border-color:var(--close);box-shadow:inset 6px 0 0 var(--close), var(--shadow)}
+.panel.notready.nag .readymsg{color:var(--close);font-weight:600}
 .readymsg{flex:1 1 300px;margin:0;align-self:center}
 .readymsg.ok b{color:var(--good)}
 .panel > h2{
@@ -494,6 +497,16 @@ footer{max-width:1340px;margin:0 auto;padding:14px 16px 30px;color:var(--ink-3);
 .mstat b{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-weight:600;font-size:21px;line-height:1.1}
 .mstat span{font-family:"Avenir Next Condensed","HelveticaNeue-CondensedBold","Arial Narrow",-apple-system,system-ui,sans-serif;
   font-size:11px;letter-spacing:.11em;text-transform:uppercase;opacity:.6}
+
+/* The Chart tab before Setup is done (Oct 20): the same screen in all 3 apps. */
+.gate{max-width:640px;margin:48px auto;padding:30px 24px;text-align:center;
+  background:var(--surface, var(--card));border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow)}
+.gate h2{margin:0 0 8px;font-family:"Avenir Next Condensed","HelveticaNeue-CondensedBold","Arial Narrow",-apple-system,system-ui,sans-serif;
+  font-weight:700;font-size:24px;letter-spacing:.05em;text-transform:uppercase;color:var(--text, var(--ink))}
+.gate p{margin:0 0 20px;font-size:16px;color:var(--text-2, var(--ink-2))}
+.gateback{padding:12px 20px;border-radius:6px;background:var(--accent);color:var(--accent-ink);border:0;cursor:pointer;
+  font-family:"Avenir Next Condensed","HelveticaNeue-CondensedBold","Arial Narrow",-apple-system,system-ui,sans-serif;
+  font-weight:700;font-size:14px;letter-spacing:.07em;text-transform:uppercase}
 </style>
 </head>
 <body>
@@ -799,6 +812,14 @@ footer{max-width:1340px;margin:0 auto;padding:14px 16px 30px;color:var(--ink-3);
     </div>
   </section>
 
+  <section id="v-gate" hidden>
+  <div class="gate">
+    <h2>Not ready to chart yet</h2>
+    <p>Still needed: Complete Setup</p>
+    <button class="gateback" id="gateBack">&larr; Back to Setup</button>
+  </div>
+</section>
+
   <!-- ============ REPORT ============ -->
   <!-- v38: the Report tab IS the Session summary, the same as the Pitch Chart's
        Report tab (v28). The session in progress from the tab; a filed session from
@@ -1087,7 +1108,7 @@ function doFile(){
   /* The script and the names carry forward: same routine, same four arms next week. */
   var keep = {script:S.script, tpl:S.tpl, tplId:S.tplId, locked:S.locked, pad:S.pad, coach:S.coach};
   var names = S.pitchers.map(function(p){ return {rid:p.rid||"", name:p.name, hand:p.hand, cls:p.cls||""}; });
-  S = blank();
+  S = blank(); readyNag = false;
   S.script = keep.script; S.tpl = keep.tpl; S.tplId = keep.tplId; S.locked = keep.locked;
   S.pad = keep.pad; S.coach = keep.coach;
   names.forEach(function(n,i){
@@ -1258,12 +1279,12 @@ function namedPitchers(){
 }
 function readyState(){
   var named = namedPitchers();
-  if(!named.length) return {ok:false, msg:"Pick at least 1 pitcher above."};
+  if(!named.length) return {ok:false, msg:"Still needed: at least 1 pitcher."};
   var scripted = named.filter(function(p){ return !ppick(p); });
   if(scripted.length && !S.script.length){
     var nm = scripted.map(function(p){ return pname(p); });
     var list = nm.length > 2 ? nm.slice(0,2).join(", ") + " and " + (nm.length-2) + " more" : nm.join(" and ");
-    return {ok:false, msg:"Load a template, or set " + list + " to Freeform or Live ABs."};
+    return {ok:false, msg:"Still needed: a script. Load a template, or set " + list + " to Freeform or Live ABs."};
   }
   var parts = [named.length + " pitcher" + (named.length===1?"":"s")];
   if(scripted.length) parts.push((S.tpl || "Custom script") + " \u00b7 " + S.script.length + " pitches");
@@ -1274,13 +1295,25 @@ function readyState(){
   if(S.practice) parts.push("practice session");
   return {ok:true, msg:parts.join(" \u00b7 ")};
 }
+/* v42: the same lock as the other 2 apps. It applies only before the session
+   starts: once a pitch is in, a cleared name never stops the charting. */
+function sessionStarted(){ return pitchCount(S) > 0; }
+function chartLocked(){ return !sessionStarted() && !readyState().ok; }
+var readyNag = false;
 function drawReady(){
   var m = document.getElementById("readyMsg"); if(!m) return;
-  var r = readyState();
+  var r = readyState(), started = sessionStarted();
+  if(started){
+    m.className = "readymsg ok";
+    m.innerHTML = "<b>Session under way.</b> Back to the chart any time.";
+    el("readyPanel").className = "panel ready";
+    el("btnStart").disabled = false; el("btnStart").innerHTML = "Back to charting &rarr;";
+    return;
+  }
   m.className = "readymsg" + (r.ok ? " ok" : "");
   m.innerHTML = (r.ok ? "<b>\u2713 Ready.</b> " : "<b>Not yet.</b> ") + esc(r.msg);
-  el("readyPanel").className = "panel" + (r.ok ? " ready" : "");
-  el("btnStart").disabled = !r.ok;
+  el("readyPanel").className = "panel " + (r.ok ? "ready" : "notready" + (readyNag ? " nag" : ""));
+  el("btnStart").disabled = !r.ok; el("btnStart").innerHTML = "Start charting &rarr;";
 }
 function byId(id){ for(var i=0;i<S.pitchers.length;i++) if(S.pitchers[i].id===id) return S.pitchers[i]; return null; }
 function cur(){ return byId(S.cur); }
@@ -1307,7 +1340,7 @@ function cur(){ return byId(S.cur); }
    gateWipe(), wipeEverything(), WIPE_KEYS, the #wipeBox markup and its listener. */
 var ALLOW_WIPE = false;
 
-var BUILD = "v41";
+var BUILD = "v43";
 
 /* ======================= DASHBOARD UPLOAD =======================
    Where a filed session goes: the Titans Upload Receiver, an Apps Script web app
@@ -1505,26 +1538,32 @@ function missRead(o){
 var views = {setup:"v-setup", chart:"v-chart", report:"v-report", hist:"v-hist"};
 var el = function(id){ return document.getElementById(id); };
 function show(which){
+  /* v42: no Chart tab until Setup is ready (before the first pitch only). */
+  /* Oct 20: before Setup is done the Chart tab opens to the "not ready" screen. */
+  var gated = (which === "chart" && chartLocked());
+  if(gated) readyNag = true;
   /* v38: the Report tab shows the session in progress (sumIdx -1) unless a filed
      session was opened from History (sumIdx n), and then History stays lit. */
   if(which !== "report") sumIdx = null; else if(sumIdx == null) sumIdx = -1;
   var lit = (which === "report" && sumIdx >= 0) ? "hist" : which;
-  el("chartBar").style.display = (which === "chart") ? "" : "none";   /* Bundle D */
+  el("chartBar").style.display = (which === "chart" && !gated) ? "" : "none";   /* Bundle D */
   for(var k in views){
-    el(views[k]).hidden = (k!==which);
+    el(views[k]).hidden = (k!==which) || (k === "chart" && gated);
     el("tab-"+k).setAttribute("aria-selected", k===lit ? "true" : "false");
   }
+  el("v-gate").hidden = !gated;
   /* Setup was the one view that never redrew on return, so anything that depends
      on charting state - the new Finish bar above all - stayed stale until some
      other edit happened to redraw it. */
   if(which==="setup")  drawSetup();
-  if(which==="chart"){ followTheMound(); drawChart(); }
+  if(which==="chart" && !gated){ followTheMound(); drawChart(); }
   if(which==="report") drawReport();
   if(which==="hist")   drawHistory();
   window.scrollTo(0,0);
 }
 el("tab-setup").onclick=function(){show("setup");};
 el("tab-chart").onclick=function(){show("chart");};
+el("gateBack").onclick=function(){show("setup");};
 el("tab-report").onclick=function(){ sumIdx = -1; show("report"); };   /* always the session in progress */
 el("tab-hist").onclick=function(){show("hist");};
 
@@ -1914,7 +1953,7 @@ el("btnReset").onclick = function(){
   }
   ask(msg, "Start over", function(){
     var pad = S.pad;
-    S = blank();
+    S = blank(); readyNag = false;
     S.pad = pad;
     S.cur = S.pitchers[0].id;
     save(); drawSetup(); show("setup");
@@ -2179,6 +2218,7 @@ window.addEventListener("resize", positionFrame);
 
 el("zone").addEventListener("click", function(e){
   var b = e.target.closest("button[data-r]"); if(!b) return;
+  if(chartLocked()){ readyNag = true; show("setup"); return; }   /* v42: the lock, at the source */
   var p = cur(); if(!p) return;
   var i = activeIdx(p), c = call(p,i);
   if(!c) return;

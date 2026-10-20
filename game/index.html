@@ -14,6 +14,16 @@
 html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 img{max-width:100%}
 [hidden]{display:none!important}
+
+/* The Chart tab before Setup is done (Oct 20): the same screen in all 3 apps. */
+.gate{max-width:640px;margin:48px auto;padding:30px 24px;text-align:center;
+  background:var(--surface, var(--card));border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow)}
+.gate h2{margin:0 0 8px;font-family:"Avenir Next Condensed","HelveticaNeue-CondensedBold","Arial Narrow",-apple-system,system-ui,sans-serif;
+  font-weight:700;font-size:24px;letter-spacing:.05em;text-transform:uppercase;color:var(--text, var(--ink))}
+.gate p{margin:0 0 20px;font-size:16px;color:var(--text-2, var(--ink-2))}
+.gateback{padding:12px 20px;border-radius:6px;background:var(--accent);color:var(--accent-ink);border:0;cursor:pointer;
+  font-family:"Avenir Next Condensed","HelveticaNeue-CondensedBold","Arial Narrow",-apple-system,system-ui,sans-serif;
+  font-weight:700;font-size:14px;letter-spacing:.07em;text-transform:uppercase}
 </style>
 </head>
 <body>
@@ -883,6 +893,14 @@ footer#foot{max-width:1340px;margin:0 auto;padding:14px 16px 30px;color:var(--te
         game again. <b>Start over</b> clears this tab too (the starter stays). Neither one is how a real
         game ends; that's <b>Finish &amp; file</b>. <b>Games in History are never touched.</b></div>
     </div>
+  </div>
+</section>
+
+<section id="v-gate" hidden>
+  <div class="gate">
+    <h2>Not ready to chart yet</h2>
+    <p>Still needed: Complete Setup</p>
+    <button class="gateback" id="gateBack">&larr; Back to Setup</button>
   </div>
 </section>
 
@@ -3010,22 +3028,25 @@ var setupOpen = false;
 var TAB = "chart", TABS = ["setup","chart","report","history"];
 function showTab(t){
   /* v25, Jim: "You can't go to charting until the level is selected each time." */
-  if(t === "chart" && chartLocked()){ t = "setup"; lvlNag = !G.level; readyNag = true; }
+  /* Oct 20: before Setup is done the Chart tab opens to the "not ready" screen. */
+  var gated = (t === "chart" && chartLocked());
+  if(gated){ lvlNag = !G.level; readyNag = true; }
   TAB = t;
   if(t !== "report") sumIdx = null; else if(sumIdx == null) sumIdx = -1;
   setupOpen = (t === "setup");
   document.getElementById("v-setup").hidden = (t !== "setup");
-  document.getElementById("v-chart").style.display = (t === "chart") ? "" : "none";
+  document.getElementById("v-chart").style.display = (t === "chart" && !gated) ? "" : "none";
+  document.getElementById("v-gate").hidden = !gated;
   document.getElementById("v-report").hidden = (t !== "report");
   document.getElementById("v-history").hidden = (t !== "history");
-  var cb = document.getElementById("chartBar"); if(cb) cb.style.display = (t === "chart") ? "" : "none";
-  var bl = document.getElementById("btnLeft"); if(bl) bl.style.visibility = (t === "chart") ? "" : "hidden";
+  var cb = document.getElementById("chartBar"); if(cb) cb.style.display = (t === "chart" && !gated) ? "" : "none";
+  var bl = document.getElementById("btnLeft"); if(bl) bl.style.visibility = (t === "chart" && !gated) ? "" : "hidden";
   /* a filed game opened from History is still "in" History */
   var on = (t === "report" && sumIdx >= 0) ? "history" : t;
   TABS.forEach(function(x){ document.getElementById("tab-" + x).setAttribute("aria-selected", x === on ? "true" : "false"); });
   if(t === "setup"){ renderSetup(); drawSuPitcher(); }
   if(t === "history") renderFiled();
-  if(t === "chart" || t === "report") render();
+  if((t === "chart" && !gated) || t === "report") render();
   drawLevel(); drawPractice(); drawReady();
   window.scrollTo(0, 0);
 }
@@ -4521,6 +4542,7 @@ function build(){
   });
 
   document.getElementById("suDone").addEventListener("click",function(){ showTab("chart"); });
+  document.getElementById("gateBack").addEventListener("click",function(){ showTab("setup"); });
   document.getElementById("suPitcher").addEventListener("change",function(){ pickPitcher(0, this.value); this.blur(); drawSuPitcher(); });
   document.getElementById("suPlus").addEventListener("click",function(){
     if(spots() < MAXSPOTS){ G.spots = spots()+1; save(); renderSetup(); render(); }
@@ -4623,7 +4645,7 @@ function build(){
    gateWipe(), wipeEverything(), WIPE_KEYS, the #wipeBox markup and its listener. */
 var ALLOW_WIPE = false;
 
-var BUILD = "v32";
+var BUILD = "v33";
 
 /* ======================= DASHBOARD UPLOAD (v25) =======================
    Same receiver as the Bullpen Chart and the Offense Chart. Blank UPLOAD_URL =

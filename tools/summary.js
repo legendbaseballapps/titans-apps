@@ -133,7 +133,7 @@ function is(name, got, want) {
     await pg.click("#tab-report");
     is("the Report tab is the live game again, not the filed one", await ev(pg, 'document.getElementById("sumPill").textContent + " | " + document.getElementById("sumBack").hidden'), "in progress | true");
     await pg.click("#tab-chart");
-    is("Chart with no level picked lands on Setup", await ev(pg, '!document.getElementById("v-setup").hidden'), true);
+    is("Chart with no level picked opens the not-ready screen", await ev(pg, '!document.getElementById("v-gate").hidden'), true);
     is("no page errors", pg.errs.join("|"), "");
     await pg.ctx.close();
   }

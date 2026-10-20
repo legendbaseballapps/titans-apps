@@ -833,6 +833,10 @@ async function wipeOff(b) {
        'function(o){return o.value}).join("/")', null, "script/free/live"],
     ["live AB panel",     null,
        'document.getElementById("abbar").hidden+""',
+       /* v42: the Chart tab needs a pitcher first, the same as the other 2 apps. */
+       'var q=document.querySelectorAll(\'#rosterTbl select[data-f="rid"]\')[0];'+
+       'if(q && !q.value){ q.value=window.TITANS_ROSTER[0].id;'+
+       ' q.dispatchEvent(new Event("input",{bubbles:true})); q.dispatchEvent(new Event("change",{bubbles:true})); }'+
        'document.querySelectorAll(\'[data-f="mode"]\')[0].value="live";'+
        'document.querySelectorAll(\'[data-f="mode"]\')[0]'+
        '.dispatchEvent(new Event("input",{bubbles:true}));'+
