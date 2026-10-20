@@ -23,19 +23,21 @@
      read a single row back out. That is the real protection - the key is printed
      in public app code, so it only keeps stray requests out.
    - It ignores a session it already has (same RecordID), so the apps can retry
-     as often as they like.
+     as often as they like. The one exception (receiver 3): an upload marked
+     update:"notes" for a record it already has REPLACES that record's note rows
+     and touches nothing else - a coach can change a note after the game is in.
    - It writes the pitch rows first and the Records row last. A record is only
      "in" once its Records row exists. If a write dies halfway, the retry first
      clears that record's own half-written rows, then writes it again whole.
    - It never touches any other rows, and never touches Coaches or Config.
    - Text is stored as text: nothing an app sends can become a formula. */
 
-var VERSION = "receiver 2 (Oct 2026)";
+var VERSION = "receiver 3 (Oct 2026)";
 
 /* Which tables each app may send, and the tab each one lands on. */
 var APPS = {
   bullpen: { pitches: "Bullpen_Pitches", notes: "Bullpen_Notes" },   /* notes: receiver 2, bullpen v36 */
-  game:    { pitches: "Game_Pitches", innings: "Game_Innings" },
+  game:    { pitches: "Game_Pitches", innings: "Game_Innings", notes: "Game_Notes" },   /* notes: receiver 3, game v27 */
   offense: { pitches: "Offense_Pitches" }
 };
 var SCHEMAS = [1];
@@ -109,11 +111,21 @@ function doPost(e) {
     if (!rec) return fail_(p, "season Sheet is not set up - run setup()");
     var rid = p.record.id;
 
+    var tabs = APPS[p.app], total = 0;
     if (find_(rec, rid).length) {
+      if (p.update === "notes") {
+        var nsh = ss.getSheetByName(tabs.notes) || sheet_(ss, tabs.notes, ["RecordID"]);
+        removeRows_(nsh, rid);
+        var nn = write_(nsh, rid, p.tables.notes);
+        SpreadsheetApp.flush();
+        return reply_({ ok: true, status: "notes updated", id: rid, rows: nn });
+      }
       return reply_({ ok: true, status: "duplicate", id: rid });
     }
+    /* A notes update for a record that is not in yet: the full upload carries the
+       notes, so this only happens out of order. Retry later. */
+    if (p.update === "notes") return reply_({ ok: false, error: "not on the dashboard yet", retry: true });
 
-    var tabs = APPS[p.app], total = 0;
     var keys = Object.keys(p.tables);
     for (var i = 0; i < keys.length; i++) {
       /* receiver 2: a tab added in a later version (Bullpen_Notes) is made on first
@@ -149,6 +161,11 @@ function check_(p) {
   if (!p.tables || typeof p.tables !== "object") return "no tables";
   var keys = Object.keys(p.tables);
   if (!keys.length) return "no tables";
+  if (p.update !== undefined) {
+    if (p.update !== "notes") return "unknown update " + String(p.update).slice(0, 20);
+    if (!APPS[p.app].hasOwnProperty("notes")) return "unknown table notes";
+    if (keys.length !== 1 || keys[0] !== "notes") return "a notes update carries only notes";
+  }
   for (var i = 0; i < keys.length; i++) {
     if (!APPS[p.app].hasOwnProperty(keys[i])) return "unknown table " + keys[i];
     var t = p.tables[keys[i]];
@@ -239,6 +256,13 @@ function clearOrphans_(sh, rid) {
   if (!rows.length) return;
   rows.sort(function (a, b) { return a - b; });
   sh.deleteRows(rows[0], rows[rows.length - 1] - rows[0] + 1);
+}
+
+/* Every row in column A carrying this RecordID, bottom up so the row numbers
+   still hold as each one goes. */
+function removeRows_(sh, rid) {
+  var rows = find_(sh, rid).sort(function (a, b) { return b - a; });
+  rows.forEach(function (r) { sh.deleteRows(r, 1); });
 }
 
 /* ---------------------------------------------------------------- replies */

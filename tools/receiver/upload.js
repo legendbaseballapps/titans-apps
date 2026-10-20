@@ -65,7 +65,7 @@ function part1() {
   let rt = freshRuntime();
   const b = rt.book("SEASON1");
   check("setup builds every tab", b.order.join(","),
-        "Records,Bullpen_Pitches,Bullpen_Notes,Game_Pitches,Game_Innings,Offense_Pitches,Log,Coaches,Config");
+        "Records,Bullpen_Pitches,Bullpen_Notes,Game_Pitches,Game_Innings,Game_Notes,Offense_Pitches,Log,Coaches,Config");
   check("setup makes a 40-character key", /^[0-9a-f]{40}$/.test(rt.key), true);
   check("setup prints the key to the log", rt.logs.some(l => l.indexOf(rt.key) >= 0), true);
   const again = rt.sandbox.setup();
@@ -141,7 +141,39 @@ function part1() {
     const n4 = b4.getSheetByName("Bullpen_Notes");
     check("notes: RecordID first, then the app's columns", n4.header().join(","), "RecordID,SessionID,PitcherID,ToPitcher,CoachOnly");
     check("a formula-shaped note stayed text", n4.records()[0].CoachOnly, "=watch the elbow");
-    check("the game app still may not send notes", (() => { const x = rt4.post(JSON.stringify(upload(rt4.key, { app: "game", record: { id: "g000001" }, tables: { notes: { columns: ["A"], rows: [] } } }))); return x.ok + " / " + x.error; })(), "false / unknown table notes");
+    check("the offense app may not send notes", (() => { const x = rt4.post(JSON.stringify(upload(rt4.key, { app: "offense", record: { id: "o000001" }, tables: { notes: { columns: ["A"], rows: [] } } }))); return x.ok + " / " + x.error; })(), "false / unknown table notes");
+  }
+
+  console.log("\nRECEIVER 3 · a notes update replaces that record's notes, and nothing else");
+  {
+    const rt5 = freshRuntime(), b5 = rt5.book("SEASON1");
+    const P = r => rt5.post(JSON.stringify(r));
+    P(upload(rt5.key, { record: { id: "upd0001", date: "2027-01-12" }, tables: {
+      pitches: { columns: ["SessionID", "PitchNo"], rows: [["upd0001", 1], ["upd0001", 2]] },
+      notes: { columns: ["SessionID", "PitcherID", "ToPitcher"], rows: [["upd0001", "p1", "first note"], ["upd0001", "p2", "second"]] } } }));
+    P(upload(rt5.key, { record: { id: "upd0002", date: "2027-01-13" }, tables: {
+      pitches: { columns: ["SessionID", "PitchNo"], rows: [["upd0002", 1]] },
+      notes: { columns: ["SessionID", "PitcherID", "ToPitcher"], rows: [["upd0002", "p3", "keep me"]] } } }));
+    const r5 = P(upload(rt5.key, { record: { id: "upd0001" }, update: "notes", tables: {
+      notes: { columns: ["SessionID", "PitcherID", "ToPitcher"], rows: [["upd0001", "p1", "changed"], ["upd0001", "p2", "second"]] } } }));
+    check("a notes update for a record already in", r5.ok + " " + r5.status + " " + r5.rows, "true notes updated 2");
+    const n5 = b5.getSheetByName("Bullpen_Notes");
+    check("  its note rows are replaced, not added to", n5.rows().length, 3);
+    check("  with the new text", n5.records().filter(x => x.RecordID === "upd0001").map(x => x.ToPitcher).join(","), "changed,second");
+    check("  another record's notes are untouched", n5.records().filter(x => x.RecordID === "upd0002").map(x => x.ToPitcher).join(","), "keep me");
+    check("  pitch rows are untouched", b5.getSheetByName("Bullpen_Pitches").rows().length, 3);
+    check("  Records is untouched", b5.getSheetByName("Records").rows().length, 2);
+    const early = P(upload(rt5.key, { record: { id: "upd0099" }, update: "notes", tables: { notes: { columns: ["A"], rows: [["x"]] } } }));
+    check("a notes update before the record is in: try later", early.ok + " / " + early.error + " / " + early.retry, "false / not on the dashboard yet / true");
+    const bad1 = P(upload(rt5.key, { record: { id: "upd0001" }, update: "notes", tables: { pitches: { columns: ["A"], rows: [["x"]] } } }));
+    check("a notes update may carry only notes", bad1.ok + " / " + bad1.error, "false / a notes update carries only notes");
+    const bad2 = P(upload(rt5.key, { record: { id: "upd0001" }, update: "pitches", tables: { notes: { columns: ["A"], rows: [["x"]] } } }));
+    check("no other kind of update", bad2.ok + " / " + bad2.error, "false / unknown update pitches");
+    check("  and nothing changed after either", n5.rows().length + " notes, " + b5.getSheetByName("Bullpen_Pitches").rows().length + " pitches", "3 notes, 3 pitches");
+    const g5 = P(upload(rt5.key, { app: "game", record: { id: "g000005" }, tables: {
+      pitches: { columns: ["Level", "Pitch"], rows: [["JV", 1]] }, notes: { columns: ["Level", "PitcherID", "ToPitcher"], rows: [["JV", "p1", "nice"]] } } }));
+    check("the game app may send notes (receiver 3)", g5.ok + " " + g5.status, "true stored");
+    check("  they land on Game_Notes", b5.getSheetByName("Game_Notes") ? b5.getSheetByName("Game_Notes").rows().length : "no tab", 1);
   }
 
   console.log("\nRECEIVER · a write that dies halfway");
@@ -338,6 +370,27 @@ async function part2() {
     check("History pill says it is on the dashboard", await pg.evaluate(() => document.querySelector(".hrow .pill").textContent), "on dashboard");
     check("the status line says all done", (await line(pg)).split(" | ")[1], "Every filed session is on the dashboard.");
     check("no page errors", pg.errs.join(" | "), "");
+
+    console.log("\nAPP v37 · a note changed after the session is on the dashboard");
+    await pg.evaluate(() => document.getElementById("tab-hist").click());
+    await pg.evaluate(() => document.querySelector("#histList [data-sum]").click());
+    check("the Session summary opens from History", await pg.evaluate(() => !document.getElementById("v-sum").hidden && document.getElementById("v-hist").hidden), true);
+    check("  the only inputs are the 2 notes", await pg.evaluate(() => [...document.querySelectorAll("#v-sum input, #v-sum textarea, #v-sum select")].map(e => e.getAttribute("data-k")).join(",")), "note,comments");
+    check("  it shows the notes already written", await pg.evaluate(() => document.querySelector('#sumBody textarea[data-k="note"]').value), "Finish out front. Great 2-strike changeup.");
+    check("  and says the session is on the dashboard", await pg.evaluate(() => document.getElementById("sumPill").textContent), "on dashboard");
+    await pg.fill('#sumBody textarea[data-k="note"]', "Finish out front. The changeup was the pitch today.");
+    check("  an edit marks the notes waiting", await pg.evaluate(() => document.getElementById("sumPill").textContent), "notes waiting");
+    const pb = st.posts;
+    await pg.click("#sumBack");
+    check("  closing sends just the notes", await until(async () => { const a = await arch(pg); return a[a.length - 1].notesDirty === false; }), true);
+    check("  in one request", st.posts - pb, 1);
+    const bn = book.getSheetByName("Bullpen_Notes");
+    check("  the note row was replaced, not doubled", bn.rows().length, 1);
+    check("  with the new note", bn.records()[0].ToPitcher, "Finish out front. The changeup was the pitch today.");
+    check("  Coach only kept", bn.records()[0].CoachOnly, "Arm slot dropping late");
+    check("  pitches and Records untouched", records() + " records, " + pitches() + " pitches", "1 records, 7 pitches");
+    check("  and the app is back on History", await pg.evaluate(() => !document.getElementById("v-hist").hidden), true);
+    check("  pill back to on dashboard", await pg.evaluate(() => document.querySelector(".hrow .pill").textContent), "on dashboard");
 
     console.log("\nAPP · practice sessions never leave the iPad");
     const postsBefore = st.posts;
@@ -586,6 +639,16 @@ async function part4() {
     /* fix the level before filing */
     await pg.click("#btnSetup"); await pg.click('[data-lvl="Varsity"]'); await pg.click("#btnSetup");
     check("the level can be changed before filing", (await G()).level, "Varsity");
+    /* v27: the Game summary, from the Game tab: notes for the arm who pitched */
+    await pg.click('#tabs button[data-tab="game"]');
+    await pg.click("#btnSummary");
+    check("v27: the Game summary opens from the Game tab", await pg.evaluate(() => !document.getElementById("v-sum").hidden && document.querySelector(".wrap").style.display === "none"), true);
+    check("  one card per arm who entered", await pg.evaluate(() => document.querySelectorAll("#sumArms .panel").length), 1);
+    check("  the only inputs are the 2 notes", await pg.evaluate(() => [...document.querySelectorAll("#v-sum input, #v-sum textarea, #v-sum select")].map(e => e.getAttribute("data-k")).join(",")), "note,comments");
+    await pg.fill('#sumArms textarea[data-k="note"]', "Attack early. Great 2-strike slider.");
+    await pg.fill('#sumArms textarea[data-k="comments"]', "=tired by the 3rd?");
+    await pg.click("#sumBack");
+    check("  the notes are saved with the game", (await G()).pitchers[0].note, "Attack early. Great 2-strike slider.");
     /* file: the open inning is asked about first */
     await pg.click('#tabs button[data-tab="game"]');
     await pg.click("#btnFinish");
@@ -612,6 +675,27 @@ async function part4() {
     const gi = book.getSheetByName("Game_Innings");
     check("the inning log went too", gi.rows().length >= 1, true);
     check("  with Runs entered as 0, not blank", gi.records()[0].Runs, 0);
+    const gn = book.getSheetByName("Game_Notes");
+    check("v27: one notes row for the arm who pitched", gn ? gn.rows().length : "no tab", 1);
+    const n0 = gn ? gn.records()[0] : {};
+    check("  stamped with level and opponent", n0.Level + " / " + n0.Opponent, "Varsity / Rock Canyon");
+    check("  To the pitcher and Coach only in their own columns", n0.ToPitcher + " | " + n0.CoachOnly, "Attack early. Great 2-strike slider. | =tired by the 3rd?");
+    check("  the next game starts with no notes", (await G()).pitchers[0].note || "", "");
+    /* a note changed the morning after, from History */
+    await pg.evaluate(() => { const row = [...document.querySelectorAll("#histList .hrow")].find(r => /Rock Canyon/.test(r.textContent)); [...row.querySelectorAll("button")].find(b => b.textContent === "Summary").click(); });
+    check("the summary opens from History", await pg.evaluate(() => !document.getElementById("v-sum").hidden), true);
+    check("  and says the game is on the dashboard", await pg.evaluate(() => document.getElementById("sumPill").textContent), "on dashboard");
+    await pg.fill('#sumArms textarea[data-k="note"]', "Attack early. The slider was the out pitch.");
+    check("  an edit marks the notes waiting", await pg.evaluate(() => document.getElementById("sumPill").textContent), "notes waiting");
+    const gpb = st.posts;
+    await pg.click("#sumBack");
+    check("  closing sends just the notes", await until(async () => ((await gArch()).find(g => g.opp === "Rock Canyon") || {}).notesDirty === false), true);
+    check("  in one request", st.posts - gpb, 1);
+    check("  the note row was replaced, not doubled", gn.rows().length, 1);
+    check("  with the new note", gn.records()[0].ToPitcher, "Attack early. The slider was the out pitch.");
+    check("  the pitch rows were not touched", gp.rows().length, 4);
+    check("  still one game record", recs().length, 1);
+    check("  with no level picked, closing lands on Setup", await onSetup(), true);
     check("the game filed by v24 was never sent", (await gArch()).find(g => g.opp === "Old Test").up || 0, 0);
     check("nothing was turned away", book.getSheetByName("Log").rows().length, 0);
 

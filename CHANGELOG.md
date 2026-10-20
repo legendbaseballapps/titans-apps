@@ -17,8 +17,8 @@ old one — tap the amber stamp to fix it.
 
 | App | Source & folder | Live on GitHub Pages |
 |---|---|---|
-| **Bullpen Chart** | **v36** | **v35** (pushed Oct 19; receiver deployed Oct 15, URL and key in). **v36 waiting: redeploy the receiver (receiver 2) FIRST, then push v36.** Real-iPad upload test **passed Oct 19** (practice pen stayed off the Sheet, real pen landed) |
-| **Pitch Chart** (game) | **v26** | **v20** — **v21 to v26 waiting to be pushed** |
+| **Bullpen Chart** | **v37** | **v36** (pushed Oct 19, with **receiver 2** redeployed first; same URL and key). **v37 waiting: redeploy receiver 3 FIRST, then push.** Notes confirmed from a real iPad Oct 19 (`Bullpen_Notes` made on first use, both notes in their columns) | Real-iPad upload test **passed Oct 19** (practice pen stayed off the Sheet, real pen landed) |
+| **Pitch Chart** (game) | **v27** | **v20** — **v21 to v27 waiting to be pushed** (receiver 3 must be deployed before v27 goes out) |
 | **Offense Chart** | **v46** | v40 — **v41 to v46 waiting to be pushed** |
 
 **The site moved Oct 14, 2026** to the program-owned account: **legendbaseballapps.github.io/titans-apps** (repo transferred from vaughnzj, so the live files, including the real `roster.js`, moved as they were). Every iPad installs from the new link; History saved under the old address does not carry over. The Coach's Guides in the pending builds (bullpen v31, game v23, offense v42) carry the new address, so pushing those builds is what puts it on the iPads.
@@ -43,6 +43,27 @@ is only for app code.
 ---
 
 ## Bullpen Chart
+
+### v37 · Oct 19, 2026
+**Headline:** A **Session summary** for any session, today's or one in History, with the 2 notes under each
+arm's numbers, and a note changed after the session is on the dashboard goes back up on its own.
+
+- **Why:** Jim, Oct 19, after the Pitch Chart got its Game summary: *"Let's build it for both the bullpen
+  and pitch chart apps."* Until now a filed session could only be exported; it could not be opened.
+- **Open it:** *Session summary & notes* on the Report tab (this session), or **Summary** beside any session
+  in History. Back returns to where you came from.
+- **The page:** the Report tab's card for every arm who threw (the card code is now one function,
+  `rptCard`, shared by both), with **To the pitcher** and **Coach only** editable underneath. Numbers are
+  read-only.
+- **Changed notes:** on a session already uploaded, an edit marks it `notesDirty`; History shows *notes
+  waiting*; the next upload sends **only the notes** (`update: "notes"`) and the receiver replaces that
+  session's note rows. On a session not yet uploaded, the first upload carries the new notes anyway.
+- **Receiver 3** (`receiver/Code.gs`): game notes land on `Game_Notes`; an upload marked `update: "notes"`
+  for a record already in **replaces** that record's note rows and touches nothing else (a notes update
+  for a record not in yet is answered *try later*; any other update, or a notes update carrying anything
+  but notes, is refused). Redeploy as a new version of the same deployment **before** pushing.
+- **Tests:** new `tools/summary.js` (both apps, 28 checks); `tools/receiver/upload.js` (205) covers the
+  notes re-send end to end and receiver 3's update rules. Each new guard proved by breaking it.
 
 ### v36 · Oct 19, 2026
 **Headline:** Coach's comments split into **To the pitcher** and **Coach only**, and both go to the
@@ -405,6 +426,31 @@ execution grading.
 ---
 
 ## Pitch Chart (game)
+
+### v27 · Oct 19, 2026
+**Headline:** A full-page **Game summary** for any game, with **To the pitcher** and **Coach only** notes for
+every arm who entered, uploaded with the game and re-sent when a coach changes one.
+
+- **Why:** E-011, the player feedback loop. Jim, Oct 19: the pitching coach writes the game notes the
+  morning after, on his team's iPad (*"The pitching coach for each team will have to carry their iPad"*),
+  and *"It's almost like we need a dedicated summary tab for each game."* Game cards go to players the next
+  morning; anyone who enters the game gets one.
+- **Open it:** *Game summary & notes* on the Game tab (the game in progress), or **Summary** beside any game
+  in History (which could only export before). Back returns to charting, or to Setup when no level is
+  picked (between games).
+- **One card per arm who entered** (a pitch thrown or a batter faced): innings, pitches, batters, and the
+  program-goal numbers as **counts** (first-pitch strikes, strikes, free bases, strikeouts, hard contact,
+  execution against the called spot, AO3+), runs / earned, the miss read, then the 2 notes. An innings
+  table below; Export at the bottom. Numbers are read-only.
+- **Notes** live on each arm (`pitchers[i].note`, `.comments`), go into the text export, and **do not
+  carry** to the next game with the staff.
+- **Upload:** a `notes` table (stamped Level, Date, Opponent) lands on `Game_Notes`. A note changed after
+  the game is on the dashboard sends only the notes, and History shows *notes waiting* until it lands.
+- **Receiver 3** (`receiver/Code.gs`): game notes land on `Game_Notes`; an upload marked `update: "notes"`
+  for a record already in **replaces** that record's note rows and touches nothing else (a notes update
+  for a record not in yet is answered *try later*; any other update, or a notes update carrying anything
+  but notes, is refused). Redeploy as a new version of the same deployment **before** pushing.
+- **Tests:** `tools/summary.js`, `tools/receiver/upload.js`.
 
 ### v26 · Oct 19, 2026
 **Headline:** **Finish & file** moves into the header; **Export** leaves it.

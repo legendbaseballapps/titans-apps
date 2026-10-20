@@ -88,6 +88,13 @@ button{cursor:pointer}
   border:1px solid var(--line);color:var(--ink);background:var(--card)}
 .histnag{color:var(--close)}
 .hrow .pill.up{border-color:var(--good);color:var(--good)}
+/* v37: the Session summary header */
+.sumhead{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.sumtitle{font-size:20px;letter-spacing:.05em;text-transform:uppercase}
+.sumhead .pill{font-family:var(--cond);font-weight:700;font-size:10px;letter-spacing:.08em;
+  text-transform:uppercase;padding:2px 7px;border-radius:10px;border:1px solid var(--line);color:var(--ink-2)}
+.sumhead .pill.unsent{border-color:var(--close);color:var(--close)}
+.sumhead .pill.up{border-color:var(--good);color:var(--good)}
 .hrow .pill.prac{border-color:var(--ink-2);color:var(--ink-2)}
 /* Practice switch on Setup, and the bar that says so on every tab. */
 .practice{display:flex;gap:12px;align-items:flex-start;margin:14px 0 0;padding:12px 14px;
@@ -737,6 +744,7 @@ footer{max-width:1340px;margin:0 auto;padding:0 16px 30px;color:var(--ink-2);fon
       <div class="row">
         <button class="btn pri" id="expCsv" style="flex:0 0 auto">Export pitch log (.csv)</button>
         <button class="btn dk" id="expTxt" style="flex:0 0 auto">Export summary (.txt)</button>
+        <button class="btn" id="btnSum" style="flex:0 0 auto">Session summary &amp; notes</button>
         <span class="tiny" id="expNote" style="flex:1 1 200px;align-self:center"></span>
       </div>
       <textarea id="expText" hidden readonly style="min-height:180px;font-family:ui-monospace,Menlo,monospace;font-size:12px"></textarea>
@@ -754,6 +762,23 @@ footer{max-width:1340px;margin:0 auto;padding:0 16px 30px;color:var(--ink-2);fon
           <div class="tiny histnag" id="histNag" style="margin-bottom:8px"></div>
           <div id="histList"></div>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ v37: SESSION SUMMARY ============ -->
+  <section id="v-sum" hidden>
+    <div class="stack">
+      <div class="panel"><div class="body sumhead">
+        <button class="btn" id="sumBack" style="flex:0 0 auto">&larr; Back</button>
+        <b class="cond sumtitle">Session summary</b>
+        <span class="tiny" id="sumSub"></span>
+        <span id="sumPill"></span>
+      </div></div>
+      <div class="rpt" id="sumBody"></div>
+      <div class="row">
+        <button class="btn" id="sumExport" style="flex:0 0 auto">Export pitch log (.csv)</button>
+        <span class="tiny" id="sumHint" style="flex:1 1 200px;align-self:center"></span>
       </div>
     </div>
   </section>
@@ -1218,7 +1243,7 @@ function cur(){ return byId(S.cur); }
    gateWipe(), wipeEverything(), WIPE_KEYS, the #wipeBox markup and its listener. */
 var ALLOW_WIPE = false;
 
-var BUILD = "v36";
+var BUILD = "v37";
 
 /* ======================= DASHBOARD UPLOAD =======================
    Where a filed session goes: the Titans Upload Receiver, an Apps Script web app
@@ -1416,6 +1441,8 @@ function missRead(o){
 var views = {setup:"v-setup", chart:"v-chart", report:"v-report", hist:"v-hist"};
 var el = function(id){ return document.getElementById(id); };
 function show(which){
+  var vs = document.getElementById("v-sum"); if(vs) vs.hidden = true;   /* v37 */
+  sumIdx = null;
   for(var k in views){
     el(views[k]).hidden = (k!==which);
     el("tab-"+k).setAttribute("aria-selected", k===which ? "true" : "false");
@@ -1757,6 +1784,70 @@ el("codeCopyBtn").onclick = function(){
 
 el("hdrFinish").onclick = finishAndFile;
 el("btnStart").onclick = function(){ if(readyState().ok) show("chart"); };
+/* ===================== v37: the Session summary (E-011) =====================
+   The same page the Pitch Chart got in v27: one session, every arm's card, and
+   the 2 notes under his numbers, for the session in progress (from the Report
+   tab) or any filed session (from History). Numbers are read-only.
+   sumIdx: null = closed, -1 = this session, n = A[n]. */
+var sumIdx = null, sumFrom = "hist";
+function sumSess(){ return sumIdx === -1 ? S : (sumIdx == null ? null : A[sumIdx]); }
+function openSum(idx, from){
+  sumIdx = idx; sumFrom = from || "hist";
+  for(var k in views){ el(views[k]).hidden = true; el("tab-"+k).setAttribute("aria-selected","false"); }
+  el("v-sum").hidden = false;
+  renderSum();
+  window.scrollTo(0,0);
+}
+function closeSum(){
+  var back = sumFrom;
+  sumIdx = null;
+  show(back);
+  uploadPending();
+}
+function drawSumPill(x){
+  el("sumPill").innerHTML = sumIdx === -1 ? '<span class="pill">in progress</span>' : histPill(x);
+}
+function renderSum(){
+  var x = sumSess();
+  if(!x){ closeSum(); return; }
+  var live = S, h = "";
+  S = x;
+  try{
+    for(var i=0;i<S.pitchers.length;i++){
+      var p = S.pitchers[i];
+      if(!(pname(p)||"").trim()) continue;
+      if(!p.pitches.length && !(p.note||"").trim() && !(p.comments||"").trim()) continue;
+      h += rptCard(p, stats(p), i);
+    }
+  } finally { S = live; }
+  el("sumBody").innerHTML = h || '<div class="empty">Nothing charted in this session.</div>';
+  el("sumSub").textContent = (x.pad || "Mound") + (x.date ? " · " + x.date : "") +
+    (x.tpl ? " · " + x.tpl : "") + " · " + pitchCount(x) + " pitches";
+  drawSumPill(x);
+  el("sumHint").textContent = x.practice
+    ? "Practice session: the notes stay on this iPad, like the session."
+    : (sumIdx === -1 ? "Notes go to the dashboard with the session when you file it."
+                     : "Changed notes go to the dashboard the next time the app has signal.");
+}
+el("sumBody").addEventListener("input", function(e){
+  var t = e.target;
+  if(!t || !t.hasAttribute || !t.hasAttribute("data-sn")) return;
+  var x = sumSess(); if(!x) return;
+  var i = +t.getAttribute("data-sn"), k = t.getAttribute("data-k");
+  if(!x.pitchers[i] || (k !== "note" && k !== "comments")) return;
+  x.pitchers[i][k] = t.value;
+  if(sumIdx === -1){ save(); return; }
+  /* On the dashboard already: send the notes again. Not yet: the first upload
+     carries them anyway. */
+  if(x.up) x.notesDirty = true;
+  saveArch(A);
+  drawSumPill(x);
+});
+el("sumBack").onclick = closeSum;
+el("btnSum").onclick = function(){ openSum(-1, "report"); };
+el("sumExport").onclick = function(){
+  if(sumIdx === -1) doExport("csv"); else if(sumIdx != null) exportFiled(sumIdx);
+};
 
 /* Reset is the only control in the app that destroys data outright, so the
    dialog has to say exactly what goes and point at the non-destructive way out.
@@ -2311,6 +2402,55 @@ function ao3Block(q){
   }
   return h + '</div>';
 }
+/* v37: one pitcher's card, shared by the Report tab (edit == null: notes shown as
+   text) and the Session summary (edit = his index: the 2 notes are editable). */
+function rptCard(pp, oo, edit){
+  var sp = pct(oo.spot,oo.graded);
+  var q3 = plive(pp) ? ao3Stats(pp) : null;
+  var pillCls = sp>=45 ? "good" : (sp>=25 ? "warn" : "bad");
+  var rows = "";
+  for(var t=0;t<TYPES.length;t++){
+    var k = TYPES[t].k, b = oo.byType[k];
+    if(!b) continue;
+    var v = oo.velo[k];
+    rows += '<tr><td><b class="cond">'+k+'</b> <span class="tiny">'+esc(TYPES[t].l)+'</span></td>'+
+            '<td>'+b.n+(b.graded<b.n?' <span class="tiny">('+b.graded+')</span>':'')+'</td>'+
+            '<td>'+pct(b.spot,b.graded)+'%</td><td>'+pct(b.spot+b.near,b.graded)+'%</td><td>'+pct(b.strike,b.n)+'%</td>'+
+            '<td>'+(v ? Math.round(v.sum/v.n)+' / '+v.top : '<span class="tiny">—</span>')+'</td></tr>';
+  }
+  var out = '<div class="rptcard">'+
+    '<div class="rpthead"><span class="nm">'+esc(pname(pp)||"Unnamed")+'</span>'+
+      (moundPerson(pp).cls?'<span class="mt">'+esc(classLabel(moundPerson(pp).cls))+'</span>':'')+
+      '<span class="mt">'+esc(pp.hand)+'HP</span>'+
+      (pmode(pp)==="free"?'<span class="pill">Freeform</span>':'')+
+      (plive(pp)?'<span class="pill">Live ABs</span>':'')+
+      (pp.stretch?'<span class="pill">Stretch only</span>':'')+
+      (pp.safe!==""&&pp.safe!=null?'<span class="pill">PitchSafe '+esc(pp.safe)+'</span>':'')+
+      '<span class="pill '+pillCls+'" style="margin-left:auto">'+sp+'% on the spot</span></div>'+
+    '<div class="body" style="padding:14px 16px">'+
+      '<div class="kpis"><div class="kpi"><div class="v">'+oo.n+'</div><div class="l">Pitches</div></div>'+
+      '<div class="kpi good"><div class="v">'+sp+'%</div><div class="l">'+
+        (oo.graded<oo.n ? 'Spot \u00b7 of '+oo.graded+' graded' : 'On the spot')+'</div></div>'+
+      '<div class="kpi"><div class="v">'+pct(oo.spot+oo.near,oo.graded)+'%</div><div class="l">Spot + close</div></div>'+
+      '<div class="kpi"><div class="v">'+pct(oo.strike,oo.n)+'%</div><div class="l">Strikes</div></div>'+
+      (q3 ? '<div class="kpi"><div class="v">'+(q3.n?r1(q3.pts,q3.n):'\u2013')+
+            '</div><div class="l">AO3+ pts / AB</div></div>' : '')+'</div>'+
+      '<div class="read" style="margin-top:12px">'+esc(missRead(oo))+'</div>'+
+      (q3 ? ao3Block(q3) : '')+
+      (rows ? '<div class="scroller" style="margin-top:12px"><table class="grid"><thead><tr><th>Pitch</th><th>No.</th><th>Spot</th><th>+Close</th><th>Strike</th><th>Velo avg / top</th></tr></thead><tbody>'+rows+'</tbody></table></div>' : '')+
+      notesHtml(pp, edit)+
+    '</div></div>';
+  return out;
+}
+function notesHtml(pp, edit){
+  if(edit == null)
+    return (pp.note ? '<div class="read" style="margin-top:12px;border-left-color:var(--good)"><b class="cond">To the pitcher:</b> '+esc(pp.note)+'</div>' : '')+
+           (pp.comments ? '<div class="read" style="margin-top:12px;border-left-color:var(--bar-2)"><b class="cond">Coach only:</b> '+esc(pp.comments)+'</div>' : '');
+  return '<label class="fld" style="margin-top:14px">To the pitcher &middot; he will read this'+
+           '<textarea data-sn="'+edit+'" data-k="note" placeholder="What you want him to take from today">'+esc(pp.note||"")+'</textarea></label>'+
+         '<label class="fld" style="margin-top:10px">Coach only &middot; never shown to him'+
+           '<textarea data-sn="'+edit+'" data-k="comments" placeholder="For the coaches">'+esc(pp.comments||"")+'</textarea></label>';
+}
 function drawReport(){
   var ranked = S.pitchers.filter(function(p){ return p.pitches.length; })
     .map(function(p){ return {p:p,o:stats(p)}; })
@@ -2337,42 +2477,7 @@ function drawReport(){
   var out = "";
   for(var j=0;j<ranked.length;j++){
     var pp = ranked[j].p, oo = ranked[j].o;
-    var sp = pct(oo.spot,oo.graded);
-    var q3 = plive(pp) ? ao3Stats(pp) : null;
-    var pillCls = sp>=45 ? "good" : (sp>=25 ? "warn" : "bad");
-    var rows = "";
-    for(var t=0;t<TYPES.length;t++){
-      var k = TYPES[t].k, b = oo.byType[k];
-      if(!b) continue;
-      var v = oo.velo[k];
-      rows += '<tr><td><b class="cond">'+k+'</b> <span class="tiny">'+esc(TYPES[t].l)+'</span></td>'+
-              '<td>'+b.n+(b.graded<b.n?' <span class="tiny">('+b.graded+')</span>':'')+'</td>'+
-              '<td>'+pct(b.spot,b.graded)+'%</td><td>'+pct(b.spot+b.near,b.graded)+'%</td><td>'+pct(b.strike,b.n)+'%</td>'+
-              '<td>'+(v ? Math.round(v.sum/v.n)+' / '+v.top : '<span class="tiny">—</span>')+'</td></tr>';
-    }
-    out += '<div class="rptcard">'+
-      '<div class="rpthead"><span class="nm">'+esc(pname(pp)||"Unnamed")+'</span>'+
-        (moundPerson(pp).cls?'<span class="mt">'+esc(classLabel(moundPerson(pp).cls))+'</span>':'')+
-        '<span class="mt">'+esc(pp.hand)+'HP</span>'+
-        (pmode(pp)==="free"?'<span class="pill">Freeform</span>':'')+
-        (plive(pp)?'<span class="pill">Live ABs</span>':'')+
-        (pp.stretch?'<span class="pill">Stretch only</span>':'')+
-        (pp.safe!==""&&pp.safe!=null?'<span class="pill">PitchSafe '+esc(pp.safe)+'</span>':'')+
-        '<span class="pill '+pillCls+'" style="margin-left:auto">'+sp+'% on the spot</span></div>'+
-      '<div class="body" style="padding:14px 16px">'+
-        '<div class="kpis"><div class="kpi"><div class="v">'+oo.n+'</div><div class="l">Pitches</div></div>'+
-        '<div class="kpi good"><div class="v">'+sp+'%</div><div class="l">'+
-          (oo.graded<oo.n ? 'Spot \u00b7 of '+oo.graded+' graded' : 'On the spot')+'</div></div>'+
-        '<div class="kpi"><div class="v">'+pct(oo.spot+oo.near,oo.graded)+'%</div><div class="l">Spot + close</div></div>'+
-        '<div class="kpi"><div class="v">'+pct(oo.strike,oo.n)+'%</div><div class="l">Strikes</div></div>'+
-        (q3 ? '<div class="kpi"><div class="v">'+(q3.n?r1(q3.pts,q3.n):'\u2013')+
-              '</div><div class="l">AO3+ pts / AB</div></div>' : '')+'</div>'+
-        '<div class="read" style="margin-top:12px">'+esc(missRead(oo))+'</div>'+
-        (q3 ? ao3Block(q3) : '')+
-        (rows ? '<div class="scroller" style="margin-top:12px"><table class="grid"><thead><tr><th>Pitch</th><th>No.</th><th>Spot</th><th>+Close</th><th>Strike</th><th>Velo avg / top</th></tr></thead><tbody>'+rows+'</tbody></table></div>' : '')+
-        (pp.note ? '<div class="read" style="margin-top:12px;border-left-color:var(--good)"><b class="cond">To the pitcher:</b> '+esc(pp.note)+'</div>' : '')+
-        (pp.comments ? '<div class="read" style="margin-top:12px;border-left-color:var(--bar-2)"><b class="cond">Coach only:</b> '+esc(pp.comments)+'</div>' : '')+
-      '</div></div>';
+    out += rptCard(pp, oo, null);
   }
   el("rpt").innerHTML = out;
 }
@@ -2614,18 +2719,22 @@ function drawHistory(){
          '<span class="when">'+esc(x.date||"")+' \u00b7 '+pitchCount(x)+'P'+
            (named ? ' \u00b7 '+esc(named) : '')+'</span>'+
          histPill(x)+
-         '<button data-exp="'+i+'">Export .csv</button>'+
+         '<button data-sum="'+i+'">Summary</button>'+
+         '<button data-exp="'+i+'" style="margin-left:0">Export .csv</button>'+
          '</div>';
   });
   host.innerHTML = h;
   host.querySelectorAll("[data-exp]").forEach(function(b){
     b.onclick = function(){ exportFiled(+b.getAttribute("data-exp")); };
   });
+  host.querySelectorAll("[data-sum]").forEach(function(b){
+    b.onclick = function(){ openSum(+b.getAttribute("data-sum"), "hist"); };
+  });
 }
 function histPill(x){
   if(x.practice) return '<span class="pill prac">practice</span>';
   if(!UPLOAD_URL) return '<span class="pill'+(x.sent?"":" unsent")+'">'+(x.sent?"sent":"not sent")+'</span>';
-  if(x.up) return '<span class="pill up">on dashboard</span>';
+  if(x.up) return x.notesDirty ? '<span class="pill unsent">notes waiting</span>' : '<span class="pill up">on dashboard</span>';
   return '<span class="pill unsent">waiting</span>';
 }
 /* A filed session stays recoverable - History always has an Export beside it. */
@@ -2664,14 +2773,15 @@ el("expTxt").onclick = function(){ doExport("txt"); };
    Practice sessions and empty ones are never offered. */
 var upBusy = false, upLast = "";
 function upQueue(){
-  return A.filter(function(x){ return !x.practice && !x.up && pitchCount(x) > 0; });
+  /* v37: a session already on the dashboard comes back when its notes change. */
+  return A.filter(function(x){ return !x.practice && pitchCount(x) > 0 && (!x.up || x.notesDirty); });
 }
 function upPayload(x){
   var live = S, t, nt;
   S = x;
   try{ t = table(); nt = notesTable(); }
   finally{ S = live; }
-  return {
+  var pl = {
     schema: UPLOAD_SCHEMA, key: UPLOAD_KEY, app: "bullpen", build: x.build || BUILD,
     record: { id: x.sid, mound: x.pad || "", date: x.date || "", coach: x.coach || "",
               template: x.tpl || "", scriptId: scriptId(x.script || []),
@@ -2680,6 +2790,10 @@ function upPayload(x){
     tables: { pitches: { columns: t.head, rows: t.rows },
               notes:   { columns: nt.head, rows: nt.rows } }
   };
+  /* v37: notes changed after the session reached the dashboard - send only the
+     notes; receiver 3 replaces that session's note rows. */
+  if(x.up && x.notesDirty){ pl.update = "notes"; pl.tables = { notes: pl.tables.notes }; }
+  return pl;
 }
 function upPost(x){
   return new Promise(function(resolve){
@@ -2716,8 +2830,9 @@ function uploadPending(){
   (function next(){
     if(i >= q.length){ upBusy = false; upLast = ""; drawUpload(); drawHistory(); return; }
     var x = q[i++];
+    var wasUp = !!x.up;
     upPost(x).then(function(r){
-      if(r.ok){ x.up = Date.now(); x.upErr = ""; }
+      if(r.ok){ if(!wasUp) x.up = Date.now(); x.notesDirty = false; x.upErr = ""; }
       else { x.upErr = r.error; }
       saveArch(A);
       if(r.ok){ next(); return; }

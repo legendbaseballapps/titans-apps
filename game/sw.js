@@ -1,7 +1,7 @@
 /* Pitch Chart - offline cache
    Bump CACHE when you change the APP - index.html, the guide - or iPads keep the
    old one. A new roster.js needs no bump: see rosterFirst below. */
-var CACHE = "titans-game-v26";
+var CACHE = "titans-game-v27";
 var FILES = [
   "./",
   "./index.html",

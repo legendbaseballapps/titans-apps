@@ -631,6 +631,32 @@ a.topbtn{display:inline-block;text-decoration:none;border:0}
 .upline.wait{color:var(--inplay)} .upline.bad{color:var(--strike)} .upline.ok{color:var(--ball)}
 .hrow .pill.up{border-color:var(--ball);color:var(--ball)}
 .hrow .pill.prac{border-color:var(--text-2);color:var(--text-2)}
+/* ---------- v27: the Game summary (E-011) ----------
+   A full page per game - the one in progress or any game in History - laid out
+   like the card the pitcher will get, with the 2 notes right under his numbers. */
+#v-sum{padding:10px;max-width:1100px;margin:0 auto}
+.sumhead{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:4px 2px 12px}
+.sumhead h2{margin:0;font-family:var(--cond);font-size:22px;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
+.sumsub{color:var(--text-2);font-size:14px}
+.sumhead .pill{font-family:var(--cond);font-weight:700;font-size:10px;letter-spacing:.08em;
+  text-transform:uppercase;padding:2px 7px;border-radius:10px;border:1px solid var(--line);color:var(--text-3)}
+.sumhead .pill.unsent{border-color:var(--inplay);color:var(--inplay)}
+.sumhead .pill.up{border-color:var(--ball);color:var(--ball)}
+.sumhead .pill.prac{border-color:var(--text-2);color:var(--text-2)}
+.sumgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(440px,1fr));gap:12px}
+.sumwho{font-family:var(--cond);font-weight:700;font-size:18px;letter-spacing:.03em;text-transform:uppercase}
+.sumkpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:8px;margin-bottom:10px}
+.sumkpi{background:var(--surface-2);border:1px solid var(--line-soft);border-radius:var(--r);padding:7px 10px}
+.sumkpi b{display:block;font-family:var(--cond);font-size:20px;line-height:1.15}
+.sumkpi span{font-family:var(--cond);font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--text-3)}
+.sumread{font-size:13.5px;color:var(--text-2);margin:2px 0 8px}
+.sumnote{display:block;margin-top:8px}
+.sumnote textarea{display:block;width:100%;min-height:62px;margin-top:4px;padding:8px;border:1px solid var(--line);
+  border-radius:var(--r);background:var(--ground);font:inherit;font-size:15px;color:inherit}
+.sumled{width:100%;border-collapse:collapse;font-size:13px}
+.sumled th,.sumled td{padding:4px 6px;border-bottom:1px solid var(--line-soft);text-align:center}
+.sumled th{font-family:var(--cond);font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-2)}
+.sumled td.l,.sumled th.l{text-align:left}
 /* armed: the at-bat is closed and the app is waiting on you */
 .nextbtn.ready{box-shadow:0 0 0 3px var(--inplay-bg), 0 0 0 4px var(--inplay)}
 
@@ -767,6 +793,27 @@ a.topbtn{display:inline-block;text-decoration:none;border:0}
       <div class="sunote" style="margin-top:8px">Names, numbers and positions only. Anything you
         learn about a hitter gets charted during the game.</div>
     </div>
+  </div>
+</section>
+
+<!-- v27: the Game summary. Opened from the Game tab (the game in progress) and
+     from History (any filed game). Numbers are read-only; the 2 notes per arm are
+     the only thing anyone types here. -->
+<section id="v-sum" hidden>
+  <div class="sumhead">
+    <button class="ghost" id="sumBack">&larr; Back</button>
+    <h2>Game summary</h2>
+    <span class="sumsub" id="sumSub"></span>
+    <span class="pill" id="sumPill"></span>
+  </div>
+  <div class="sumgrid" id="sumArms"></div>
+  <div class="panel" style="margin-top:12px">
+    <div class="phead"><span class="lbl">Innings</span></div>
+    <div class="pbody" id="sumInn"></div>
+  </div>
+  <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:12px">
+    <button class="ghost" id="sumExport">Export game</button>
+    <span class="lbl" id="sumHint" style="text-transform:none;letter-spacing:0;font-size:12.5px"></span>
   </div>
 </section>
 
@@ -953,6 +1000,7 @@ a.topbtn{display:inline-block;text-decoration:none;border:0}
       <div id="innSummary"></div>
       <label class="field" style="margin:9px 0 10px"><span class="lbl">Game note</span>
         <input id="fNotes2" placeholder="e.g. all 4 BB in the first"></label>
+      <button class="ghost" id="btnSummary" style="width:100%;margin-bottom:8px">Game summary &amp; notes</button>
       <button class="finishbtn" id="btnFinish">Finish &amp; file this game</button>
       <div class="lbl" style="margin:4px 0 10px;text-transform:none;letter-spacing:0;font-size:11.5px">
         Moves it to History and starts a clean one. Nothing is deleted.</div>
@@ -1590,6 +1638,8 @@ function doFile(){
      week, the other team's hitters are not. The Offense Chart carries ITS lineup
      for the same reason - that one is ours. */
   var keepP = JSON.parse(JSON.stringify(G.pitchers)), spots = G.spots;
+  /* v27: the staff carries forward, their notes do not - they were about that game. */
+  keepP.forEach(function(p){ delete p.note; delete p.comments; });
   G = emptyGame(); G.pitchers = keepP; G.spots = spots;   /* level unpicked, practice off */
   save(); render(); renderFiled();
   showSetup(true);
@@ -2751,6 +2801,8 @@ function resultClass(r){
 /* ===================== pre-game lineup setup ===================== */
 var setupOpen = false;
 function showSetup(on){
+  /* v27: Setup and the Game summary never show together. */
+  if(on && sumIdx != null){ sumIdx = null; var vs = document.getElementById("v-sum"); if(vs) vs.hidden = true; }
   /* v25, Jim: "You can't go to charting until the level is selected each time." */
   if(!on && !G.level){ lvlNag = true; on = true; }
   setupOpen = !!on;
@@ -3615,6 +3667,142 @@ function render(){
   }
 }
 
+/* ===================== v27: the Game summary (E-011) =====================
+   Jim, Oct 19: "It's almost like we need a dedicated summary tab for each game."
+   The pitching coach carries his team's iPad, opens a game the morning after, and
+   writes each arm's 2 notes looking at exactly what the kid's card will show.
+   sumIdx: null = closed, -1 = the game in progress, n = A[n] in History. */
+var sumIdx = null;
+var INPLAY = {GO:1, FO:1, LO:1, PO:1, FC:1, DP:1, SAC:1, "1B":1, "2B":1, "3B":1, HR:1, E:1};
+function sumGame(){ return sumIdx === -1 ? G : (sumIdx == null ? null : A[sumIdx]); }
+function hardOf(i){
+  var o = {bip:0, hard:0};
+  allPlayers().forEach(function(b){ b.abs.forEach(function(a){
+    var h = abHead(a);
+    if(!h || h.p !== i || !a.result || !INPLAY[a.result]) return;
+    o.bip++; if(a.hard) o.hard++;
+  }); });
+  return o;
+}
+/* Who gets a card: anyone who entered the game (Jim: "anyone that enters the game
+   gets a card"), which the chart knows as a pitch thrown or a batter faced. */
+function armEntered(i){
+  var p = G.pitchers[i] || {};
+  return pitcherCount(i) > 0 || pitcherStats(i).bf > 0 ||
+         !!(p.note || "").trim() || !!(p.comments || "").trim();
+}
+function showSum(idx){
+  sumIdx = idx;
+  setupOpen = false;
+  var su = document.getElementById("v-setup"); if(su) su.hidden = true;
+  var bs = document.getElementById("btnSetup"); if(bs) bs.textContent = "Setup";
+  document.querySelector(".wrap").style.display = "none";
+  document.getElementById("v-sum").hidden = false;
+  renderSum();
+  window.scrollTo(0, 0);
+}
+function closeSum(){
+  sumIdx = null;
+  document.getElementById("v-sum").hidden = true;
+  document.querySelector(".wrap").style.display = "";
+  render(); renderFiled();
+  /* Same lock as at open: with no level picked (between games) the app sits on Setup. */
+  if(!G.level) showSetup(true);
+  uploadPending();
+}
+function sumKpi(v, l){ return '<div class="sumkpi"><b>'+v+'</b><span>'+l+'</span></div>'; }
+function ofTxt(a, b){ return b ? a + " of " + b + ' <small style="color:var(--text-3)">' + Math.round(a/b*100) + '%</small>' : "—"; }
+function sumArm(i){
+  var st = pitcherStats(i), who = pitcherOf(i), hc = hardOf(i), cs = callStats(i), a3 = ao3Stats({pitcher:i});
+  var p = G.pitchers[i] || {};
+  var meta = [ROLES[i] || ("Pitcher " + (i+1))];
+  if(who.cls) meta.push(classLabel(who.cls));
+  meta.push((who.throws || "R") + "HP");
+  return '<div class="panel"><div class="phead"><span class="sumwho">' + escHtml(pitcherName(i)) + '</span>' +
+      '<span class="lbl">' + escHtml(meta.join(" · ")) + '</span></div><div class="pbody">' +
+    '<div class="sumkpis">' +
+      sumKpi(ipText(outsOf(i)), "Innings") + sumKpi(st.tot, "Pitches") + sumKpi(st.bf, "Batters") +
+      sumKpi(ofTxt(st.fps, st.fp), "First-pitch strikes") + sumKpi(ofTxt(st.str, st.tot), "Strikes") +
+      sumKpi(st.bb + st.hbp, "Free bases (BB+HBP)") + sumKpi(st.k, "Strikeouts") +
+      sumKpi(ofTxt(hc.hard, hc.bip), "Hard contact") +
+      sumKpi(cs.called ? ofTxt(cs.spot + cs.close, cs.called) : "—", "Execution (spot+close)") +
+      sumKpi(a3.tot ? ofTxt(a3.c["++"] + a3.c["+-"], a3.tot) : "—", "AO3+") +
+      sumKpi(runsOf(i) + " / " + erOf(i), "Runs / earned") +
+    '</div>' +
+    '<div class="sumread">' + escHtml(callRead(cs)) + '</div>' +
+    '<label class="sumnote"><span class="lbl">To the pitcher &middot; he will read this</span>' +
+      '<textarea data-sn="' + i + '" data-k="note" placeholder="What you want him to take from this outing">' + escHtml(p.note || "") + '</textarea></label>' +
+    '<label class="sumnote"><span class="lbl">Coach only &middot; never shown to him</span>' +
+      '<textarea data-sn="' + i + '" data-k="comments" placeholder="For the coaches">' + escHtml(p.comments || "") + '</textarea></label>' +
+  '</div></div>';
+}
+function sumInnings(){
+  var t = inningLogTable();
+  if(!t.rows.length) return '<div class="lbl">No innings charted yet.</div>';
+  var want = [["Inning","Inn"],["Pitcher","Pitcher"],["Pitches","P"],["Strikes","Str"],["FirstPitchStrikes","FPS"],
+              ["BattersFaced","BF"],["Outs","Outs"],["FreeBases","BB+HBP"],["K","K"],["Hits","H"],["Runs","R"],["Earned","ER"]];
+  var ix = want.map(function(w){ return t.head.indexOf(w[0]); });
+  var h = '<div style="overflow-x:auto"><table class="sumled"><thead><tr>' +
+    want.map(function(w, k){ return '<th' + (k === 1 ? ' class="l"' : '') + '>' + w[1] + '</th>'; }).join("") + '</tr></thead><tbody>';
+  t.rows.forEach(function(r){
+    h += '<tr>' + ix.map(function(c, k){ return '<td' + (k === 1 ? ' class="l"' : '') + '>' + escHtml(c < 0 ? "" : r[c]) + '</td>'; }).join("") + '</tr>';
+  });
+  return h + '</tbody></table></div>';
+}
+function drawSumPill(g){
+  var pl = document.getElementById("sumPill");
+  var hp = sumIdx === -1 ? ["", "in progress"] : histPill(g);
+  pl.className = "pill" + (hp[0] ? " " + hp[0] : ""); pl.textContent = hp[1];
+}
+function renderSum(){
+  var g = sumGame();
+  if(!g){ closeSum(); return; }
+  var live = G, arms = "", inn = "", n = 0;
+  G = g;
+  try{
+    for(var i = 0; i < G.pitchers.length; i++){ if(armEntered(i)){ arms += sumArm(i); n++; } }
+    inn = sumInnings();
+  } finally { G = live; }
+  document.getElementById("sumArms").innerHTML = arms ||
+    '<div class="panel"><div class="pbody"><div class="lbl">No one has pitched in this game yet.</div></div></div>';
+  document.getElementById("sumInn").innerHTML = inn;
+  document.getElementById("sumSub").textContent = "vs " + (g.opp || "Unknown opponent") +
+    (g.date ? " · " + g.date : "") + (g.level ? " · " + g.level : "") +
+    " · " + chartedAnything(g) + " pitches";
+  drawSumPill(g);
+  document.getElementById("sumHint").textContent = g.practice
+    ? "Practice game: the notes stay on this iPad, like the game."
+    : (sumIdx === -1 ? "Notes go to the dashboard with the game when you file it."
+                     : "Changed notes go to the dashboard the next time the app has signal.");
+}
+function sumNoteInput(e){
+  var t = e.target;
+  if(!t || !t.hasAttribute || !t.hasAttribute("data-sn")) return;
+  var g = sumGame(); if(!g) return;
+  var i = +t.getAttribute("data-sn"), k = t.getAttribute("data-k");
+  if(!g.pitchers[i] || (k !== "note" && k !== "comments")) return;
+  g.pitchers[i][k] = t.value;
+  if(sumIdx === -1){ save(); return; }
+  /* A game already on the dashboard sends its notes again; one that is not yet
+     uploaded carries the new notes in its first upload anyway. */
+  if(g.up) g.notesDirty = true;
+  saveArch(A);
+  drawSumPill(g);
+}
+/* v27: one row per arm who entered, stamped like the other tables. Lands on
+   Game_Notes; joins on RecordID (the game) + PitcherID. */
+function notesTable(){
+  var head = ["PitcherID","Pitcher","PitcherLast","PitcherFirst","Role","Batters","Pitches","ToPitcher","CoachOnly","Practice"];
+  var rows = [];
+  for(var i = 0; i < G.pitchers.length; i++){
+    if(!armEntered(i)) continue;
+    var p = G.pitchers[i] || {}, who = pitcherOf(i);
+    rows.push([who.rid || "", pitcherName(i), who.last, who.first, ROLES[i] || "",
+               pitcherStats(i).bf, pitcherCount(i), p.note || "", p.comments || "", G.practice ? "Y" : "N"]);
+  }
+  return {head:head, rows:rows};
+}
+
 /* ---------- history ---------- */
 /* NOT renderHistory: that name already belongs to the batter's read panel above.
    Two declarations with one name meant this one silently replaced it, and the
@@ -3645,7 +3833,11 @@ function renderFiled(){
         " \u00b7 " + chartedAnything(g) + "P"));
     var hp = histPill(g);
     row.appendChild(el("span","pill"+(hp[0]?" "+hp[0]:""), hp[1]));
+    var sb = el("button", null, "Summary");
+    sb.addEventListener("click", function(){ showSum(i); });
+    row.appendChild(sb);
     var b = el("button", null, "Export");
+    b.style.marginLeft = "0";
     b.addEventListener("click", function(){ exportFiled(i); });
     row.appendChild(b);
     host.appendChild(row);
@@ -3781,6 +3973,8 @@ function exportText(){
       L.push("    AO3+               AO3 "+pct(a3.ao3).padEnd(6)+"++ "+pct(a3.pp).padEnd(6)+
              "[++ "+a3.c["++"]+"   +- "+a3.c["+-"]+"   -+ "+a3.c["-+"]+"   -- "+a3.c["--"]+"]");
     }
+    if(pit.note) L.push("    To the pitcher     "+pit.note);
+    if(pit.comments) L.push("    Coach only         "+pit.comments);
     if(m.tot){
       L.push("    Mix                "+TYPEKEYS.filter(function(k){return m.counts[k];})
         .sort(function(x,y){return m.counts[y]-m.counts[x];})
@@ -4172,6 +4366,12 @@ function build(){
     G.hideLeft = !G.hideLeft; render(); save();
   });
   document.getElementById("hdrFinish").addEventListener("click", finishAndFile);
+  document.getElementById("btnSummary").addEventListener("click", function(){ showSum(-1); });
+  document.getElementById("sumBack").addEventListener("click", closeSum);
+  document.getElementById("sumExport").addEventListener("click", function(){
+    if(sumIdx === -1) openExport(); else if(sumIdx != null) exportFiled(sumIdx);
+  });
+  document.getElementById("sumArms").addEventListener("input", sumNoteInput);
   drawHdrFinish();
   document.getElementById("fNotes2").addEventListener("input",function(){ G.notes=this.value; save(); });
 
@@ -4220,7 +4420,7 @@ function build(){
    gateWipe(), wipeEverything(), WIPE_KEYS, the #wipeBox markup and its listener. */
 var ALLOW_WIPE = false;
 
-var BUILD = "v26";
+var BUILD = "v27";
 
 /* ======================= DASHBOARD UPLOAD (v25) =======================
    Same receiver as the Bullpen Chart and the Offense Chart. Blank UPLOAD_URL =
@@ -4238,12 +4438,14 @@ var UPLOAD_SCHEMA = 1;
 var UPLOAD_WAIT = 20000;
 var upBusy = false, upLast = "";
 function upQueue(){
-  return A.filter(function(g){ return g.rid && g.level && !g.practice && !g.up && chartedAnything(g) > 0; });
+  /* v27: a game already on the dashboard comes back when its notes change. */
+  return A.filter(function(g){ return g.rid && g.level && !g.practice && chartedAnything(g) > 0 &&
+                                      (!g.up || g.notesDirty); });
 }
 function upPayload(g){
-  var live = G, pl, il;
+  var live = G, pl, il, nt;
   G = g;
-  try{ pl = pitchLogTable(); il = inningLogTable(); }
+  try{ pl = pitchLogTable(); il = inningLogTable(); nt = notesTable(); }
   finally{ G = live; }
   function stamp(t){
     return { columns: ["Level","Date","Opponent"].concat(t.head),
@@ -4251,13 +4453,20 @@ function upPayload(g){
   }
   var tables = { pitches: stamp(pl) };
   if(il.rows.length) tables.innings = stamp(il);
-  return {
+  tables.notes = stamp(nt);
+  /* v27: notes changed after the game reached the dashboard - send only the notes,
+     and the receiver replaces that game's note rows. */
+  var upd = !!(g.up && g.notesDirty);
+  if(upd) tables = { notes: stamp(nt) };
+  var out = {
     schema: UPLOAD_SCHEMA, key: UPLOAD_KEY, app: "game", build: g.build || BUILD,
     record: { id: g.rid, mound: "", team: g.level || "", date: g.date || "", coach: "",
               template: "", scriptId: "", filedAt: g.filed ? new Date(g.filed).toISOString() : "",
               pitches: chartedAnything(g) },
     tables: tables
   };
+  if(upd) out.update = "notes";
+  return out;
 }
 function upPost(g){
   return new Promise(function(resolve){
@@ -4294,8 +4503,9 @@ function uploadPending(){
   (function next(){
     if(i >= q.length){ upBusy = false; upLast = ""; renderFiled(); return; }
     var g = q[i++];
+    var wasUp = !!g.up;
     upPost(g).then(function(r){
-      if(r.ok){ g.up = Date.now(); g.upErr = ""; }
+      if(r.ok){ if(!wasUp) g.up = Date.now(); g.notesDirty = false; g.upErr = ""; }
       else { g.upErr = r.error; }
       saveArch(A);
       if(r.ok){ next(); return; }
@@ -4309,7 +4519,7 @@ function histPill(g){
   if(!UPLOAD_URL) return g.sent ? ["", "sent"] : ["unsent", "not sent"];
   if(g.practice) return ["prac", "practice"];
   if(!g.rid || !g.level) return ["", "kept here"];
-  if(g.up) return ["up", "on dashboard"];
+  if(g.up) return g.notesDirty ? ["unsent", "notes waiting"] : ["up", "on dashboard"];
   return ["unsent", "waiting"];
 }
 function drawUpload(){
