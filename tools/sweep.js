@@ -7,6 +7,7 @@
        node tools/sweep.js
    Exits non-zero if anything is dead. */
 const { chromium } = require("playwright");
+const { FILL_SETUP } = require("./game-ready.js");
 const BASE = process.env.BASE || "http://localhost:8807";
 let fails = 0, checks = 0;
 
@@ -37,6 +38,8 @@ async function pickLevel(pg, path) {
     if (b && !b.classList.contains("on")) b.click();
   });
   await pg.waitForTimeout(150);
+  /* v29: the Pitch Chart also needs the rest of Setup finished before it charts. */
+  if (/\/game\//.test(path)) await pg.evaluate(FILL_SETUP);
   await pg.evaluate((isGame) => {
     /* v28: the Pitch Chart has the same Chart tab as the other two apps. */
     const t = document.getElementById("tab-chart"); if (t) t.click();
@@ -1635,7 +1638,11 @@ async function wipeOff(b) {
     }
     return {q:q, qa:qa, done:done, put:put, val:val, warn:warn, flags:flags,
             opts:opts, arm:arm, pitch:pitch, res:res, logRow:logRow};
-  })(); document.getElementById("tab-setup").click(); "ready"`;
+  })(); document.getElementById("tab-setup").click();
+  /* v29: pickLevel finished Setup with a jersey in every spot; these checks are
+     about the jersey rule, so they start from blank numbers again (the game has
+     no pitch yet, so nothing is lost). */
+  for(var __i=0; __i<9; __i++) __L.put(__i, "jersey", ""); "ready"`;
 
   await sweep(b, "PITCH CHART · one jersey, one position", "/game/index.html", [
     /* Numbers, not 1B/2B/3B. Those three are already AT-BAT RESULTS on the pad
@@ -1689,7 +1696,7 @@ async function wipeOff(b) {
        would sit on top of the batter selector and eat the tap that picks the
        hitter - the row is the control. */
     ["the lineup shows it, read-only", null,
-      '(function(){ __L.done();'+
+      FILL_SETUP + ';(function(){ __L.done();'+
       ' var r = __L.qa("#lineup .slot-posr");'+
       ' return r.length + " readouts, " + __L.qa("#lineup select").length + " selects, first=" +'+
       '   (r[0] ? r[0].textContent : "∅"); })()',

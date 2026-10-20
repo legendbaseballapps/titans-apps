@@ -1,5 +1,5 @@
 /* Finish & file in the header (bullpen v34, game v26, offense v46), the shared
-   top bar (game v28 matches offense), the bullpen's
+   top bar (game v28 matches offense), the Pitch Chart's Setup lock (v29), the bullpen's
    Ready to chart box, and its "All Bullpens Complete" card.
 
      cd titans-apps && python3 -m http.server 8807 &
@@ -8,6 +8,7 @@
    Google's script hosts are blocked in the browser, so nothing here can reach the
    real receiver; uploads just fail quietly and stay waiting. */
 const { chromium } = require("playwright");
+const { FILL_SETUP } = require("./game-ready.js");
 const BASE = process.env.BASE || "http://localhost:8807";
 let fail = 0, n = 0;
 function is(name, got, want) {
@@ -89,14 +90,39 @@ const shown = id => `(function(){ var b=document.getElementById(${JSON.stringify
     is("  the old Setup button is gone", await ev(pg, '!document.getElementById("btnSetup")'), true);
     is("  the old bottom box is gone", await ev(pg, '!document.getElementById("tabs") && !document.querySelector(".p-tabs")'), true);
     is("nothing charted: no header button", await ev(pg, shown("hdrFinish")), false);
-    await pg.click('[data-lvl="JV"]'); await pg.click("#tab-chart");
-    await ev(pg, '(function(){ var s=document.querySelector("#pitchers select[data-pick]"); s.value=window.TITANS_ROSTER[0].id; s.dispatchEvent(new Event("change",{bubbles:true})); })()');
+    await pg.click('[data-lvl="JV"]');
+    /* v29: charting stays locked until all of Setup is done */
+    const msg = () => ev(pg, 'document.getElementById("readyMsg").textContent');
+    const onSetup = () => ev(pg, '!document.getElementById("v-setup").hidden');
+    is("v29 Ready box lists what is missing", await msg(), "Not yet. Still needed: the date, the opponent, the starting pitcher, 9 hitters' names and 9 jersey numbers. Date and opponent are at the top of the screen.");
+    is("  Start charting waits", await ev(pg, 'document.getElementById("suDone").disabled'), true);
+    await pg.click("#tab-chart");
+    is("  the Chart tab sends you back to Setup", await onSetup(), true);
+    is("  and the box turns amber", await ev(pg, 'document.getElementById("readyPanel").classList.contains("nag")'), true);
+    await ev(pg, 'document.querySelector("#zone .cell:nth-child(13)").click()');
+    is("  a zone tap is refused at the source", await ev(pg, 'JSON.parse(localStorage.getItem("dugout-pitch-chart-v2")).lineup[0].men[0].abs[0].pitches.length'), 0);
+    await ev(pg, 'document.querySelector(\'#results button[data-res="IBB"]\').click()');
+    is("  so is a no-pitch IBB", await ev(pg, 'JSON.parse(localStorage.getItem("dugout-pitch-chart-v2")).lineup[0].men[0].abs[0].result || ""'), "");
+    await ev(pg, '(function(){ var s=document.getElementById("suPitcher"); s.value=window.TITANS_ROSTER[0].id; s.dispatchEvent(new Event("change",{bubbles:true})); })()');
+    is("the starter is picked on Setup", /starting pitcher/.test(await msg()), false);
+    is("  and lands on the mound chip", await ev(pg, 'document.querySelector("#pitchers select[data-pick]").value === window.TITANS_ROSTER[0].id'), true);
+    await ev(pg, '(function(){ var e=document.getElementById("fDate"); e.value="4-18"; e.dispatchEvent(new Event("input",{bubbles:true})); e=document.getElementById("fOpp"); e.value="Ponderosa"; e.dispatchEvent(new Event("input",{bubbles:true})); })()');
+    await ev(pg, '(function(){ var x=document.querySelector(\'#suRows tr [data-su="name"]\'); x.dispatchEvent(new Event("focus")); x.value="Lopez"; x.dispatchEvent(new Event("input",{bubbles:true})); x.dispatchEvent(new Event("change",{bubbles:true})); })()');
+    is("  counts down as the lineup fills", await msg(), "Not yet. Still needed: 8 hitters' names and 9 jersey numbers. Date and opponent are at the top of the screen.");
+    await ev(pg, FILL_SETUP);
+    is("all of it in: ready, and says what is set", await msg(), "✓ Ready. JV · vs Ponderosa · 4-18 · " + await ev(pg, 'window.TITANS_ROSTER[0].name') + " starting · 9 hitters");
+    is("  Start charting is live", await ev(pg, 'document.getElementById("suDone").disabled'), false);
+    await pg.click("#suDone");
+    is("  and opens the Chart tab", await ev(pg, 'document.getElementById("v-chart").style.display'), "");
     await pg.click("#zone .cell:nth-child(13)");
     is("1 pitch: Finish & file appears in the header", await ev(pg, shown("hdrFinish")), true);
     /* measured with Finish & file showing: the widest the bar gets */
     is("  the top row fits on one line at iPad width", await ev(pg, '(function(){ var t=function(id){ return document.getElementById(id).getBoundingClientRect(); }; var a=t("tab-setup"), f=t("hdrFinish"), o=t("fOpp"), br=document.querySelector(".top .brand").getBoundingClientRect(); return f.top < br.bottom && a.top < br.bottom && o.top < br.bottom && f.right <= window.innerWidth; })()'), true);
     await pg.click("#tab-setup");
     is("  and is still there on the Setup tab", await ev(pg, shown("hdrFinish")), true);
+    await ev(pg, '(function(){ var x=document.querySelector(\'#suRows tr [data-su="name"]\'); x.dispatchEvent(new Event("focus")); x.value=""; x.dispatchEvent(new Event("input",{bubbles:true})); x.dispatchEvent(new Event("change",{bubbles:true})); })()');
+    is("  game under way: a blanked name never locks charting", await ev(pg, '(function(){ document.getElementById("tab-chart").click(); return document.getElementById("v-chart").style.display; })()'), "");
+    await pg.click("#tab-setup");
     await pg.click("#tab-report");
     is("  and on the Report tab", await ev(pg, shown("hdrFinish")), true);
     await pg.click("#tab-chart");
@@ -109,6 +135,8 @@ const shown = id => `(function(){ var b=document.getElementById(${JSON.stringify
     await pg.waitForTimeout(200);
     is("  and files the game", await ev(pg, 'JSON.parse(localStorage.getItem("dugout-pitch-chart-archive-v1")||"[]").length'), 1);
     is("after filing the header button goes away", await ev(pg, shown("hdrFinish")), false);
+    is("the next game is locked again (the starter carries over)", await msg(), "Not yet. Still needed: the level, the date, the opponent, 9 hitters' names and 9 jersey numbers. Date and opponent are at the top of the screen.");
+    is("  and the box is not amber until someone tries", await ev(pg, 'document.getElementById("readyPanel").classList.contains("nag")'), false);
     is("no page errors", pg.errs.join("|"), "");
     await pg.ctx.close();
   }

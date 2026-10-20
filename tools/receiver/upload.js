@@ -24,6 +24,7 @@
 const http = require("http");
 const path = require("path");
 const { chromium } = require("playwright");
+const { FILL_SETUP } = require("../game-ready.js");
 const { makeRuntime } = require("./mock-gas");
 
 const ROOT = path.join(__dirname, "..", "..");
@@ -624,13 +625,16 @@ async function part4() {
     check("a zone tap is refused at the source too", ((await G()) || { lineup: [] }).lineup.some(sp => sp.men.some(m => m.abs.some(a => a.pitches.length))), false);
     await pg.click('[data-lvl="JV"]');
     await pg.click("#tab-chart");
-    check("picking JV unlocks charting", await onSetup(), false);
+    check("v29: the level alone does not unlock charting", await onSetup(), true);
     await pg.evaluate(() => {
       const s = document.querySelector("#pitchers select[data-pick]");
       s.value = window.TITANS_ROSTER[0].id; s.dispatchEvent(new Event("change", { bubbles: true }));
       const set = (id, v) => { const e = document.getElementById(id); e.value = v; e.dispatchEvent(new Event("input", { bubbles: true })); };
       set("fDate", "4-18"); set("fOpp", "Rock Canyon");
     });
+    await pg.evaluate(FILL_SETUP);
+    await pg.click("#tab-chart");
+    check("  a finished Setup does", await onSetup(), false);
     const zone = () => pg.click("#zone .cell:nth-child(13)");
     const res = k => pg.click('#results button[data-res="' + k + '"]');
     await zone(); await zone(); await res("1B"); await pg.click("#nextBtn");
@@ -703,6 +707,7 @@ async function part4() {
     await pg.click("#tab-setup");
     await pg.click('[data-lvl="Freshman"]');
     await pg.click("#fPractice");
+    await pg.evaluate(FILL_SETUP);
     await pg.click("#tab-chart");
     check("the practice bar shows while charting", await pg.evaluate(() => !document.getElementById("practiceBar").hidden), true);
     const before = st.posts;

@@ -14,6 +14,7 @@
 
    roster.js is intercepted, so each state is a real page load of the real file. */
 const { chromium } = require("playwright");
+const { FILL_SETUP } = require("./game-ready.js");
 const BASE = process.env.BASE || "http://localhost:8807";
 let fail = 0;
 function is(n,g,w){ const ok=String(g)===String(w);
@@ -207,8 +208,9 @@ const bannerFull = sel => `(function(){ var b=document.getElementById(${JSON.str
     await pg.waitForTimeout(300);
     /* v25: charting is locked until the game's level is picked - pick it the way a
        charter would, then return to charting. */
-    await ev(`(function(){ document.querySelector('[data-lvl="Varsity"]').click();
-      document.getElementById("tab-chart").click(); })()`);
+    await ev(`(function(){ document.querySelector('[data-lvl="Varsity"]').click(); })()`);
+    await ev(FILL_SETUP);   /* v29: the rest of Setup too */
+    await ev('document.getElementById("tab-chart").click()');
     await pg.waitForTimeout(200);
     await ev('(function(){ var z=document.querySelectorAll("#zone button"); z[4].click(); z[12].click(); })()');
     await pg.waitForTimeout(400);

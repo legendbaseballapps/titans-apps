@@ -628,6 +628,19 @@ a.topbtn{display:inline-block;text-decoration:none;border:0}
 .lvlrow button.on{background:var(--navy);border-color:var(--navy);color:#fff}
 .lvlrow.needed button{border-color:var(--inplay);color:var(--inplay)}
 .lvlnote.needed{color:var(--inplay);font-weight:600}
+/* v29: the Ready to chart box, the same idea as the bullpen's. */
+.panel.ready{border-color:var(--ball);box-shadow:inset 6px 0 0 var(--ball), var(--shadow)}
+.panel.notready.nag{border-color:var(--inplay);box-shadow:inset 6px 0 0 var(--inplay), var(--shadow)}
+.readyrow{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.readymsg{margin:0;flex:1 1 320px;font-size:15px;line-height:1.45}
+.panel.ready .readymsg{color:var(--ball);font-weight:600}
+.panel.notready.nag .readymsg{color:var(--inplay);font-weight:600}
+.gostart{padding:12px 18px;border-radius:var(--r);background:var(--accent);color:var(--accent-ink);
+  font-family:var(--cond);font-weight:700;font-size:14px;letter-spacing:.07em;text-transform:uppercase}
+.gostart:disabled{background:var(--surface-2);color:var(--text-3)}
+.sustart{display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap}
+.sustart select{padding:9px 10px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface);
+  font-size:16px;min-width:240px}
 .practice{display:flex;gap:10px;align-items:flex-start;margin-top:10px;padding:10px 12px;
   border:1px dashed var(--line);border-radius:var(--r);font-size:13px;color:var(--text-2);line-height:1.4;cursor:pointer}
 .practice input{width:22px;height:22px;margin-top:1px;flex:0 0 auto}
@@ -780,10 +793,12 @@ a.topbtn{display:inline-block;text-decoration:none;border:0}
     <div class="phead"><span class="lbl">Our pitchers</span></div>
     <div class="pbody">
       <div class="rossrc" id="rosSrc"></div>
-      <div class="read" style="margin-top:9px">Pick each arm from the released roster on the
-        chips at the top of the chart screen. <b>It is a read-out, not a form</b> &mdash; the roster
-        ships with the app so a pitcher is one pitcher across the bullpen chart, the offense chart
-        and this one. Somebody wrong or missing? Tell Jim.</div>
+      <label class="sustart" for="suPitcher"><span class="lbl">Starting pitcher</span>
+        <select id="suPitcher"></select></label>
+      <div class="read" style="margin-top:9px">Every arm comes off the released roster: the starter
+        here, relievers on the chips at the top of the chart screen. <b>The roster is a read-out, not
+        a form</b> &mdash; it ships with the app so a pitcher is one pitcher across the bullpen chart,
+        the offense chart and this one. Somebody wrong or missing? Tell Jim.</div>
     </div>
   </div>
   <div class="panel">
@@ -803,10 +818,18 @@ a.topbtn{display:inline-block;text-decoration:none;border:0}
       <div class="rowsplit" style="margin-top:12px">
         <button class="ghost" id="suMinus">&minus; Spot</button>
         <button class="ghost" id="suPlus">+ Spot</button>
-        <button class="ghost" id="suDone">Done &mdash; start charting</button>
       </div>
       <div class="sunote" style="margin-top:8px">Names, numbers and positions only. Anything you
         learn about a hitter gets charted during the game.</div>
+    </div>
+  </div>
+  <div class="panel notready" id="readyPanel">
+    <div class="phead"><span class="lbl">Ready to chart</span></div>
+    <div class="pbody">
+      <div class="readyrow">
+        <p class="readymsg" id="readyMsg"></p>
+        <button class="gostart" id="suDone">Start charting &rarr;</button>
+      </div>
     </div>
   </div>
 </section>
@@ -1646,6 +1669,7 @@ function doFile(){
   /* v27: the staff carries forward, their notes do not - they were about that game. */
   keepP.forEach(function(p){ delete p.note; delete p.comments; });
   G = emptyGame(); G.pitchers = keepP; G.spots = spots;   /* level unpicked, practice off */
+  readyNag = false;
   save(); render(); renderFiled();
   showSetup(true);
   uploadPending();
@@ -1666,6 +1690,74 @@ var LEVELS = ["Varsity","JV","Sophomore","Freshman"];
 function newAB(){ return {pitches:[], result:null, auto:false, spray:null, traj:null, hard:false}; }
 function newBatter(n){ return {num:n, name:"", jersey:"", pos:"", notes:"", hand:"R", play:null, tags:{}, carried:null, abs:[newAB()], cur:0}; }
 function newSpot(n){ return {num:n, men:[newBatter(n)], cur:0}; }
+/* v29: Setup is finished when the game has its level, date, opponent, starting
+   pitcher, and a name AND a jersey number in every lineup spot (Jim's list). The
+   lock only applies BEFORE the game starts: once a pitch (or a no-pitch IBB) is in,
+   a sub with no name yet or a cleared field must never stop the charting. */
+function gameStarted(g){
+  if(chartedAnything(g)) return true;
+  return (g.lineup||[]).some(function(sp){ return (sp.men||[]).some(function(b){
+    return (b.abs||[]).some(function(a){ return !!a.result; }); }); });
+}
+function readyState(){
+  var miss = [];
+  if(!G.level) miss.push("the level");
+  if(!String(G.date||"").trim()) miss.push("the date");
+  if(!String(G.opp||"").trim()) miss.push("the opponent");
+  var p0 = G.pitchers[0] || {};
+  if(!p0.rid && !String(p0.name||"").trim()) miss.push("the starting pitcher");
+  var nm = 0, jn = 0;
+  for(var i=0;i<spots();i++){
+    var b = spot(i).men[0];
+    if(!String(b.name||"").trim()) nm++;
+    if(!String(b.jersey||"").trim()) jn++;
+  }
+  if(nm) miss.push(nm === 1 ? "1 hitter's name" : nm + " hitters' names");
+  if(jn) miss.push(jn === 1 ? "1 jersey number" : jn + " jersey numbers");
+  return {ok: !miss.length, miss: miss};
+}
+function chartLocked(){ return !G.level || (!gameStarted(G) && !readyState().ok); }
+var readyNag = false;
+function drawReady(){
+  var m = document.getElementById("readyMsg"); if(!m) return;
+  var st = readyState(), started = gameStarted(G), go = document.getElementById("suDone");
+  var panel = document.getElementById("readyPanel");
+  if(started){
+    m.textContent = "Game under way. Back to the chart any time.";
+    panel.className = "panel ready";
+    go.disabled = false; go.textContent = "Back to charting →";
+  } else if(st.ok){
+    m.textContent = "✓ Ready. " + G.level + " · vs " + G.opp + " · " + G.date +
+      " · " + (pitcherName(0) || "starter") + " starting · " + spots() + " hitters";
+    panel.className = "panel ready";
+    go.disabled = false; go.textContent = "Start charting →";
+  } else {
+    var t = st.miss.slice(0, -1).join(", ");
+    m.textContent = "Not yet. Still needed: " + (t ? t + " and " : "") + st.miss[st.miss.length-1] +
+      ". Date and opponent are at the top of the screen.";
+    panel.className = "panel notready" + (readyNag ? " nag" : "");
+    go.disabled = true; go.textContent = "Start charting →";
+  }
+}
+/* The starter, picked on Setup. Same rules as the mound chip it mirrors. */
+function pickPitcher(i, v){
+  var p = G.pitchers[i];
+  if(v === "__keep") return;        /* leave an off-roster name exactly as it is */
+  p.rid = v;
+  var r = v ? rosById(v) : null;
+  /* Stamp the name and hand onto the game record too. The roster still wins
+     while it is pointed at - this is so a FILED game reads correctly years
+     later even if the roster changed. */
+  if(r){ p.name = r.name; p.last = r.last || ""; p.first = r.first || "";
+         p.cls = r.cls || ""; p.hand = r.throws || "R"; }
+  else if(!v){ p.name = ""; p.last = ""; p.first = ""; p.cls = ""; }
+  save(); render();
+}
+function drawSuPitcher(){
+  var s = document.getElementById("suPitcher"); if(!s) return;
+  if(document.activeElement === s) return;
+  s.innerHTML = pitcherOptions(0);
+}
 function emptyGame(){
   var l=[],i;
   for(i=1;i<=MAXSPOTS;i++) l.push(newSpot(i));
@@ -1692,6 +1784,7 @@ function save(){
   if(G.sample) return;
   try{ localStorage.setItem(KEY, JSON.stringify(G)); }catch(e){}
   try{ drawHdrFinish(); }catch(e){}
+  try{ drawReady(); }catch(e){}
 }
 /* v26: Finish & file sits in the header once anything is charted, on every screen.
    It runs the same flow as the Game tab's button: the open-inning prompt, then the
@@ -1861,7 +1954,7 @@ function pendingPitch(a){
 /* A location tap only records where the pitch was. Nothing closes the at-bat
    until Step 2 says what actually happened. */
 function logPitch(t, r, c){
-  if(!G.level){ showSetup(true); return false; }      /* the lock, again, at the source */
+  if(chartLocked()){ readyNag = true; lvlNag = !G.level; showTab("setup"); return false; }   /* the lock, at the source (v29: all of Setup) */
   var a = curAB();
   if(a.result) return false;
   var pend = pendingPitch(a);
@@ -2024,6 +2117,7 @@ function setResult(k){
   /* v24, Jim: an at-bat needs where the pitch was AND how it ended. The
      intentional walk is the one exception. */
   if(!a.pitches.length && k !== "IBB"){ nudge("Log the pitch on the zone first — then tap how it ended"); return; }
+  if(k === "IBB" && chartLocked()){ readyNag = true; showTab("setup"); return; }   /* v29: no IBB before Setup is done */
   if(k === "IBB"){ a.ibbP = G.curP; a.ibbInn = (G.inning || 1); }
   if(BATTED[k] && a.pitches.length){                // a batted ball implies the last pitch was hit
     var last = a.pitches[a.pitches.length-1];
@@ -2620,19 +2714,7 @@ function renderPitchers(){
       nm.setAttribute("data-pick", String(i));
       nm.innerHTML = pitcherOptions(i);
       nm.addEventListener("click",function(e){e.stopPropagation();});
-      nm.addEventListener("change",function(){
-        var v = nm.value;
-        if(v === "__keep") return;        /* leave an off-roster name exactly as it is */
-        p.rid = v;
-        var r = v ? rosById(v) : null;
-        /* Stamp the name and hand onto the game record too. The roster still wins
-           while it is pointed at - this is so a FILED game reads correctly years
-           later even if the roster changed. */
-        if(r){ p.name = r.name; p.last = r.last || ""; p.first = r.first || "";
-               p.cls = r.cls || ""; p.hand = r.throws || "R"; }
-        else if(!v){ p.name = ""; p.last = ""; p.first = ""; p.cls = ""; }
-        save(); render();
-      });
+      nm.addEventListener("change",function(){ pickPitcher(i, nm.value); });
       left.appendChild(nm); b.appendChild(left);
       var ct=el("div"); ct.style.textAlign="right";
       ct.appendChild(el("div","pc",String(pitcherCount(i))));
@@ -2809,7 +2891,7 @@ var setupOpen = false;
 var TAB = "chart", TABS = ["setup","chart","report","history"];
 function showTab(t){
   /* v25, Jim: "You can't go to charting until the level is selected each time." */
-  if(t === "chart" && !G.level){ t = "setup"; lvlNag = true; }
+  if(t === "chart" && chartLocked()){ t = "setup"; lvlNag = !G.level; readyNag = true; }
   TAB = t;
   if(t !== "report") sumIdx = null; else if(sumIdx == null) sumIdx = -1;
   setupOpen = (t === "setup");
@@ -2822,10 +2904,10 @@ function showTab(t){
   /* a filed game opened from History is still "in" History */
   var on = (t === "report" && sumIdx >= 0) ? "history" : t;
   TABS.forEach(function(x){ document.getElementById("tab-" + x).setAttribute("aria-selected", x === on ? "true" : "false"); });
-  if(t === "setup") renderSetup();
+  if(t === "setup"){ renderSetup(); drawSuPitcher(); }
   if(t === "history") renderFiled();
   if(t === "chart" || t === "report") render();
-  drawLevel(); drawPractice();
+  drawLevel(); drawPractice(); drawReady();
   window.scrollTo(0, 0);
 }
 function showSetup(on){ showTab(on ? "setup" : "chart"); }
@@ -4314,6 +4396,7 @@ function build(){
   });
 
   document.getElementById("suDone").addEventListener("click",function(){ showTab("chart"); });
+  document.getElementById("suPitcher").addEventListener("change",function(){ pickPitcher(0, this.value); this.blur(); drawSuPitcher(); });
   document.getElementById("suPlus").addEventListener("click",function(){
     if(spots() < MAXSPOTS){ G.spots = spots()+1; save(); renderSetup(); render(); }
   });
@@ -4423,7 +4506,7 @@ function build(){
    gateWipe(), wipeEverything(), WIPE_KEYS, the #wipeBox markup and its listener. */
 var ALLOW_WIPE = false;
 
-var BUILD = "v28";
+var BUILD = "v29";
 
 /* ======================= DASHBOARD UPLOAD (v25) =======================
    Same receiver as the Bullpen Chart and the Offense Chart. Blank UPLOAD_URL =
@@ -4646,7 +4729,7 @@ document.getElementById("lvlRow").addEventListener("click", function(e){
 document.getElementById("fPractice").addEventListener("change", function(){
   G.practice = this.checked; save(); drawPractice();
 });
-showTab(G.level ? "chart" : "setup");
+showTab(chartLocked() ? "setup" : "chart");
 drawUpload();
 setTimeout(uploadPending, 600);
 window.addEventListener("online", function(){ uploadPending(); });

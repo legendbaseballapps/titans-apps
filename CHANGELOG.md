@@ -18,7 +18,7 @@ old one — tap the amber stamp to fix it.
 | App | Source & folder | Live on GitHub Pages |
 |---|---|---|
 | **Bullpen Chart** | **v38** | **v36** (pushed Oct 19, with **receiver 2** redeployed first; same URL and key). **v37 and v38 waiting: redeploy receiver 3 FIRST, then push.** Notes confirmed from a real iPad Oct 19 (`Bullpen_Notes` made on first use, both notes in their columns) | Real-iPad upload test **passed Oct 19** (practice pen stayed off the Sheet, real pen landed) |
-| **Pitch Chart** (game) | **v28** | **v20** — **v21 to v28 waiting to be pushed** (receiver 3 must be deployed before v27+ goes out) |
+| **Pitch Chart** (game) | **v29** | **v20** — **v21 to v29 waiting to be pushed** (receiver 3 must be deployed before v27+ goes out) |
 | **Offense Chart** | **v46** | v40 — **v41 to v46 waiting to be pushed** |
 
 **The site moved Oct 14, 2026** to the program-owned account: **legendbaseballapps.github.io/titans-apps** (repo transferred from vaughnzj, so the live files, including the real `roster.js`, moved as they were). Every iPad installs from the new link; History saved under the old address does not carry over. The Coach's Guides in the pending builds (bullpen v31, game v23, offense v42) carry the new address, so pushing those builds is what puts it on the iPads.
@@ -442,6 +442,25 @@ execution grading.
 ---
 
 ## Pitch Chart (game)
+
+### v29 · Oct 20, 2026
+**Headline:** Charting stays locked until **Setup is finished**, with a **Ready to chart** box on Setup like
+the bullpen's.
+
+- **Why:** Jim, Oct 20: *"I noticed in the pitch chart that I can begin charting pitches without finishing
+  the setup process. Fix that."* Only the level was required before.
+- **Required (Jim's list):** the level, the date, the opponent, the starting pitcher, and a **name and
+  jersey number in every lineup spot** (9 by default, up to 12). Position stays optional.
+- **Ready to chart box** at the bottom of Setup: lists what is still missing (*"Not yet. Still needed: the
+  date, the opponent, 9 hitters' names and 9 jersey numbers"*), turns amber when someone tries to chart
+  early, green when done (*"✓ Ready. JV · vs Ponderosa · 4-18 · Andrews starting · 9 hitters"*), and its
+  **Start charting** button opens the Chart tab. It replaces *Done, start charting*.
+- **Starting pitcher picker on Setup** (Our pitchers panel). Same pick as the first mound chip; relievers
+  stay on the chips. The starter still carries over to the next game.
+- **The lock is checked at the Chart tab, a zone tap, and a no-pitch IBB.** It applies only **before the
+  game starts**: once a pitch or an IBB is in, a sub with no name yet or a cleared field never stops charting.
+- Tests: `tools/game-ready.js` fills Setup for every suite that charts a game; `tools/header-finish.js`
+  has 15 new lock checks, each proved by breaking the lock 3 ways.
 
 ### v28 · Oct 20, 2026
 **Headline:** The Pitch Chart now navigates like the Offense Chart: **Setup, Chart, Report, History** tabs
