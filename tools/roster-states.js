@@ -144,7 +144,7 @@ const bannerFull = sel => `(function(){ var b=document.getElementById(${JSON.str
      the pickers on the mound chips - so it gets its own block rather than a fifth
      parameter on the loop above. Same four states, same four colours. */
   {
-    const open = 'document.getElementById("btnSetup").click();';
+    const open = 'document.getElementById("tab-setup").click();';
     const opts = '(function(){ var s=document.querySelector(\'#pitchers select[data-pick]\');'+
       ' if(!s) return "no picker";'+
       ' var n=0; for(var i=0;i<s.options.length;i++) if(s.options[i].value) n++;'+
@@ -208,7 +208,7 @@ const bannerFull = sel => `(function(){ var b=document.getElementById(${JSON.str
     /* v25: charting is locked until the game's level is picked - pick it the way a
        charter would, then return to charting. */
     await ev(`(function(){ document.querySelector('[data-lvl="Varsity"]').click();
-      var s=document.getElementById("v-setup"); if(s && !s.hidden) document.getElementById("btnSetup").click(); })()`);
+      document.getElementById("tab-chart").click(); })()`);
     await pg.waitForTimeout(200);
     await ev('(function(){ var z=document.querySelectorAll("#zone button"); z[4].click(); z[12].click(); })()');
     await pg.waitForTimeout(400);

@@ -1,4 +1,5 @@
-/* Finish & file in the header (bullpen v34, game v26, offense v46), the bullpen's
+/* Finish & file in the header (bullpen v34, game v26, offense v46), the shared
+   top bar (game v28 matches offense), the bullpen's
    Ready to chart box, and its "All Bullpens Complete" card.
 
      cd titans-apps && python3 -m http.server 8807 &
@@ -82,15 +83,23 @@ const shown = id => `(function(){ var b=document.getElementById(${JSON.stringify
   {
     const pg = await open("/game/index.html");
     is("Export is gone from the header", await ev(pg, '!document.getElementById("btnExport2")'), true);
-    is("  and still on the Game tab", await ev(pg, '!!document.getElementById("btnExport")'), true);
+    is("  and sits on the Report tab (v28)", await ev(pg, '!!document.querySelector("#v-report #btnExport")'), true);
+    /* v28: the same top bar as the Offense Chart, in the same order */
+    is("header order matches the Offense Chart", await ev(pg, '[...document.querySelectorAll(".top .tabs button, .top .topbar2 > *")].map(function(e){ return e.id || e.textContent.trim(); }).join(",")'), "tab-setup,tab-chart,tab-report,tab-history,Guide,hdrFinish");
+    is("  the old Setup button is gone", await ev(pg, '!document.getElementById("btnSetup")'), true);
+    is("  the old bottom box is gone", await ev(pg, '!document.getElementById("tabs") && !document.querySelector(".p-tabs")'), true);
     is("nothing charted: no header button", await ev(pg, shown("hdrFinish")), false);
-    await pg.click('[data-lvl="JV"]'); await pg.click("#btnSetup");
+    await pg.click('[data-lvl="JV"]'); await pg.click("#tab-chart");
     await ev(pg, '(function(){ var s=document.querySelector("#pitchers select[data-pick]"); s.value=window.TITANS_ROSTER[0].id; s.dispatchEvent(new Event("change",{bubbles:true})); })()');
     await pg.click("#zone .cell:nth-child(13)");
     is("1 pitch: Finish & file appears in the header", await ev(pg, shown("hdrFinish")), true);
-    await pg.click("#btnSetup");
-    is("  and is still there on the Setup screen", await ev(pg, shown("hdrFinish")), true);
-    await pg.click("#btnSetup");
+    /* measured with Finish & file showing: the widest the bar gets */
+    is("  the top row fits on one line at iPad width", await ev(pg, '(function(){ var t=function(id){ return document.getElementById(id).getBoundingClientRect(); }; var a=t("tab-setup"), f=t("hdrFinish"), o=t("fOpp"), br=document.querySelector(".top .brand").getBoundingClientRect(); return f.top < br.bottom && a.top < br.bottom && o.top < br.bottom && f.right <= window.innerWidth; })()'), true);
+    await pg.click("#tab-setup");
+    is("  and is still there on the Setup tab", await ev(pg, shown("hdrFinish")), true);
+    await pg.click("#tab-report");
+    is("  and on the Report tab", await ev(pg, shown("hdrFinish")), true);
+    await pg.click("#tab-chart");
     await pg.click('#results button[data-res="GO"]');
     await pg.click("#hdrFinish");
     if (await pg.$("#innNoRuns")) { await pg.click("#innNoRuns"); await pg.waitForTimeout(200); if (await pg.$("#innOk")) await pg.click("#innOk"); }
@@ -110,6 +119,7 @@ const shown = id => `(function(){ var b=document.getElementById(${JSON.stringify
     const pg = await open("/offense/index.html");
     is("Export moved to Setup, beside Finish & file", await ev(pg, '!!document.querySelector("#v-setup #btnExport")'), true);
     is("  and is not in the header", await ev(pg, '!document.querySelector(".topbar2 #btnExport, header #btnExport")'), true);
+    is("header order (the one the Pitch Chart copies)", await ev(pg, '[...document.querySelectorAll(".top .tabs button, .top .topbar2 > *")].map(function(e){ return e.id || e.textContent.trim(); }).join(",")'), "tab-setup,tab-chart,tab-report,tab-history,Guide,hdrFinish");
     is("nothing charted: no header button", await ev(pg, shown("hdrFinish")), false);
     await pg.click('[data-lvl="JV"]'); await pg.click("#tab-chart");
     await pg.click('#v-chart [data-r="2"][data-c="2"]');

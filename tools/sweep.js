@@ -38,12 +38,8 @@ async function pickLevel(pg, path) {
   });
   await pg.waitForTimeout(150);
   await pg.evaluate((isGame) => {
-    if (isGame) {
-      const s = document.getElementById("v-setup"), btn = document.getElementById("btnSetup");
-      if (s && !s.hidden && btn) btn.click();
-    } else {
-      const t = document.getElementById("tab-chart"); if (t) t.click();
-    }
+    /* v28: the Pitch Chart has the same Chart tab as the other two apps. */
+    const t = document.getElementById("tab-chart"); if (t) t.click();
   }, /\/game\//.test(path));
   await pg.waitForTimeout(150);
 }
@@ -206,7 +202,7 @@ async function migration(b) {
        cell and stayed green with the migration turned off entirely. The
        migration is about what is on disk; so is the check. */
     ["free text becomes picker values",
-      '(function(){ document.getElementById("btnSetup").click();'+
+      '(function(){ document.getElementById("tab-setup").click();'+
       ' var tr=document.querySelectorAll("#suRows tr")[0];'+
       ' tr.querySelector(\'[data-h="R"]\').click();'+        /* any edit writes the record */
       ' document.getElementById("suDone").click();'+
@@ -426,17 +422,20 @@ async function wipeOff(b) {
     ["batter strip",     "#scoutPick button:nth-child(2)", c("#scoutPick button:nth-child(2)")],
     ["scout tag",        "#tagsP button:nth-child(1)",    c("#tagsP button:nth-child(1)")],
     ["position seg",     "#posSeg button:nth-child(3)",   c("#posSeg button:nth-child(3)")],
-    ["report tab",       '#tabs button[data-tab="mix"]',  'document.getElementById("tab-mix").style.display'],
+    /* v28: Setup, Chart, Report, History tabs in the header, like the Offense Chart. */
+    ["report tab",       "#tab-report",                   'document.getElementById("v-report").hidden+""'],
+    ["history tab",      "#tab-history",                  'document.getElementById("v-history").hidden+""'],
+    ["chart tab",        "#tab-chart",                    'document.getElementById("v-chart").style.display'],
     ["lineup toggle",    "#btnLeft",                      c(".wrap")],
     ["colour key",       null,                            n(".zonekey span"), null, 4],
     ["finish & file",    null,                            n("#btnFinish"), null, 1],
-    ["history pane",     null,                            n("#tab-hist"), null, 1],
+    ["history pane",     null,                            n("#v-history #histList"), null, 1],
     /* LAST: the read panel must be checked before Setup hides the charting
        screen, and Setup must be last because it hides it. */
     ["batter read panel", null,
        '((document.getElementById("readLine")||{}).textContent||"").length > 0 ? "filled" : "EMPTY"',
        null, "filled"],
-    ["setup screen",      "#btnSetup",                     'document.getElementById("v-setup").hidden+""'],
+    ["setup screen",      "#tab-setup",                    'document.getElementById("v-setup").hidden+""'],
     ["setup rows",        null,                            n("#suRows tr"), null, 9],
     /* ---- the released roster (v18) ---- */
     /* The last app to stop typing our own players. Until now the game-side export
@@ -507,7 +506,7 @@ async function wipeOff(b) {
        '   return /SAMPLE roster/.test(t) ? "yes" : t.slice(0,50); }'+
        ' if(b.className.indexOf("ok")<0) return "class "+b.className;'+
        ' return /Released roster/.test(t) ? "yes" : t.slice(0,50); })()',
-       'document.getElementById("btnSetup").click();', "yes"],
+       'document.getElementById("tab-setup").click();', "yes"],
     ["export carries the pitcher ID", null,
     /* exportText() is inside the IIFE too. Open the export panel and read the
        textarea it fills - the same trick the bullpen suite uses. */
@@ -1636,7 +1635,7 @@ async function wipeOff(b) {
     }
     return {q:q, qa:qa, done:done, put:put, val:val, warn:warn, flags:flags,
             opts:opts, arm:arm, pitch:pitch, res:res, logRow:logRow};
-  })(); document.getElementById("btnSetup").click(); "ready"`;
+  })(); document.getElementById("tab-setup").click(); "ready"`;
 
   await sweep(b, "PITCH CHART · one jersey, one position", "/game/index.html", [
     /* Numbers, not 1B/2B/3B. Those three are already AT-BAT RESULTS on the pad

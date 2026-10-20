@@ -70,10 +70,9 @@ if (!PREFIX || !BUILD) { console.log("site/ does not look like one of the apps")
   }
 }
 const APP = PREFIX.replace(/^titans-|-$/g, "");
-/* Three apps, three ways in: the bullpen's Setup is a tab button, the offense app
-   exposes showTab(), and the Pitch Chart toggles a Setup button. */
+/* The offense app exposes showTab(); the bullpen and (since v28) the Pitch Chart
+   have a Setup tab button. */
 const OPEN_SETUP = APP === "offense" ? 'showTab("setup")'
-                 : APP === "game"    ? 'document.getElementById("btnSetup").click()'
                  :                     'document.getElementById("tab-setup").click()';
 console.log("testing " + APP + " " + BUILD);
 

@@ -17,8 +17,8 @@ old one — tap the amber stamp to fix it.
 
 | App | Source & folder | Live on GitHub Pages |
 |---|---|---|
-| **Bullpen Chart** | **v37** | **v36** (pushed Oct 19, with **receiver 2** redeployed first; same URL and key). **v37 waiting: redeploy receiver 3 FIRST, then push.** Notes confirmed from a real iPad Oct 19 (`Bullpen_Notes` made on first use, both notes in their columns) | Real-iPad upload test **passed Oct 19** (practice pen stayed off the Sheet, real pen landed) |
-| **Pitch Chart** (game) | **v27** | **v20** — **v21 to v27 waiting to be pushed** (receiver 3 must be deployed before v27 goes out) |
+| **Bullpen Chart** | **v38** | **v36** (pushed Oct 19, with **receiver 2** redeployed first; same URL and key). **v37 and v38 waiting: redeploy receiver 3 FIRST, then push.** Notes confirmed from a real iPad Oct 19 (`Bullpen_Notes` made on first use, both notes in their columns) | Real-iPad upload test **passed Oct 19** (practice pen stayed off the Sheet, real pen landed) |
+| **Pitch Chart** (game) | **v28** | **v20** — **v21 to v28 waiting to be pushed** (receiver 3 must be deployed before v27+ goes out) |
 | **Offense Chart** | **v46** | v40 — **v41 to v46 waiting to be pushed** |
 
 **The site moved Oct 14, 2026** to the program-owned account: **legendbaseballapps.github.io/titans-apps** (repo transferred from vaughnzj, so the live files, including the real `roster.js`, moved as they were). Every iPad installs from the new link; History saved under the old address does not carry over. The Coach's Guides in the pending builds (bullpen v31, game v23, offense v42) carry the new address, so pushing those builds is what puts it on the iPads.
@@ -43,6 +43,22 @@ is only for app code.
 ---
 
 ## Bullpen Chart
+
+### v38 · Oct 20, 2026
+**Headline:** The **Report tab is the Session summary**, the same as the Pitch Chart's Report tab (v28).
+The separate *Session summary & notes* page is gone.
+
+- **Why:** Jim, Oct 20: *"I think the more similar we can make the apps the easier the learning curve
+  should be for new users."*
+- **Report tab, top to bottom:** the summary header (mound, date, template, pitches, and an *in progress*
+  pill), the mound leaderboard, every arm's card with his 2 notes as **editable boxes**, then Export
+  (.csv and .txt) at the bottom. Notes typed here are the same notes as the Chart tab's boxes.
+- **History > Summary** opens the same Report page for that filed session: *← History* at the top, its
+  upload pill, History stays lit, only the 2 notes editable, and both Exports export **that** session.
+  The Report tab button always returns to the session in progress.
+- An arm with notes but no pitches still gets his card.
+- Header order unchanged; it already matched the other 2 apps (Setup, Chart, Report, History, Guide,
+  Finish & file).
 
 ### v37 · Oct 19, 2026
 **Headline:** A **Session summary** for any session, today's or one in History, with the 2 notes under each
@@ -426,6 +442,26 @@ execution grading.
 ---
 
 ## Pitch Chart (game)
+
+### v28 · Oct 20, 2026
+**Headline:** The Pitch Chart now navigates like the Offense Chart: **Setup, Chart, Report, History** tabs
+in the header, with **Guide** and **Finish & file** to their right. The small AO3+/Mix/Game/History box under
+the zone is gone; its contents have full pages.
+
+- **Why:** Jim, Oct 20: *"I like the top bar of the Offense chart better than the Pitch Chart - the buttons
+  off on the right. Make the consistent and in the same order"*, and the bottom box *"gets lost at the
+  bottom."* Then: *"I want the apps to be as similar as possible so it is easy for someone to learn how to
+  navigate."*
+- **Header:** brand, Date, Opponent, Lineup; then the 4 tabs; then Guide and Finish & file. Same CSS and
+  order as the Offense Chart, one row at iPad landscape width. The pitcher chips and live stats sit on a
+  second row that shows only on the Chart tab. The old Setup button is gone (the Setup tab replaces it).
+- **Report tab** (named to match the other 2 apps) is the Game summary for the game in progress: the arm
+  cards and notes from v27, the inning ledger and each arm's line (IP, P/IP, ERA), AO3+ and Pitch mix side
+  by side, the game note, Finish & file, Discard, and **Export game** at the very bottom.
+- **A filed game** opened from History (**Summary**) shows the same page with *← History* at the top,
+  the static innings table, and only the 2 notes editable. Its Export runs the filed game's export.
+- **History tab:** the filed-games list, full width.
+- Charting still needs a level: the Chart tab sends you to Setup until one is picked.
 
 ### v27 · Oct 19, 2026
 **Headline:** A full-page **Game summary** for any game, with **To the pitcher** and **Coach only** notes for

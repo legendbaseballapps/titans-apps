@@ -75,12 +75,8 @@ async function pickLevel(pg, path) {
   });
   await pg.waitForTimeout(150);
   await pg.evaluate((isGame) => {
-    if (isGame) {
-      const s = document.getElementById("v-setup"), btn = document.getElementById("btnSetup");
-      if (s && !s.hidden && btn) btn.click();
-    } else {
-      const t = document.getElementById("tab-chart"); if (t) t.click();
-    }
+    /* v28: the Pitch Chart has the same Chart tab as the other two apps. */
+    const t = document.getElementById("tab-chart"); if (t) t.click();
   }, /\/game\//.test(path));
   await pg.waitForTimeout(150);
 }

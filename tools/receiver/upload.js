@@ -371,14 +371,14 @@ async function part2() {
     check("the status line says all done", (await line(pg)).split(" | ")[1], "Every filed session is on the dashboard.");
     check("no page errors", pg.errs.join(" | "), "");
 
-    console.log("\nAPP v37 · a note changed after the session is on the dashboard");
+    console.log("\nAPP v37/v38 · a note changed after the session is on the dashboard");
     await pg.evaluate(() => document.getElementById("tab-hist").click());
     await pg.evaluate(() => document.querySelector("#histList [data-sum]").click());
-    check("the Session summary opens from History", await pg.evaluate(() => !document.getElementById("v-sum").hidden && document.getElementById("v-hist").hidden), true);
-    check("  the only inputs are the 2 notes", await pg.evaluate(() => [...document.querySelectorAll("#v-sum input, #v-sum textarea, #v-sum select")].map(e => e.getAttribute("data-k")).join(",")), "note,comments");
-    check("  it shows the notes already written", await pg.evaluate(() => document.querySelector('#sumBody textarea[data-k="note"]').value), "Finish out front. Great 2-strike changeup.");
+    check("the Session summary (Report page) opens from History", await pg.evaluate(() => !document.getElementById("v-report").hidden && document.getElementById("v-hist").hidden), true);
+    check("  the only inputs are the 2 notes", await pg.evaluate(() => [...document.querySelectorAll("#rpt input, #rpt textarea, #rpt select")].map(e => e.getAttribute("data-k")).join(",")), "note,comments");
+    check("  it shows the notes already written", await pg.evaluate(() => document.querySelector('#rpt textarea[data-k="note"]').value), "Finish out front. Great 2-strike changeup.");
     check("  and says the session is on the dashboard", await pg.evaluate(() => document.getElementById("sumPill").textContent), "on dashboard");
-    await pg.fill('#sumBody textarea[data-k="note"]', "Finish out front. The changeup was the pitch today.");
+    await pg.fill('#rpt textarea[data-k="note"]', "Finish out front. The changeup was the pitch today.");
     check("  an edit marks the notes waiting", await pg.evaluate(() => document.getElementById("sumPill").textContent), "notes waiting");
     const pb = st.posts;
     await pg.click("#sumBack");
@@ -617,13 +617,13 @@ async function part4() {
     const onSetup = () => pg.evaluate(() => !document.getElementById("v-setup").hidden);
     const recs = () => book.getSheetByName("Records").records().filter(r => r.App === "game");
     check("a fresh game opens on the Setup screen", await onSetup(), true);
-    await pg.click("#btnSetup");
+    await pg.click("#tab-chart");
     check("Charting refuses with no level", await onSetup(), true);
     check("  and says why, in amber", await pg.evaluate(() => { const n = document.getElementById("lvlNote"); return n.classList.contains("needed") && /locked/.test(n.textContent); }), true);
     await pg.evaluate(() => document.querySelector("#zone .cell:nth-child(13)").click());
     check("a zone tap is refused at the source too", ((await G()) || { lineup: [] }).lineup.some(sp => sp.men.some(m => m.abs.some(a => a.pitches.length))), false);
     await pg.click('[data-lvl="JV"]');
-    await pg.click("#btnSetup");
+    await pg.click("#tab-chart");
     check("picking JV unlocks charting", await onSetup(), false);
     await pg.evaluate(() => {
       const s = document.querySelector("#pitchers select[data-pick]");
@@ -637,20 +637,19 @@ async function part4() {
     await zone(); await res("GO"); await pg.click("#nextBtn");
     await res("IBB"); await pg.click("#nextBtn");
     /* fix the level before filing */
-    await pg.click("#btnSetup"); await pg.click('[data-lvl="Varsity"]'); await pg.click("#btnSetup");
+    await pg.click("#tab-setup"); await pg.click('[data-lvl="Varsity"]'); await pg.click("#tab-chart");
     check("the level can be changed before filing", (await G()).level, "Varsity");
-    /* v27: the Game summary, from the Game tab: notes for the arm who pitched */
-    await pg.click('#tabs button[data-tab="game"]');
-    await pg.click("#btnSummary");
-    check("v27: the Game summary opens from the Game tab", await pg.evaluate(() => !document.getElementById("v-sum").hidden && document.querySelector(".wrap").style.display === "none"), true);
+    /* v28: the Report tab is the Game summary: notes for the arm who pitched */
+    await pg.click("#tab-report");
+    check("v28: the Report tab is the Game summary", await pg.evaluate(() => !document.getElementById("v-report").hidden && document.getElementById("v-chart").style.display === "none"), true);
     check("  one card per arm who entered", await pg.evaluate(() => document.querySelectorAll("#sumArms .panel").length), 1);
-    check("  the only inputs are the 2 notes", await pg.evaluate(() => [...document.querySelectorAll("#v-sum input, #v-sum textarea, #v-sum select")].map(e => e.getAttribute("data-k")).join(",")), "note,comments");
+    check("  the cards' only inputs are the 2 notes", await pg.evaluate(() => [...document.querySelectorAll("#sumArms input, #sumArms textarea, #sumArms select")].map(e => e.getAttribute("data-k")).join(",")), "note,comments");
     await pg.fill('#sumArms textarea[data-k="note"]', "Attack early. Great 2-strike slider.");
     await pg.fill('#sumArms textarea[data-k="comments"]', "=tired by the 3rd?");
-    await pg.click("#sumBack");
+    await pg.click("#tab-chart");
     check("  the notes are saved with the game", (await G()).pitchers[0].note, "Attack early. Great 2-strike slider.");
-    /* file: the open inning is asked about first */
-    await pg.click('#tabs button[data-tab="game"]');
+    /* file from the Report tab: the open inning is asked about first */
+    await pg.click("#tab-report");
     await pg.click("#btnFinish");
     if (await pg.$("#innNoRuns")) { await pg.click("#innNoRuns"); await pg.waitForTimeout(200); if (await pg.$("#innOk")) await pg.click("#innOk"); }
     await pg.waitForTimeout(200);
@@ -682,8 +681,9 @@ async function part4() {
     check("  To the pitcher and Coach only in their own columns", n0.ToPitcher + " | " + n0.CoachOnly, "Attack early. Great 2-strike slider. | =tired by the 3rd?");
     check("  the next game starts with no notes", (await G()).pitchers[0].note || "", "");
     /* a note changed the morning after, from History */
+    await pg.click("#tab-history");
     await pg.evaluate(() => { const row = [...document.querySelectorAll("#histList .hrow")].find(r => /Rock Canyon/.test(r.textContent)); [...row.querySelectorAll("button")].find(b => b.textContent === "Summary").click(); });
-    check("the summary opens from History", await pg.evaluate(() => !document.getElementById("v-sum").hidden), true);
+    check("the summary opens from History", await pg.evaluate(() => !document.getElementById("v-report").hidden && !document.getElementById("sumBack").hidden), true);
     check("  and says the game is on the dashboard", await pg.evaluate(() => document.getElementById("sumPill").textContent), "on dashboard");
     await pg.fill('#sumArms textarea[data-k="note"]', "Attack early. The slider was the out pitch.");
     check("  an edit marks the notes waiting", await pg.evaluate(() => document.getElementById("sumPill").textContent), "notes waiting");
@@ -695,18 +695,19 @@ async function part4() {
     check("  with the new note", gn.records()[0].ToPitcher, "Attack early. The slider was the out pitch.");
     check("  the pitch rows were not touched", gp.rows().length, 4);
     check("  still one game record", recs().length, 1);
-    check("  with no level picked, closing lands on Setup", await onSetup(), true);
+    check("  ← History lands back on History", await pg.evaluate(() => !document.getElementById("v-history").hidden), true);
     check("the game filed by v24 was never sent", (await gArch()).find(g => g.opp === "Old Test").up || 0, 0);
     check("nothing was turned away", book.getSheetByName("Log").rows().length, 0);
 
     /* practice */
+    await pg.click("#tab-setup");
     await pg.click('[data-lvl="Freshman"]');
     await pg.click("#fPractice");
-    await pg.click("#btnSetup");
+    await pg.click("#tab-chart");
     check("the practice bar shows while charting", await pg.evaluate(() => !document.getElementById("practiceBar").hidden), true);
     const before = st.posts;
     await zone(); await res("FO"); await pg.click("#nextBtn");
-    await pg.click('#tabs button[data-tab="game"]');
+    await pg.click("#tab-report");
     await pg.click("#btnFinish");
     if (await pg.$("#innNoRuns")) { await pg.click("#innNoRuns"); await pg.waitForTimeout(200); if (await pg.$("#innOk")) await pg.click("#innOk"); }
     await pg.waitForTimeout(200);
@@ -714,7 +715,7 @@ async function part4() {
     await pg.waitForTimeout(900);
     check("a practice game is never sent", st.posts - before, 0);
     check("practice switches itself off after filing", (await G()).practice, false);
-    await pg.evaluate(() => { const t = document.querySelector('#tabs button[data-tab="hist"]'); if (t) t.click(); });
+    await pg.click("#tab-history");
     const pills = await pg.evaluate(() => [...document.querySelectorAll("#histList .pill")].map(p => p.textContent));
     check("History pills: practice, on dashboard, kept here", pills.join(", "), "practice, on dashboard, kept here");
     check("the status line is green", /upline ok/.test(await line(pg)), true);

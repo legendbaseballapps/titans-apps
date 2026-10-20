@@ -735,20 +735,29 @@ footer{max-width:1340px;margin:0 auto;padding:0 16px 30px;color:var(--ink-2);fon
   </section>
 
   <!-- ============ REPORT ============ -->
+  <!-- v38: the Report tab IS the Session summary, the same as the Pitch Chart's
+       Report tab (v28). The session in progress from the tab; a filed session from
+       History > Summary opens this same page with "← History" at the top. -->
   <section id="v-report" role="tabpanel" aria-labelledby="tab-report" hidden>
     <div class="stack">
+      <div class="panel"><div class="body sumhead">
+        <button class="btn" id="sumBack" style="flex:0 0 auto" hidden>&larr; History</button>
+        <b class="cond sumtitle">Session summary</b>
+        <span class="tiny" id="sumSub"></span>
+        <span id="sumPill"></span>
+      </div></div>
       <div class="panel">
         <h2>Mound leaderboard</h2>
         <div class="body"><div id="board"></div></div>
       </div>
+      <div class="rpt" id="rpt"></div>
       <div class="row">
         <button class="btn pri" id="expCsv" style="flex:0 0 auto">Export pitch log (.csv)</button>
         <button class="btn dk" id="expTxt" style="flex:0 0 auto">Export summary (.txt)</button>
-        <button class="btn" id="btnSum" style="flex:0 0 auto">Session summary &amp; notes</button>
         <span class="tiny" id="expNote" style="flex:1 1 200px;align-self:center"></span>
       </div>
+      <div class="tiny" id="sumHint"></div>
       <textarea id="expText" hidden readonly style="min-height:180px;font-family:ui-monospace,Menlo,monospace;font-size:12px"></textarea>
-      <div class="rpt" id="rpt"></div>
     </div>
   </section>
 
@@ -766,22 +775,6 @@ footer{max-width:1340px;margin:0 auto;padding:0 16px 30px;color:var(--ink-2);fon
     </div>
   </section>
 
-  <!-- ============ v37: SESSION SUMMARY ============ -->
-  <section id="v-sum" hidden>
-    <div class="stack">
-      <div class="panel"><div class="body sumhead">
-        <button class="btn" id="sumBack" style="flex:0 0 auto">&larr; Back</button>
-        <b class="cond sumtitle">Session summary</b>
-        <span class="tiny" id="sumSub"></span>
-        <span id="sumPill"></span>
-      </div></div>
-      <div class="rpt" id="sumBody"></div>
-      <div class="row">
-        <button class="btn" id="sumExport" style="flex:0 0 auto">Export pitch log (.csv)</button>
-        <span class="tiny" id="sumHint" style="flex:1 1 200px;align-self:center"></span>
-      </div>
-    </div>
-  </section>
 </div>
 
 <footer>Filed sessions go to the coaching dashboard by themselves the next time the app opens with signal. Practice sessions stay on this iPad.<br>
@@ -1243,7 +1236,7 @@ function cur(){ return byId(S.cur); }
    gateWipe(), wipeEverything(), WIPE_KEYS, the #wipeBox markup and its listener. */
 var ALLOW_WIPE = false;
 
-var BUILD = "v37";
+var BUILD = "v38";
 
 /* ======================= DASHBOARD UPLOAD =======================
    Where a filed session goes: the Titans Upload Receiver, an Apps Script web app
@@ -1441,11 +1434,13 @@ function missRead(o){
 var views = {setup:"v-setup", chart:"v-chart", report:"v-report", hist:"v-hist"};
 var el = function(id){ return document.getElementById(id); };
 function show(which){
-  var vs = document.getElementById("v-sum"); if(vs) vs.hidden = true;   /* v37 */
-  sumIdx = null;
+  /* v38: the Report tab shows the session in progress (sumIdx -1) unless a filed
+     session was opened from History (sumIdx n), and then History stays lit. */
+  if(which !== "report") sumIdx = null; else if(sumIdx == null) sumIdx = -1;
+  var lit = (which === "report" && sumIdx >= 0) ? "hist" : which;
   for(var k in views){
     el(views[k]).hidden = (k!==which);
-    el("tab-"+k).setAttribute("aria-selected", k===which ? "true" : "false");
+    el("tab-"+k).setAttribute("aria-selected", k===lit ? "true" : "false");
   }
   /* Setup was the one view that never redrew on return, so anything that depends
      on charting state - the new Finish bar above all - stayed stale until some
@@ -1458,7 +1453,7 @@ function show(which){
 }
 el("tab-setup").onclick=function(){show("setup");};
 el("tab-chart").onclick=function(){show("chart");};
-el("tab-report").onclick=function(){show("report");};
+el("tab-report").onclick=function(){ sumIdx = -1; show("report"); };   /* always the session in progress */
 el("tab-hist").onclick=function(){show("hist");};
 
 /* ===================== setup ===================== */
@@ -1784,52 +1779,20 @@ el("codeCopyBtn").onclick = function(){
 
 el("hdrFinish").onclick = finishAndFile;
 el("btnStart").onclick = function(){ if(readyState().ok) show("chart"); };
-/* ===================== v37: the Session summary (E-011) =====================
-   The same page the Pitch Chart got in v27: one session, every arm's card, and
-   the 2 notes under his numbers, for the session in progress (from the Report
-   tab) or any filed session (from History). Numbers are read-only.
-   sumIdx: null = closed, -1 = this session, n = A[n]. */
-var sumIdx = null, sumFrom = "hist";
+/* ===================== the Session summary (E-011) =====================
+   v37 built it as its own page; v38 makes it the Report tab, the same as the
+   Pitch Chart's (v28): every arm's card with the 2 notes under his numbers, for
+   the session in progress or any filed session opened from History. Numbers are
+   read-only; the notes can be changed on either.
+   sumIdx: null = Report not showing, -1 = this session, n = A[n]. */
+var sumIdx = null;
 function sumSess(){ return sumIdx === -1 ? S : (sumIdx == null ? null : A[sumIdx]); }
-function openSum(idx, from){
-  sumIdx = idx; sumFrom = from || "hist";
-  for(var k in views){ el(views[k]).hidden = true; el("tab-"+k).setAttribute("aria-selected","false"); }
-  el("v-sum").hidden = false;
-  renderSum();
-  window.scrollTo(0,0);
-}
-function closeSum(){
-  var back = sumFrom;
-  sumIdx = null;
-  show(back);
-  uploadPending();
-}
+function openSum(idx){ sumIdx = idx; show("report"); }
+function closeSum(){ uploadPending(); show("hist"); }
 function drawSumPill(x){
   el("sumPill").innerHTML = sumIdx === -1 ? '<span class="pill">in progress</span>' : histPill(x);
 }
-function renderSum(){
-  var x = sumSess();
-  if(!x){ closeSum(); return; }
-  var live = S, h = "";
-  S = x;
-  try{
-    for(var i=0;i<S.pitchers.length;i++){
-      var p = S.pitchers[i];
-      if(!(pname(p)||"").trim()) continue;
-      if(!p.pitches.length && !(p.note||"").trim() && !(p.comments||"").trim()) continue;
-      h += rptCard(p, stats(p), i);
-    }
-  } finally { S = live; }
-  el("sumBody").innerHTML = h || '<div class="empty">Nothing charted in this session.</div>';
-  el("sumSub").textContent = (x.pad || "Mound") + (x.date ? " · " + x.date : "") +
-    (x.tpl ? " · " + x.tpl : "") + " · " + pitchCount(x) + " pitches";
-  drawSumPill(x);
-  el("sumHint").textContent = x.practice
-    ? "Practice session: the notes stay on this iPad, like the session."
-    : (sumIdx === -1 ? "Notes go to the dashboard with the session when you file it."
-                     : "Changed notes go to the dashboard the next time the app has signal.");
-}
-el("sumBody").addEventListener("input", function(e){
+el("rpt").addEventListener("input", function(e){
   var t = e.target;
   if(!t || !t.hasAttribute || !t.hasAttribute("data-sn")) return;
   var x = sumSess(); if(!x) return;
@@ -1844,10 +1807,6 @@ el("sumBody").addEventListener("input", function(e){
   drawSumPill(x);
 });
 el("sumBack").onclick = closeSum;
-el("btnSum").onclick = function(){ openSum(-1, "report"); };
-el("sumExport").onclick = function(){
-  if(sumIdx === -1) doExport("csv"); else if(sumIdx != null) exportFiled(sumIdx);
-};
 
 /* Reset is the only control in the app that destroys data outright, so the
    dialog has to say exactly what goes and point at the non-destructive way out.
@@ -2402,8 +2361,8 @@ function ao3Block(q){
   }
   return h + '</div>';
 }
-/* v37: one pitcher's card, shared by the Report tab (edit == null: notes shown as
-   text) and the Session summary (edit = his index: the 2 notes are editable). */
+/* One pitcher's card. edit = his index: the 2 notes are editable boxes (the Report
+   tab, v38). edit == null shows them as text (kept for any read-only use). */
 function rptCard(pp, oo, edit){
   var sp = pct(oo.spot,oo.graded);
   var q3 = plive(pp) ? ao3Stats(pp) : null;
@@ -2452,13 +2411,37 @@ function notesHtml(pp, edit){
            '<textarea data-sn="'+edit+'" data-k="comments" placeholder="For the coaches">'+esc(pp.comments||"")+'</textarea></label>';
 }
 function drawReport(){
-  var ranked = S.pitchers.filter(function(p){ return p.pitches.length; })
-    .map(function(p){ return {p:p,o:stats(p)}; })
+  if(sumIdx == null) sumIdx = -1;
+  var x = sumSess();
+  if(!x){ sumIdx = -1; x = S; }
+  /* A coach typing a note: never redraw the box out from under him. */
+  var fa = document.activeElement;
+  if(fa && fa.hasAttribute && fa.hasAttribute("data-sn") && el("rpt").contains(fa)){ drawSumPill(x); return; }
+  el("sumBack").hidden = (sumIdx === -1);
+  el("sumSub").textContent = (x.pad || "Mound") + (x.date ? " · " + x.date : "") +
+    (x.tpl ? " · " + x.tpl : "") + " · " + pitchCount(x) + " pitches";
+  drawSumPill(x);
+  el("sumHint").textContent = x.practice
+    ? "Practice session: the notes stay on this iPad, like the session."
+    : (sumIdx === -1 ? "Notes go to the dashboard with the session when you file it."
+                     : "Changed notes go to the dashboard the next time the app has signal.");
+  var keep = S;
+  S = x;
+  try{ drawReportOf(); }
+  finally{ S = keep; }
+}
+function drawReportOf(){
+  var ranked = S.pitchers.map(function(p, i){ return {p:p, o:stats(p), i:i}; })
+    .filter(function(r){ return r.p.pitches.length; })
     .sort(function(a,b){ return pct(b.o.spot,b.o.graded) - pct(a.o.spot,a.o.graded); });
+  /* An arm with notes but no pitches still gets his card (and his notes). */
+  var noted = S.pitchers.map(function(p, i){ return {p:p, o:stats(p), i:i}; })
+    .filter(function(r){ return !r.p.pitches.length && (pname(r.p)||"").trim() &&
+                                ((r.p.note||"").trim() || (r.p.comments||"").trim()); });
 
   if(!ranked.length){
     el("board").innerHTML = '<div class="empty">Nothing charted on this mound yet.</div>';
-    el("rpt").innerHTML = "";
+    el("rpt").innerHTML = noted.map(function(r){ return rptCard(r.p, r.o, r.i); }).join("");
     return;
   }
   var h = '<div class="bars">';
@@ -2475,10 +2458,7 @@ function drawReport(){
   el("board").innerHTML = h;
 
   var out = "";
-  for(var j=0;j<ranked.length;j++){
-    var pp = ranked[j].p, oo = ranked[j].o;
-    out += rptCard(pp, oo, null);
-  }
+  ranked.concat(noted).forEach(function(r){ out += rptCard(r.p, r.o, r.i); });
   el("rpt").innerHTML = out;
 }
 
@@ -2728,7 +2708,7 @@ function drawHistory(){
     b.onclick = function(){ exportFiled(+b.getAttribute("data-exp")); };
   });
   host.querySelectorAll("[data-sum]").forEach(function(b){
-    b.onclick = function(){ openSum(+b.getAttribute("data-sum"), "hist"); };
+    b.onclick = function(){ openSum(+b.getAttribute("data-sum")); };
   });
 }
 function histPill(x){
@@ -2752,8 +2732,18 @@ function doExport(kind){
   if(data.split("\n").length < 2){ note("Nothing charted yet."); return; }
   offlineSave(name, data, kind==="csv" ? "text/csv" : "text/plain");
 }
-el("expCsv").onclick = function(){ doExport("csv"); };
-el("expTxt").onclick = function(){ doExport("txt"); };
+/* v38: on a filed session opened from History, Export is that session's. */
+function exportShown(kind){
+  if(sumIdx != null && sumIdx >= 0){
+    if(kind === "csv"){ exportFiled(sumIdx); return; }
+    var keep = S; S = A[sumIdx];
+    try{ doExport(kind); } finally{ S = keep; }
+    return;
+  }
+  doExport(kind);
+}
+el("expCsv").onclick = function(){ exportShown("csv"); };
+el("expTxt").onclick = function(){ exportShown("txt"); };
 
 
 
