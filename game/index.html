@@ -40,7 +40,10 @@ img{max-width:100%}
   --line-soft:#DFE6EF;
   --text:#152234;
   --text-2:#54637A;
-  --text-3:#8494A8;
+  --text-3:#5A697F;   /* Oct 22: was #8494A8, 2.6:1 on the panel band; now 4.6:1 */
+  /* Oct 22: text ON a colored marker, and navy used as a text color. Dark mode
+     flips both: the dark-mode colors are bright, so white text on them was faint. */
+  --mk-ink:#FFFFFF; --navy-text:#16325C; --num-ink:#2A4C82; --inplay-ink:#8A5E17;
   --strike:#C8102E;
   --strike-bg:#FBE9EC;
   --ball:#2E7D5B;
@@ -61,12 +64,12 @@ img{max-width:100%}
     --ink:#05080E; --navy:#22406E; --navy-soft:#4E76B4;
     --ground:#0B1220; --surface:#141E30; --surface-2:#1D2A3F;
     --line:#2E3E56; --line-soft:#243247;
-    --text:#E3EAF4; --text-2:#9FB0C6; --text-3:#6E8099;
+    --text:#E3EAF4; --text-2:#9FB0C6; --text-3:#8798B0; --mk-ink:#0B1220; --navy-text:#A9C2EA; --num-ink:#8FB0E0; --inplay-ink:#E0AC55;
     --strike:#F2647C; --strike-bg:#3A1621;
     --ball:#5BC195; --ball-bg:#123024;
     --inplay:#E0AC55; --inplay-bg:#3A2C11;
     --zone-fill:#22304A;  --call-zone:#363B45;
-    --accent:#E8873F; --accent-ink:#FFFFFF;
+    --accent:#E8873F; --accent-ink:#1A1206;
     --pr0:#5A8AD6; --pr1:#4571B4; --pr2:#345A92; --pr3:#27466F;
     --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 18px rgba(0,0,0,.35);
   }
@@ -75,12 +78,12 @@ img{max-width:100%}
   --ink:#05080E; --navy:#22406E; --navy-soft:#4E76B4;
   --ground:#0B1220; --surface:#141E30; --surface-2:#1D2A3F;
   --line:#2E3E56; --line-soft:#243247;
-  --text:#E3EAF4; --text-2:#9FB0C6; --text-3:#6E8099;
+  --text:#E3EAF4; --text-2:#9FB0C6; --text-3:#8798B0; --mk-ink:#0B1220; --navy-text:#A9C2EA; --num-ink:#8FB0E0; --inplay-ink:#E0AC55;
   --strike:#F2647C; --strike-bg:#3A1621;
   --ball:#5BC195; --ball-bg:#123024;
   --inplay:#E0AC55; --inplay-bg:#3A2C11;
   --zone-fill:#22304A;  --call-zone:#363B45;
-  --accent:#E8873F; --accent-ink:#FFFFFF;
+  --accent:#E8873F; --accent-ink:#1A1206;
   --pr0:#5A8AD6; --pr1:#4571B4; --pr2:#345A92; --pr3:#27466F;
   --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 18px rgba(0,0,0,.35);
 }
@@ -93,7 +96,7 @@ body{
   -webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent;
 }
 button{font:inherit;color:inherit;cursor:pointer;border:none;background:none}
-input{font:inherit;color:inherit}
+input,select,textarea{font:inherit;color:inherit}   /* Oct 22: a select never inherited, so dark mode drew black text */
 :focus-visible{outline:2px solid var(--navy-soft);outline-offset:2px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 
@@ -112,7 +115,7 @@ input{font:inherit;color:inherit}
 
 .gamebar{display:flex;align-items:center;gap:9px;padding:8px 10px;flex-wrap:wrap;min-width:0}
 .gf{display:flex;flex-direction:column;gap:1px}
-.gf .lbl{color:rgba(255,255,255,.55);font-size:10px}
+.gf .lbl{color:rgba(255,255,255,.72);font-size:10px}
 .gf input{background:transparent;border:none;border-bottom:1px solid rgba(255,255,255,.3);color:#fff;padding:2px 0;width:108px;font-size:16px;font-weight:500}
 .gf input::placeholder{color:rgba(255,255,255,.35)}
 .gf input[type="date"]{width:128px;color-scheme:dark;font-size:15px}
@@ -248,8 +251,8 @@ a.topbtn{display:inline-block;text-decoration:none;border:0}
 .slot:last-child{border-bottom:none}
 
 .slot.on{background:var(--zone-fill);box-shadow:inset 3px 0 0 var(--navy)}
-.slot-n{font-family:var(--mono);font-weight:600;font-size:17px;color:var(--navy-soft);text-align:center;font-variant-numeric:tabular-nums}
-.slot.on .slot-n{color:var(--navy)}
+.slot-n{font-family:var(--mono);font-weight:600;font-size:17px;color:var(--num-ink);text-align:center;font-variant-numeric:tabular-nums}
+.slot.on .slot-n{color:var(--navy-text)}
 .slot-name{font-weight:600;font-size:18px;line-height:1.25;background:transparent;border:none;width:100%;padding:0}
 .slot-meta{display:flex;gap:5px;align-items:center;flex-wrap:wrap;line-height:1.3}
 .hand{font-family:var(--mono);font-size:11.5px;font-weight:600;padding:1px 5px;border-radius:3px;background:var(--surface-2);color:var(--text-2);border:1px solid var(--line-soft)}
@@ -375,7 +378,7 @@ a.topbtn{display:inline-block;text-decoration:none;border:0}
   border:1px solid currentColor;color:inherit;white-space:nowrap;
 }
 .abflow{display:flex;flex-direction:column;gap:8px;padding:13px}
-.lbl.step em{font-style:normal;opacity:.6;font-size:11px;margin-left:6px;letter-spacing:.06em}
+.lbl.step em{font-style:normal;font-size:11px;margin-left:6px;letter-spacing:.06em}
 .lbl.step{color:var(--text-2)}
 .zonecol{width:min(300px,100%);margin:0 auto}  /* retired: the zone is now half of .gridpair */
 /* The two grids share a row and a size: what was asked for on the left, what the
@@ -443,9 +446,9 @@ a.topbtn{display:inline-block;text-decoration:none;border:0}
    did - and the type rides along in text. */
 .mk{font-family:var(--mono);font-weight:600;pointer-events:none;height:22px;
   padding:0 5px;border-radius:11px;display:inline-flex;align-items:center;gap:3px;
-  color:#fff;box-shadow:0 0 0 1.5px var(--surface);line-height:1}
+  color:var(--mk-ink);box-shadow:0 0 0 1.5px var(--surface);line-height:1}
 .mk b{font-size:12.5px;font-weight:700}
-.mk i{font-style:normal;font-size:10px;font-weight:600;opacity:.82;letter-spacing:.02em}
+.mk i{font-style:normal;font-size:10px;font-weight:600;letter-spacing:.02em}
 /* Stacked pitches shrink, and past three the type is dropped before the number -
    a cell with five pitches in it is a count, not a reading. */
 .mk.more{background:var(--text-3);font-weight:700}
@@ -470,10 +473,10 @@ a.topbtn{display:inline-block;text-decoration:none;border:0}
 
 .seq{display:flex;flex-wrap:wrap;gap:5px;align-content:flex-start;min-height:28px}
 .pchipx{display:flex;align-items:center;gap:5px;padding:4px 9px;border-radius:var(--r);font-family:var(--mono);font-size:13px;font-weight:500;border:1px solid var(--line-soft);background:var(--surface-2)}
-.pchipx i{font-style:normal;font-size:10px;opacity:.65}
+.pchipx i{font-style:normal;font-size:10px}
 .pchipx.S{background:var(--strike-bg);color:var(--strike);border-color:transparent}
 .pchipx.B{background:var(--ball-bg);color:var(--ball);border-color:transparent}
-.pchipx.X{background:var(--inplay-bg);color:var(--inplay);border-color:transparent}
+.pchipx.X{background:var(--inplay-bg);color:var(--inplay-ink);border-color:transparent}
 .pchipx.N{background:var(--navy);color:#fff;border-color:transparent}
 
 .mods{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
@@ -544,7 +547,7 @@ a.topbtn{display:inline-block;text-decoration:none;border:0}
 .priorwrap{margin-top:10px;display:flex;flex-direction:column}
 .priorab{display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:7px 0;border-top:1px solid var(--line-soft)}
 .abtag{font-family:var(--cond);font-weight:700;font-size:10.5px;letter-spacing:.08em;color:var(--text-3);min-width:30px}
-.abtag.now{color:var(--navy)}
+.abtag.now{color:var(--navy-text)}
 .pmini{font-family:var(--mono);font-size:12px;padding:3px 6px;border-radius:3px;border:1px solid var(--line-soft);background:var(--surface-2);color:var(--text-2)}
 .pmini.S{background:var(--strike-bg);color:var(--strike);border-color:transparent}
 .pmini.B{background:var(--ball-bg);color:var(--ball);border-color:transparent}
@@ -554,7 +557,7 @@ a.topbtn{display:inline-block;text-decoration:none;border:0}
 .types{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
 .types button{padding:12px 2px;border-radius:var(--r);border:1px solid var(--line);background:var(--surface);font-family:var(--mono);font-size:15px;font-weight:600;color:var(--text-2)}
 .types button.on{background:var(--text);color:var(--surface);border-color:var(--text)}
-.pchipx .ty{font-style:normal;font-size:9.5px;font-weight:600;letter-spacing:.04em;opacity:.72;padding-left:4px;margin-left:2px;border-left:1px solid currentColor}
+.pchipx .ty{font-style:normal;font-size:9.5px;font-weight:600;letter-spacing:.04em;padding-left:4px;margin-left:2px;border-left:1px solid currentColor}
 .pchipx.tap{cursor:pointer}
 .pchipx.pend{border:2px dashed var(--navy-soft);background:var(--surface)}
 .mods.waiting button{border-color:var(--navy-soft);box-shadow:inset 0 0 0 1px var(--navy-soft)}
@@ -4645,7 +4648,7 @@ function build(){
    gateWipe(), wipeEverything(), WIPE_KEYS, the #wipeBox markup and its listener. */
 var ALLOW_WIPE = false;
 
-var BUILD = "v33";
+var BUILD = "v34";
 
 /* ======================= DASHBOARD UPLOAD (v25) =======================
    Same receiver as the Bullpen Chart and the Offense Chart. Blank UPLOAD_URL =

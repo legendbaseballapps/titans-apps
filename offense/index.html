@@ -57,7 +57,7 @@ img{max-width:100%}
   --ink:#0E1726; --navy:#16325C; --navy-soft:#2A4C82;
   --ground:#F1F4F8; --surface:#FFFFFF; --surface-2:#E7ECF3;
   --line:#C9D3E0; --line-soft:#DFE6EF;
-  --text:#152234; --text-2:#54637A; --text-3:#8494A8;
+  --text:#152234; --text-2:#54637A; --text-3:#5A697F; --mk-ink:#FFFFFF;
   --strike:#C8102E; --strike-bg:#FBE9EC;
   --ball:#2E7D5B; --ball-bg:#E6F2EC;
   --inplay:#B07C2A; --inplay-bg:#FAF0DC;
@@ -77,11 +77,11 @@ img{max-width:100%}
   --ink:#05080E; --navy:#22406E; --navy-soft:#4E76B4;
   --ground:#0B1220; --surface:#141E30; --surface-2:#1D2A3F;
   --line:#2E3E56; --line-soft:#243247;
-  --text:#E3EAF4; --text-2:#9FB0C6; --text-3:#6E8099;
+  --text:#E3EAF4; --text-2:#9FB0C6; --text-3:#8798B0; --mk-ink:#0B1220;
   --strike:#F2647C; --strike-bg:#3A1621;
   --ball:#5BC195; --ball-bg:#123024;
   --inplay:#E0AC55; --inplay-bg:#3A2C11;
-  --accent:#E8873F;
+  --accent:#E8873F; --accent-ink:#1A1206;
   --zone-fill:#22304A;
   --pr0:#5A8AD6; --pr1:#4571B4; --pr2:#345A92; --pr3:#27466F;
   --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 18px rgba(0,0,0,.35);
@@ -91,7 +91,7 @@ html,body{max-width:100%;overflow-x:hidden}
 body{margin:0;background:var(--ground);color:var(--text);font-family:var(--sans);
   font-size:14px;line-height:1.45;-webkit-text-size-adjust:100%;
   -webkit-tap-highlight-color:transparent}
-button,input,select{font-family:inherit;font-size:inherit;color:inherit}
+button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit}
 button{cursor:pointer;border:1px solid var(--line);background:var(--surface);border-radius:var(--r)}
 
 /* ---------- top bar ---------- */
@@ -108,7 +108,7 @@ button{cursor:pointer;border:1px solid var(--line);background:var(--surface);bor
 .build.warn{color:#FFC27A;font-weight:600}
 .gamebar{display:flex;align-items:center;gap:9px;padding:8px 10px;flex-wrap:wrap}
 .gf{display:flex;flex-direction:column;gap:1px}
-.gf .lbl{color:rgba(255,255,255,.55);font-size:10px}
+.gf .lbl{color:rgba(255,255,255,.72);font-size:10px}
 .gf input{background:transparent;border:none;border-bottom:1px solid rgba(255,255,255,.3);
   color:#fff;padding:2px 0;width:108px;font-size:16px;font-weight:500}
 .gf input::placeholder{color:rgba(255,255,255,.35)}
@@ -226,6 +226,7 @@ table.grid tbody tr:nth-child(even){background:var(--surface-2)}
 /* On the selected chip the dot would vanish into its own shade, so it goes white. */
 .pchip.on .prdot{background:#fff !important;box-shadow:none}
 .pchip .mt{font-family:var(--mono);font-size:11px;opacity:.7}
+.pchip.on .mt{opacity:1}   /* Oct 22: faint on the colored chip in dark mode */
 
 /* pitcher scouting tags - the same model the Pitch Chart uses for hitters.
    A stored tag is the coach's decision and always wins. A dashed one with a dot
@@ -283,7 +284,7 @@ table.grid tbody tr:nth-child(even){background:var(--surface-2)}
 .count small{font-size:11px;color:var(--text-3);font-family:var(--cond);display:block;
   text-align:center;letter-spacing:.1em;font-weight:600}
 .step{display:block;margin:10px 0 5px}
-.step em{font-style:normal;opacity:.65;font-size:11px;margin-left:6px}
+.step em{font-style:normal;font-size:11px;margin-left:6px}
 .types,.mods{display:flex;gap:6px;flex-wrap:wrap}
 .types button{padding:9px 14px;font-family:var(--cond);font-weight:600;font-size:15px;
   letter-spacing:.05em;text-transform:uppercase}
@@ -304,7 +305,7 @@ table.grid tbody tr:nth-child(even){background:var(--surface-2)}
 .cell:active{transform:scale(.93)}
 @media (hover:hover){.cell:hover{box-shadow:inset 0 0 0 2px var(--navy-soft)}}
 .mk{font-family:var(--mono);font-size:12px;font-weight:600;pointer-events:none;min-width:22px;
-  height:22px;padding:0 2px;border-radius:11px;display:grid;place-items:center;color:#fff;
+  height:22px;padding:0 2px;border-radius:11px;display:grid;place-items:center;color:var(--mk-ink);
   box-shadow:0 0 0 1.5px var(--surface)}
 .mk.s{background:var(--strike)} .mk.b{background:var(--ball)} .mk.x{background:var(--inplay)}
 /* The key the charting grid never had - without it the colours mean nothing
@@ -833,7 +834,7 @@ footer{max-width:1340px;margin:0 auto;padding:14px 16px 30px;color:var(--text-3)
    gateWipe(), wipeEverything(), WIPE_KEYS, the #wipeBox markup and its listener. */
 var ALLOW_WIPE = false;
 
-var BUILD = "v50";
+var BUILD = "v51";
 
 /* ======================= DASHBOARD UPLOAD (v45) =======================
    Same receiver as the Bullpen Chart: an Apps Script web app on the program

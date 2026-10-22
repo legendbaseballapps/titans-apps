@@ -17,9 +17,9 @@ old one — tap the amber stamp to fix it.
 
 | App | Source & folder | Live on GitHub Pages |
 |---|---|---|
-| **Bullpen Chart** | **v43** | **v36** (pushed Oct 19, with **receiver 2** redeployed first; same URL and key). **v37 to v43 waiting: redeploy receiver 3 FIRST, then push.** Notes confirmed from a real iPad Oct 19 (`Bullpen_Notes` made on first use, both notes in their columns) | Real-iPad upload test **passed Oct 19** (practice pen stayed off the Sheet, real pen landed) |
-| **Pitch Chart** (game) | **v33** | **v20** — **v21 to v33 waiting to be pushed** (receiver 3 must be deployed before v27+ goes out) |
-| **Offense Chart** | **v50** | v40 — **v41 to v50 waiting to be pushed** |
+| **Bullpen Chart** | **v44** | **v36** (pushed Oct 19, with **receiver 2** redeployed first; same URL and key). **v37 to v44 waiting: redeploy receiver 3 FIRST, then push.** Notes confirmed from a real iPad Oct 19 (`Bullpen_Notes` made on first use, both notes in their columns) | Real-iPad upload test **passed Oct 19** (practice pen stayed off the Sheet, real pen landed) |
+| **Pitch Chart** (game) | **v34** | **v20** — **v21 to v34 waiting to be pushed** (receiver 3 must be deployed before v27+ goes out) |
+| **Offense Chart** | **v51** | v40 — **v41 to v51 waiting to be pushed** |
 
 **The site moved Oct 14, 2026** to the program-owned account: **legendbaseballapps.github.io/titans-apps** (repo transferred from vaughnzj, so the live files, including the real `roster.js`, moved as they were). Every iPad installs from the new link; History saved under the old address does not carry over. The Coach's Guides in the pending builds (bullpen v31, game v23, offense v42) carry the new address, so pushing those builds is what puts it on the iPads.
 
@@ -43,6 +43,24 @@ is only for app code.
 ---
 
 ## Bullpen Chart
+
+### v44 · Oct 22, 2026
+**Headline:** Readability in light and dark mode, all 3 apps (Bullpen v44, Pitch Chart v34, Offense v51).
+
+- **Why:** Jim, Oct 22: *"In the Pitch Chart app, the text for the Starting Pitcher dropdown is black and not
+  readable. Fix it and evaluate the other two apps for similar issues."*
+- **The reported bug:** a `<select>` does not inherit the page's text color, and the Pitch Chart only told
+  inputs to. On a dark-mode iPad every Pitch Chart drop-down (starting pitcher, home or away, the lineup's
+  Pos) drew black text on a dark box (1.3:1). All 3 apps now set selects and text areas to inherit.
+- **Found by the new check, fixed in all 3:** the shared label grey was 2.6:1 on the grey panel band (now
+  4.6:1, light and dark); dark-mode orange buttons and selected tabs had white text at 2.6:1 (now dark text,
+  7:1, as the bullpen already did); pitch markers and bullpen pips had white text on the bright dark-mode
+  colors (now dark text); the bullpen's PitchSafe boxes were white with light text in dark mode; navy used as a
+  text color disappeared in dark mode (slot numbers, the NOW tag); faded hints (*stays set*, *catcher's view*)
+  and the in-play pitch chips; header field labels lifted a little.
+- **Tests:** new `tools/contrast.js` walks every visible piece of text and every control on every tab, in
+  light and dark, and fails anything under 3:1. Before: 230 unreadable items; now 0. White on the Titans
+  orange stays at 4.2:1 in light mode (bold capitals; darker would change the team color).
 
 ### v43 · Oct 20, 2026
 **Headline:** Before Setup is done, the Chart tab opens to a **Not ready to chart yet** screen instead of
@@ -507,6 +525,24 @@ execution grading.
 ---
 
 ## Pitch Chart (game)
+
+### v34 · Oct 22, 2026
+**Headline:** Readability in light and dark mode, all 3 apps (Bullpen v44, Pitch Chart v34, Offense v51).
+
+- **Why:** Jim, Oct 22: *"In the Pitch Chart app, the text for the Starting Pitcher dropdown is black and not
+  readable. Fix it and evaluate the other two apps for similar issues."*
+- **The reported bug:** a `<select>` does not inherit the page's text color, and the Pitch Chart only told
+  inputs to. On a dark-mode iPad every Pitch Chart drop-down (starting pitcher, home or away, the lineup's
+  Pos) drew black text on a dark box (1.3:1). All 3 apps now set selects and text areas to inherit.
+- **Found by the new check, fixed in all 3:** the shared label grey was 2.6:1 on the grey panel band (now
+  4.6:1, light and dark); dark-mode orange buttons and selected tabs had white text at 2.6:1 (now dark text,
+  7:1, as the bullpen already did); pitch markers and bullpen pips had white text on the bright dark-mode
+  colors (now dark text); the bullpen's PitchSafe boxes were white with light text in dark mode; navy used as a
+  text color disappeared in dark mode (slot numbers, the NOW tag); faded hints (*stays set*, *catcher's view*)
+  and the in-play pitch chips; header field labels lifted a little.
+- **Tests:** new `tools/contrast.js` walks every visible piece of text and every control on every tab, in
+  light and dark, and fails anything under 3:1. Before: 230 unreadable items; now 0. White on the Titans
+  orange stays at 4.2:1 in light mode (bold capitals; darker would change the team color).
 
 ### v33 · Oct 20, 2026
 **Headline:** Before Setup is done, the Chart tab opens to a **Not ready to chart yet** screen instead of
@@ -983,6 +1019,24 @@ Not logged at the time.
 ---
 
 ## Offense Chart
+
+### v51 · Oct 22, 2026
+**Headline:** Readability in light and dark mode, all 3 apps (Bullpen v44, Pitch Chart v34, Offense v51).
+
+- **Why:** Jim, Oct 22: *"In the Pitch Chart app, the text for the Starting Pitcher dropdown is black and not
+  readable. Fix it and evaluate the other two apps for similar issues."*
+- **The reported bug:** a `<select>` does not inherit the page's text color, and the Pitch Chart only told
+  inputs to. On a dark-mode iPad every Pitch Chart drop-down (starting pitcher, home or away, the lineup's
+  Pos) drew black text on a dark box (1.3:1). All 3 apps now set selects and text areas to inherit.
+- **Found by the new check, fixed in all 3:** the shared label grey was 2.6:1 on the grey panel band (now
+  4.6:1, light and dark); dark-mode orange buttons and selected tabs had white text at 2.6:1 (now dark text,
+  7:1, as the bullpen already did); pitch markers and bullpen pips had white text on the bright dark-mode
+  colors (now dark text); the bullpen's PitchSafe boxes were white with light text in dark mode; navy used as a
+  text color disappeared in dark mode (slot numbers, the NOW tag); faded hints (*stays set*, *catcher's view*)
+  and the in-play pitch chips; header field labels lifted a little.
+- **Tests:** new `tools/contrast.js` walks every visible piece of text and every control on every tab, in
+  light and dark, and fails anything under 3:1. Before: 230 unreadable items; now 0. White on the Titans
+  orange stays at 4.2:1 in light mode (bold capitals; darker would change the team color).
 
 ### v50 · Oct 20, 2026
 **Headline:** Before Setup is done, the Chart tab opens to a **Not ready to chart yet** screen instead of

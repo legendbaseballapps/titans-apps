@@ -15,7 +15,7 @@
   /* v40: the palette the Pitch Chart and Offense Chart share. */
   --navy:#16325C; --cond:"Avenir Next Condensed","HelveticaNeue-CondensedBold","Arial Narrow",-apple-system,system-ui,sans-serif;
   --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace; --r:6px;
-  --line-soft:#DFE6EF; --ink-3:#8494A8;
+  --line-soft:#DFE6EF; --ink-3:#5A697F; --mk-ink:#ffffff;
   --bg:#F1F4F8; --card:#ffffff; --card-2:#E7ECF3; --line:#C9D3E0;
   --ink:#152234; --ink-2:#54637A;
   --bar:#16325C; --bar-2:#16325C; --bar-ink:#eef3fc;
@@ -31,7 +31,7 @@
   :root:not([data-theme="light"]){
     --bg:#0a1122; --card:#141e35; --card-2:#101a2e; --line:#2b3852;
     --ink:#e7edf9; --ink-2:#97a5c1;
-    --bar:#101a2e; --bar-2:#1d3f76; --bar-ink:#e7edf9; --line-soft:#22304a; --ink-3:#7f8ea8;
+    --bar:#101a2e; --bar-2:#1d3f76; --bar-ink:#e7edf9; --line-soft:#22304a; --ink-3:#8798B0; --mk-ink:#0a1122;
     --accent:#e8873f; --accent-ink:#1a1206;
     --good:#4cc088; --good-bg:#12301f;
     --close:#d7a63c; --close-bg:#332708;
@@ -44,7 +44,7 @@
 :root[data-theme="dark"]{
   --bg:#0a1122; --card:#141e35; --card-2:#101a2e; --line:#2b3852;
   --ink:#e7edf9; --ink-2:#97a5c1;
-  --bar:#101a2e; --bar-2:#1d3f76; --bar-ink:#e7edf9; --line-soft:#22304a; --ink-3:#7f8ea8;
+  --bar:#101a2e; --bar-2:#1d3f76; --bar-ink:#e7edf9; --line-soft:#22304a; --ink-3:#8798B0; --mk-ink:#0a1122;
   --accent:#e8873f; --accent-ink:#1a1206;
   --good:#4cc088; --good-bg:#12301f;
   --close:#d7a63c; --close-bg:#332708;
@@ -85,7 +85,7 @@ button{cursor:pointer}
 .top .build{font-family:var(--mono);font-size:10px;letter-spacing:0;text-transform:none;font-style:normal}
 .gamebar{display:flex;align-items:center;gap:9px;padding:8px 10px;flex-wrap:wrap}
 .gf{display:flex;flex-direction:column;gap:1px}
-.gf .lbl{color:rgba(255,255,255,.55);font-size:10px;font-family:var(--cond);font-weight:600;
+.gf .lbl{color:rgba(255,255,255,.72);font-size:10px;font-family:var(--cond);font-weight:600;
   text-transform:uppercase;letter-spacing:.09em}
 .top .gf input{background:transparent;border:none;border-bottom:1px solid rgba(255,255,255,.3);border-radius:0;
   color:#fff;padding:2px 0;width:108px;font-size:16px;font-weight:500}
@@ -184,7 +184,7 @@ a.topbtn{display:inline-block;text-decoration:none}
 @media (min-width:900px){ .cols.c2{grid-template-columns:minmax(0,1fr) minmax(300px,380px)} }
 
 label.fld{display:flex;flex-direction:column;gap:4px;min-width:0;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2);font-family:"Avenir Next Condensed","HelveticaNeue-CondensedBold","Arial Narrow",-apple-system,system-ui,sans-serif;font-weight:600}
-input[type=text],input[type=date],select,textarea{
+input[type=text],input[type=date],input[type=number],select,textarea{
   background:var(--field);border:1px solid var(--line);border-radius:7px;padding:8px 10px;
   font-size:15px;width:100%;min-width:0;
 }
@@ -361,7 +361,7 @@ table.grid select,table.grid input[type=text],table.grid input[type=number]{
   gap:3px;padding:28px 3px 4px;pointer-events:none;
 }
 .zone .pip{
-  width:19px;height:19px;border-radius:50%;color:#fff;font-size:11px;line-height:19px;
+  width:19px;height:19px;border-radius:50%;color:var(--mk-ink);font-size:11px;line-height:19px;
   text-align:center;font-weight:700;flex:0 0 auto;
 }
 .zone .pip.hit{background:var(--good)}
@@ -609,7 +609,7 @@ footer{max-width:1340px;margin:0 auto;padding:14px 16px 30px;color:var(--ink-3);
           </div>
           <div class="legend">
             <span><b>1</b> FB</span><span><b>2</b> CT</span><span><b>3</b> SL</span><span><b>4</b> CB</span><span><b>5</b> CH</span><span><b>6</b> SP</span>
-            <span style="opacity:.5">|</span>
+            <span style="color:var(--ink-3)">|</span>
             <span><b>0</b> Middle</span><span><b>1</b> Up, above zone</span><span><b>2</b> Up &amp; in</span>
             <span><b>3</b> Down &amp; in</span><span><b>4</b> Down &amp; away</span><span><b>5</b> Below &amp; away</span>
           </div>
@@ -1340,7 +1340,7 @@ function cur(){ return byId(S.cur); }
    gateWipe(), wipeEverything(), WIPE_KEYS, the #wipeBox markup and its listener. */
 var ALLOW_WIPE = false;
 
-var BUILD = "v43";
+var BUILD = "v44";
 
 /* ======================= DASHBOARD UPLOAD =======================
    Where a filed session goes: the Titans Upload Receiver, an Apps Script web app
