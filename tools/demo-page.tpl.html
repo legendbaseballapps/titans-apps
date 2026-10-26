@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Legend Titans · Demo Data</title>
+<meta name="theme-color" content="#16305C">
+<meta name="robots" content="noindex">
+<style>
+:root{--navy:#16305C;--ink:#16233A;--ink2:#5A6781;--bg:#ECEFF5;--card:#fff;
+ --line:#D2D9E6;--accent:#C85C1C;--good:#1F7A4A;--bad:#B3261E;
+ --cond:"Avenir Next Condensed","HelveticaNeue-CondensedBold","Arial Narrow",-apple-system,system-ui,sans-serif;
+ --sans:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+ --ink:#E7EDF9;--ink2:#97A5C1;--bg:#0A1122;--card:#141E35;--line:#2B3852;--accent:#E8873F;--good:#5CC48D;--bad:#F08A80}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.5}
+.bar{background:var(--navy);color:#EEF3FC;padding:26px 20px}
+.bar div{max-width:760px;margin:0 auto}
+.bar h1{font-family:var(--cond);font-size:32px;text-transform:uppercase;letter-spacing:.05em;margin:0}
+.bar p{margin:6px 0 0;color:#9FB6DA;font-size:14px;letter-spacing:.06em;text-transform:uppercase;font-family:var(--cond)}
+main{max-width:760px;margin:0 auto;padding:24px 20px 60px;display:flex;flex-direction:column;gap:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 20px}
+.card h2{font-family:var(--cond);font-size:22px;text-transform:uppercase;letter-spacing:.03em;margin:0 0 8px}
+.card p{margin:0 0 10px;font-size:15px}
+.card p:last-child{margin-bottom:0}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th,td{text-align:left;padding:8px 6px;border-top:1px solid var(--line);vertical-align:top}
+th{font-family:var(--cond);text-transform:uppercase;letter-spacing:.05em;font-size:13px;color:var(--ink2);border-top:0}
+td:first-child{font-weight:600;white-space:nowrap}
+button{font-family:var(--cond);font-weight:700;font-size:18px;letter-spacing:.07em;text-transform:uppercase;
+ background:var(--accent);color:#fff;border:0;border-radius:8px;padding:14px 22px;cursor:pointer;width:100%}
+#status{margin-top:12px;font-size:15px;min-height:1.5em}
+#status.ok{color:var(--good)} #status.bad{color:var(--bad)}
+.links{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+.links a{display:block;text-decoration:none;color:inherit;background:var(--card);border:1px solid var(--line);
+ border-left:5px solid var(--accent);border-radius:12px;padding:14px 16px;font-family:var(--cond);font-size:20px;
+ font-weight:700;text-transform:uppercase;letter-spacing:.03em}
+.links a span{display:block;font-family:var(--sans);font-size:13px;font-weight:400;text-transform:none;letter-spacing:0;color:var(--ink2)}
+.warn{border-left:5px solid var(--accent)}
+.small{font-size:14px;color:var(--ink2)}
+</style>
+</head>
+<body>
+<div class="bar"><div>
+  <h1>Legend Titans</h1>
+  <p>Demo data for the coaching apps</p>
+</div></div>
+<main>
+  <div class="card">
+    <h2>What this loads</h2>
+    <table id="what"><tr><th>App</th><th>Charted, not filed</th></tr></table>
+  </div>
+
+  <div class="card warn">
+    <h2>Before you tap Load</h2>
+    <p>This replaces everything charted in these 3 apps on this iPad, History included.</p>
+    <p>All 3 are marked Practice, so filing one keeps it on the iPad and never sends it to the dashboard.</p>
+    <p>Open the apps from the links below, in Safari. On an iPad, Home Screen icons keep their own storage, so they will not see this data.</p>
+    <button id="go">Load demo data</button>
+    <div id="status"></div>
+  </div>
+
+  <div class="links">
+    <a href="../game/index.html">Pitch Chart<span>Our pitchers vs Ridgeview</span></a>
+    <a href="../offense/index.html">Offense Chart<span>Our hitters vs Ridgeview</span></a>
+    <a href="../bullpen/index.html">Bullpen Chart<span>Smith, Hall, Borcherding</span></a>
+  </div>
+  <p class="small">Every pitch here was entered by tapping the real apps, so the numbers on every tab are the apps' own.</p>
+</main>
+<script>
+(function(){
+  var DATA = /*DATA*/null;
+  function pc(g){ var n = 0; (g.lineup || []).forEach(function(sp){ sp.men.forEach(function(b){ b.abs.forEach(function(a){ n += a.pitches.length; }); }); }); return n; }
+  function row(app, text){ var tr = document.createElement("tr");
+    tr.innerHTML = "<td>" + app + "</td><td>" + text + "</td>"; document.getElementById("what").appendChild(tr); }
+  var G = JSON.parse(DATA["dugout-pitch-chart-v2"]), O = JSON.parse(DATA["titans-offense-v1"]), S = JSON.parse(DATA["titans-bullpen-v1"]);
+  var arms = G.pitchers.filter(function(p){ return p.name; }).map(function(p){ return p.name; });
+  row("Pitch Chart", G.level + " at " + G.opp + " &middot; 7 innings &middot; " + pc(G) + " pitches &middot; " + arms.join(", "));
+  var on = O.pas.filter(function(a){ return a.result; }).length, op = 0; O.pas.forEach(function(a){ op += a.pitches.length; });
+  row("Offense Chart", O.level + " at " + O.opp + " &middot; 7 innings &middot; " + on + " at-bats &middot; " + op + " pitches &middot; " +
+      O.pitchers.map(function(p){ return p.name; }).join(", "));
+  var pens = S.pitchers.filter(function(p){ return p.pitches.length; });
+  row("Bullpen Chart", "&ldquo;" + S.tpl + "&rdquo; &middot; " + pens.map(function(p){ return p.name + " " + p.pitches.length; }).join(", ") + " pitches");
+
+  document.getElementById("go").onclick = function(){
+    var st = document.getElementById("status");
+    if(!confirm("Replace everything charted in the 3 apps on this iPad with the demo data?")) return;
+    try{
+      Object.keys(DATA).forEach(function(k){ localStorage.setItem(k, DATA[k]); });
+      var bad = Object.keys(DATA).filter(function(k){ return localStorage.getItem(k) !== DATA[k]; });
+      if(bad.length) throw new Error("did not stick: " + bad.join(", "));
+      st.className = "ok"; st.textContent = "Loaded. Open an app below.";
+    }catch(e){
+      st.className = "bad"; st.textContent = "Could not save on this iPad (" + e.message + "). Private Browsing blocks it.";
+    }
+  };
+})();
+</script>
+</body>
+</html>
