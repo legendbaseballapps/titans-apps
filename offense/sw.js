@@ -1,7 +1,7 @@
 /* Titans Offense Chart - offline cache
    Bump CACHE when you change the APP - index.html, the guide, templates.js - or
    iPads keep the old one. A new roster.js needs no bump: see rosterFirst below. */
-var CACHE = "titans-offense-v51";
+var CACHE = "titans-offense-v52";
 var FILES = [
   "./",
   "./index.html",

@@ -49,6 +49,26 @@ img{max-width:100%}
 .gateback{padding:12px 20px;border-radius:6px;background:var(--accent);color:var(--accent-ink);border:0;cursor:pointer;
   font-family:"Avenir Next Condensed","HelveticaNeue-CondensedBold","Arial Narrow",-apple-system,system-ui,sans-serif;
   font-weight:700;font-size:14px;letter-spacing:.07em;text-transform:uppercase}
+
+/* v52: the hitter cards and the filed-game header, the same as the Pitch Chart's
+   game summary cards. */
+.sumhead{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:4px 2px 12px}
+.sumhead h2{margin:0;font-family:var(--cond);font-size:22px;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
+.sumsub{color:var(--text-2);font-size:14px}
+.sumhint{flex-basis:100%;color:var(--text-2);font-size:12.5px}
+.ghost{padding:9px 14px;border-radius:var(--r);border:1px solid var(--line);background:var(--surface);font-family:var(--cond);
+  font-weight:600;font-size:13px;letter-spacing:.07em;text-transform:uppercase;color:var(--text-2);cursor:pointer}
+.sumgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(440px,1fr));gap:12px}
+@media (max-width:560px){.sumgrid{grid-template-columns:1fr}}
+.sumwho{font-family:var(--cond);font-weight:700;font-size:18px;letter-spacing:.03em;text-transform:uppercase}
+.sumkpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:8px;margin-bottom:10px}
+.sumkpi{background:var(--surface-2);border:1px solid var(--line-soft);border-radius:var(--r);padding:7px 10px}
+.sumkpi b{display:block;font-family:var(--cond);font-size:20px;line-height:1.15}
+.sumkpi span{font-family:var(--cond);font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--text-3)}
+.sumread{font-size:13.5px;color:var(--text-2);margin:2px 0 8px}
+.sumnote{display:block;margin-top:8px}
+.sumnote textarea{display:block;width:100%;min-height:62px;margin-top:4px;padding:8px;border:1px solid var(--line);
+  border-radius:var(--r);background:var(--ground);font:inherit;font-size:15px;color:inherit}
 </style>
 </head>
 <body>
@@ -791,6 +811,14 @@ footer{max-width:1340px;margin:0 auto;padding:14px 16px 30px;color:var(--text-3)
   </div>
 </section>
   <section id="v-report" role="tabpanel" hidden>
+    <!-- v52: a filed game opened from History shows here, read-only except the hitter notes. -->
+    <div class="sumhead" id="sumHead" hidden>
+      <button class="ghost" id="sumBack">&larr; History</button>
+      <h2>Game summary</h2>
+      <span class="sumsub" id="sumSub"></span>
+      <span id="sumPill"></span>
+      <span class="sumhint" id="sumHint"></span>
+    </div>
     <div id="rpt" class="stack"></div>
     <!-- v48: Export at the bottom of Report, like the other 2 apps. -->
     <div class="row" style="margin-top:12px">
@@ -834,7 +862,7 @@ footer{max-width:1340px;margin:0 auto;padding:14px 16px 30px;color:var(--text-3)
    gateWipe(), wipeEverything(), WIPE_KEYS, the #wipeBox markup and its listener. */
 var ALLOW_WIPE = false;
 
-var BUILD = "v51";
+var BUILD = "v52";
 
 /* ======================= DASHBOARD UPLOAD (v45) =======================
    Same receiver as the Bullpen Chart: an Apps Script web app on the program
@@ -1016,6 +1044,9 @@ var O = null;    /* the game being charted */
 var A = [];      /* archived games */
 var storageOK = true;
 var sel = { type:0, pending:null, hand:"A", histHand:"A", histP:"", spray:"H", rptP:null };
+/* v52: -1 = the Report tab shows the game in progress; 0+ = that filed game. */
+var sumIdx = -1;
+function rptGame(){ return (sumIdx >= 0 && A[sumIdx]) ? A[sumIdx] : O; }
 
 function isoToday(){ var d=new Date(); function p(n){ return (n<10?"0":"")+n; }
   return d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate()); }
@@ -1062,7 +1093,9 @@ function emptyGame(){
      copy of the same rid, so a retry can never double a game. */
   return { v:1, sample:false, date:isoToday(), opp:"", who:"", home:"H",
            lineup:[], pitchers:[], cp:0, pas:[], cur:0, created:Date.now(),
-           level:"", practice:false, rid:newRid() };
+           level:"", practice:false, rid:newRid(),
+           /* v52: To the hitter / Coach only, per hitter, keyed by hitterKey(). */
+           hnotes:{} };
 }
 function newPitcher(name){
   return { id:uid(), name:name||"", jersey:"", hand:"R",
@@ -1220,13 +1253,14 @@ function clearPitches(){
   if(!charted()){ setupMsg("Nothing charted yet, so there is nothing to clear."); return; }
   var n = countPitches();
   ask("Clear the pitches?\n\n" + n + " charted pitch" + (n === 1 ? "" : "es") +
-      " (and every at-bat) will be gone for good.\n\n" +
+      " (and every at-bat and hitter note) will be gone for good.\n\n" +
       "Everything on Setup stays, so you can chart the same game again.\n\n" +
       "Want to keep them? Tap Cancel and use Finish & file. Games already in History are not touched.",
       "Clear pitches", function(){
     O.lineup.forEach(function(sp){ if(sp.men && sp.men.length){ sp.men = [sp.men[0]]; sp.cur = 0; } });
     O.cp = 0; O.cur = 0;
     O.pas = [newPA(0, 0)];
+    O.hnotes = {};
     save(); showTab("setup");
     setupMsg("Pitches cleared. Setup is as you left it, ready to chart again.");
   });
@@ -1466,8 +1500,13 @@ function hitterOf(spot){
    Before this existed the live export resolved the hitter from whoever occupied
    the spot at EXPORT time - one pinch hitter and the starter's whole line moved. */
 function paHitter(a){
-  if(a && a.hname != null) return {name:a.hname, last:a.hlast||"", first:a.hfirst||"",
-                                   hand:a.hhand||"R", rid:a.hrid||""};
+  if(a && a.hname != null){
+    var out = {name:a.hname, last:a.hlast||"", first:a.hfirst||"", hand:a.hhand||"R", rid:a.hrid||""};
+    /* v52: PAs stamped before v52 have no last/first (see manPerson). The roster id
+       is the key, so fill them from the roster; the stamped name still wins. */
+    if(out.rid && !out.last && !out.first){ var rp = rosterById(out.rid); if(rp){ out.last = rp.last||""; out.first = rp.first||""; } }
+    return out;
+  }
   var h = hitterOf(a ? a.spot : 0);
   return {name:h.name, last:h.last||"", first:h.first||"",
           hand:h.hand||"R", rid:h.rid||""};
@@ -2388,8 +2427,15 @@ function umpBlock(game){
 }
 
 function drawReport(){
+  /* v52: the game on screen - the one in progress, or a filed one from History.
+     Everything below reads this O, never the global one. */
+  var O = rptGame(), filed = (O !== window.O);
+  drawSumHead(O, filed);
+  /* A coach typing a note: never redraw the box out from under him. */
+  var fa = document.activeElement;
+  if(fa && fa.hasAttribute && fa.hasAttribute("data-hn") && el("rpt").contains(fa)) return;
   var out = "";
-  if(!countPitches()){
+  if(!pitchesIn(O)){
     el("rpt").innerHTML = '<div class="notice"><strong>Nothing charted yet</strong>'+
       '<span>Chart a few pitches and this fills in.</span></div>';
     return;
@@ -2405,7 +2451,8 @@ function drawReport(){
   var pi = (typeof sel.rptP === "number" && live.indexOf(sel.rptP) >= 0) ? sel.rptP
          : (live.indexOf(O.cp) >= 0 ? O.cp : live[live.length - 1]);
 
-  var team = (sel.rptP === "T");
+  var team = (sel.rptP === "T"), cards = (sel.rptP === "H");
+  if(team || cards) pi = null;
   if(live.length){
     out += '<div class="panel"><div class="phead"><span class="lbl">Show</span>' +
       '<div class="pchips" style="margin-left:auto">' + live.map(function(k){
@@ -2418,10 +2465,16 @@ function drawReport(){
       '<button class="pchip' + (team ? " on" : "") + '" data-rp="T"' +
       (team ? ' style="background:var(--navy);border-color:var(--navy)"' : '') + '>' +
       '<b>At the plate</b><span class="mt">hitters \u00b7 ump \u00b7 contact</span>' +
+      '</button>' +
+      '<button class="pchip' + (cards ? " on" : "") + '" data-rp="H"' +
+      (cards ? ' style="background:var(--navy);border-color:var(--navy)"' : '') + '>' +
+      '<b>Hitter cards</b><span class="mt">notes to each hitter</span>' +
       '</button></div></div></div>';
   }
 
-  if(!team && pi != null){
+  if(cards) out += hitterCardsHtml(O, filed);
+
+  if(!team && !cards && pi != null){
     var pp = O.pitchers[pi], st = pitcherStats(O, pi);
     out += expectBlock([O], null, "What to expect \u2014 " + pname(pi),
                        "this game only", sel.hand, "rpt", pi, roleShade(pi),
@@ -2497,6 +2550,100 @@ function drawReport(){
   var f = el("rptField");
   if(f) drawField(f, ipl, null, true);
 }
+
+/* ===================== hitter cards (v52) =====================
+   Jim, Oct 26: the players asked for a card after each game, "the hitters want it
+   too". One card per hitter who came up: his line, quality at-bats and why, pitches
+   per at-bat, chase, hard contact, strikeouts and free bases, as counts - and the
+   2 notes, To the hitter (he reads it) and Coach only (he never does). The hitting
+   coach writes them here, during the game or after it from History. */
+function hitterKey(h){ return h.rid ? h.rid : "name:" + (h.name || ""); }
+function hitterCards(game){
+  var by = {}, order = [];
+  game.pas.forEach(function(a){
+    if(!a.result) return;
+    var h = paHitter(a), k = hitterKey(h);
+    if(!by[k]){ by[k] = {key:k, rid:h.rid||"", name:h.name||"", last:h.last||"", first:h.first||"", hand:h.hand||"R",
+                         spot:a.spot, line:[], pa:0, n:0, qpa:0, qab:0, why:{}, oz:0, ozsw:0, ip:0, hard:0, k:0, free:0};
+                order.push(k); }
+    var o = by[k];
+    o.pa++; o.n += a.pitches.length;
+    o.line.push(a.result);
+    a.pitches.forEach(function(p){ if(!inZone(p.r,p.c)){ o.oz++; if(isSwing(p)) o.ozsw++; } });
+    if(isInPlay(a)){ o.ip++; if(a.hard) o.hard++; }
+    if(a.result === "K" || a.result === "Kc") o.k++;
+    if(a.result === "BB" || a.result === "IBB" || a.result === "HBP") o.free++;
+    var qr = qabReasons(a);
+    if(qr){ o.qpa++; if(qr.length) o.qab++; qr.forEach(function(r){ o.why[r] = (o.why[r] || 0) + 1; }); }
+  });
+  return order.map(function(k){ return by[k]; });
+}
+function ofTxt(a, b){ return b ? a + " of " + b : "\u2014"; }
+function sumKpi(v, l){ return '<div class="sumkpi"><b>' + v + '</b><span>' + l + '</span></div>'; }
+function hitterCardsHtml(game, filed){
+  var list = hitterCards(game), notes = game.hnotes || {};
+  if(!list.length) return '<div class="panel"><div class="pbody read">No at-bats finished yet. ' +
+    'A card appears for each hitter once his first at-bat ends.</div></div>';
+  var hint = game.practice ? "Practice game: the notes stay on this iPad, like the game."
+           : filed ? "Changed notes go to the dashboard the next time the app has signal."
+           : "Notes go to the dashboard with the game when you file it. You can still change them from History.";
+  return '<div class="read">' + esc(hint) + '</div><div class="sumgrid">' + list.map(function(o){
+    var n = notes[o.key] || {};
+    var why = QAB_RULES.filter(function(r){ return o.why[r.k]; }).map(function(r){
+      return QAB_SHORT[r.k] + (o.why[r.k] > 1 ? " \u00d7" + o.why[r.k] : ""); });
+    return '<div class="panel" data-card="' + esc(o.key) + '"><div class="phead"><span class="sumwho">' + esc(o.name || "Hitter") +
+      '</span><span class="lbl" style="margin-left:auto">Spot ' + (o.spot + 1) + ' \u00b7 bats ' + esc(o.hand) + '</span></div>' +
+      '<div class="pbody">' +
+      '<div class="sumread"><b>' + esc(o.line.join(" \u00b7 ")) + '</b></div>' +
+      '<div class="sumkpis">' +
+        sumKpi(ofTxt(o.qab, o.qpa), "Quality at-bats") +
+        sumKpi(r1(o.n, o.pa), "Pitches per at-bat") +
+        sumKpi(ofTxt(o.ozsw, o.oz), "Chased out of the zone") +
+        sumKpi(ofTxt(o.hard, o.ip), "Hard contact") +
+        sumKpi(o.k, "Strikeouts") +
+        sumKpi(o.free, "Free bases (BB+HBP)") +
+      '</div>' +
+      '<div class="sumread">' + (why.length ? "Quality at-bats from: " + esc(why.join(", ")) : "No quality at-bats this game.") + '</div>' +
+      '<label class="sumnote"><span class="lbl">To the hitter &middot; he will read this</span>' +
+        '<textarea data-hn="' + esc(o.key) + '" data-k="note" placeholder="What you want him to take from today">' + esc(n.note || "") + '</textarea></label>' +
+      '<label class="sumnote"><span class="lbl">Coach only &middot; never shown to him</span>' +
+        '<textarea data-hn="' + esc(o.key) + '" data-k="comments" placeholder="For the coaches">' + esc(n.comments || "") + '</textarea></label>' +
+      '</div></div>';
+  }).join("") + '</div>';
+}
+function hitterNoteInput(t){
+  var g = rptGame(), k = t.getAttribute("data-hn"), f = t.getAttribute("data-k");
+  if(f !== "note" && f !== "comments") return;
+  if(!g.hnotes) g.hnotes = {};
+  if(!g.hnotes[k]) g.hnotes[k] = {note:"", comments:""};
+  g.hnotes[k][f] = t.value;
+  if(g === O){ save(); return; }
+  /* A filed game already on the dashboard sends its notes again; one not yet
+     uploaded carries them in its first upload anyway. */
+  if(g.up) g.notesDirty = true;
+  saveArchive();
+  drawSumHead(g, true);
+}
+/* One row per hitter who came up. Lands on Offense_Notes; joins on RecordID (the
+   game) + HitterID. */
+function notesTableOf(game){
+  var head = ["HitterID","Hitter","HitterLast","HitterFirst","Spot","PA","Pitches","ToHitter","CoachOnly","Practice"];
+  var notes = game.hnotes || {};
+  return {head:head, rows: hitterCards(game).map(function(o){
+    var n = notes[o.key] || {};
+    return [o.rid, o.name, o.last, o.first, o.spot + 1, o.pa, o.n, n.note || "", n.comments || "", game.practice ? "Y" : "N"];
+  })};
+}
+function drawSumHead(g, filed){
+  el("sumHead").hidden = !filed;
+  if(!filed) return;
+  el("sumSub").textContent = "vs " + (g.opp || "Unknown opponent") + (g.date ? " \u00b7 " + g.date : "") +
+    (g.level ? " \u00b7 " + g.level : "") + " \u00b7 " + pitchesIn(g) + " pitches";
+  el("sumPill").innerHTML = histPill(g);
+  el("sumHint").textContent = "Filed. The pitches can't change; the hitter notes can.";
+}
+function openSum(i){ sumIdx = i; sel.rptP = "H"; showTab("report"); }
+function closeSum(){ sumIdx = -1; uploadPending(); showTab("history"); }
 
 /* Team quality at-bats, with the reasons. A PA can qualify more than one way, so
    the reasons add up to more than the total - the table says so. */
@@ -2737,6 +2884,7 @@ function drawHistory(){
         '<span class="pill">'+esc(g.date||"no date")+'</span><br>'+
         '<span class="gm">'+n+' pitches · '+npa+' PA'+(ps?" · "+esc(ps):"")+'</span></div>'+
         histPill(g)+
+        '<button class="btn sm" data-hsum="'+i+'">Summary</button>'+
         '<button class="btn sm" data-hexp="'+i+'">Export</button></div>';
     }).join("") : '<div class="pbody read">No filed games yet. The first one lands here when you '+
       'tap <b>Finish &amp; file</b>.</div>')+'</div></div>';
@@ -2873,7 +3021,9 @@ function manPerson(m){
   /* A roster entry keys its id as `id`; everything downstream matches people on
      `rid`. Returning the raw roster object left rid undefined, so every hitter
      looked like every other hitter to samePerson. Normalise here, once. */
-  return p ? {name:p.name, hand:p.hand||"R", jersey:p.jersey||"", rid:p.id} : null;
+  /* v52: last and first too. Without them every PA was stamped with a blank
+     HitterLast / HitterFirst, so the export columns of those names were empty. */
+  return p ? {name:p.name, last:p.last||"", first:p.first||"", hand:p.hand||"R", jersey:p.jersey||"", rid:p.id} : null;
 }
 </script>
 
@@ -3143,11 +3293,13 @@ function showTab(t){
   gated = (t === "chart" && chartLocked());
   if(gated){ lvlNag = !O.level; readyNag = true; }
   tab = t;
+  var lit = (t === "report" && sumIdx >= 0) ? "history" : t;
   TABS.forEach(function(x){
-    el("tab-"+x).setAttribute("aria-selected", x===t ? "true" : "false");
+    el("tab-"+x).setAttribute("aria-selected", x===lit ? "true" : "false");
     el("v-"+x).hidden = (x!==t) || (x === "chart" && gated);
   });
   el("v-gate").hidden = !gated;
+  if(sumIdx < 0) el("sumHead").hidden = true;   /* v52: only a filed game has the header */
   render();
 }
 function render(){
@@ -3194,8 +3346,14 @@ function render(){
 
 /* ===================== events ===================== */
 function wire(){
-  TABS.forEach(function(t){ el("tab-"+t).onclick = function(){ showTab(t); }; });
-  el("btnExport").onclick = exportNow;
+  TABS.forEach(function(t){ el("tab-"+t).onclick = function(){ sumIdx = -1; showTab(t); }; });
+  /* v52: Export on a filed game's summary exports that game. */
+  el("btnExport").onclick = function(){
+    var g = rptGame();
+    if(g !== O){ deliver(fileNameOf(g), csvOf(g)); return; }
+    exportNow();
+  };
+  el("sumBack").onclick = closeSum;
   el("btnStart").onclick = function(){ showTab("chart"); };
   el("gateBack").onclick = function(){ showTab("setup"); };
   el("hdrFinish").onclick = function(){ askFile(function(){ archiveGame(); }); };
@@ -3230,7 +3388,7 @@ function wire(){
   document.addEventListener("click", function(e){
     var t = e.target.closest ? e.target.closest("[data-r],[data-mod],[data-ty],"+
       "[data-res],[data-tr],[data-spot],[data-cp],[data-newp],[data-pdel],"+
-      "[data-hexp],[data-hdel],[data-hv],[data-hp],[data-sv],[data-rp],[data-ptag],"+
+      "[data-hexp],[data-hsum],[data-hdel],[data-hv],[data-hp],[data-sv],[data-rp],[data-ptag],"+
       "[data-ppull],[data-qf]") : null;
     if(!t) return;
     var g = function(k){ return t.getAttribute(k); };
@@ -3295,9 +3453,10 @@ function wire(){
     if(g("data-hp")){ sel.histP = g("data-hp"); render(); return; }
     if(g("data-rp")){
       var v = g("data-rp");
-      sel.rptP = (v === "T") ? "T" : +v;
+      sel.rptP = (v === "T" || v === "H") ? v : +v;
       render(); return;
     }
+    if(g("data-hsum")!==null && g("data-hsum")!==""){ openSum(+g("data-hsum")); return; }
     if(g("data-hexp")!==null && g("data-hexp")!==""){
       var gg = arch()[+g("data-hexp")]; deliver(fileNameOf(gg), csvOf(gg)); return;
     }
@@ -3305,6 +3464,7 @@ function wire(){
 
   document.addEventListener("input", function(e){
     var t = e.target, row;
+    if(t.getAttribute("data-hn") !== null){ hitterNoteInput(t); return; }
     if(t.getAttribute("data-lf")){
       row = t.closest("[data-li]");
       /* Setup edits the STARTER. A sub is a game-time action on the Chart tab. */
@@ -3477,18 +3637,28 @@ var upBusy = false, upLast = "";
 function pitchesIn(g){ var n = 0; (g.pas||[]).forEach(function(a){ n += a.pitches.length; }); return n; }
 function upQueue(){
   return A.slice().reverse().filter(function(g){
-    return g.rid && g.level && !g.practice && !g.up && pitchesIn(g) > 0;
+    /* v52: a game already on the dashboard comes back when its hitter notes change. */
+    return g.rid && g.level && !g.practice && pitchesIn(g) > 0 && (!g.up || g.notesDirty);
   });
 }
 function upPayload(g){
   var t = tableOf(g);
-  return {
+  var out = {
     schema: UPLOAD_SCHEMA, key: UPLOAD_KEY, app: "offense", build: g.build || BUILD,
     record: { id: g.rid, mound: "", team: g.level || "", date: g.date || "", coach: g.who || "",
               template: "", scriptId: "", filedAt: g.filed ? new Date(g.filed).toISOString() : "",
               pitches: pitchesIn(g) },
     tables: { pitches: { columns: t.head, rows: t.rows } }
   };
+  /* v52: one row per hitter who came up, with his 2 notes, to Offense_Notes.
+     Notes changed after the game reached the dashboard go alone, and the
+     receiver replaces that game's note rows. */
+  var nt = notesTableOf(g);
+  var notes = { columns: ["Level","Date","Opponent"].concat(nt.head),
+                rows: nt.rows.map(function(r){ return [g.level || "", g.date || "", g.opp || ""].concat(r); }) };
+  if(g.up && g.notesDirty){ out.tables = { notes: notes }; out.update = "notes"; }
+  else out.tables.notes = notes;
+  return out;
 }
 function upPost(g){
   return new Promise(function(resolve){
@@ -3526,7 +3696,7 @@ function uploadPending(){
     if(i >= q.length){ upBusy = false; upLast = ""; drawUpload(); if(tab==="history") drawHistory(); return; }
     var g = q[i++];
     upPost(g).then(function(r){
-      if(r.ok){ g.up = Date.now(); g.upErr = ""; }
+      if(r.ok){ if(!g.up) g.up = Date.now(); g.notesDirty = false; g.upErr = ""; }
       else { g.upErr = r.error; }
       saveArchive();
       if(r.ok){ next(); return; }
@@ -3539,7 +3709,7 @@ function histPill(g){
   if(!UPLOAD_URL) return g.sent===false ? '<span class="pill q">not uploaded</span>' : '';
   if(g.practice) return '<span class="pill prac">practice</span>';
   if(!g.rid || !g.level) return '<span class="pill">kept here</span>';
-  if(g.up) return '<span class="pill up">on dashboard</span>';
+  if(g.up) return g.notesDirty ? '<span class="pill q">notes waiting</span>' : '<span class="pill up">on dashboard</span>';
   return '<span class="pill q">waiting</span>';
 }
 function drawUpload(){

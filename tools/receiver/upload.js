@@ -66,7 +66,7 @@ function part1() {
   let rt = freshRuntime();
   const b = rt.book("SEASON1");
   check("setup builds every tab", b.order.join(","),
-        "Records,Bullpen_Pitches,Bullpen_Notes,Game_Pitches,Game_Innings,Game_Notes,Offense_Pitches,Log,Coaches,Config");
+        "Records,Bullpen_Pitches,Bullpen_Notes,Game_Pitches,Game_Innings,Game_Notes,Offense_Pitches,Offense_Notes,Log,Coaches,Config");
   check("setup makes a 40-character key", /^[0-9a-f]{40}$/.test(rt.key), true);
   check("setup prints the key to the log", rt.logs.some(l => l.indexOf(rt.key) >= 0), true);
   const again = rt.sandbox.setup();
@@ -142,7 +142,9 @@ function part1() {
     const n4 = b4.getSheetByName("Bullpen_Notes");
     check("notes: RecordID first, then the app's columns", n4.header().join(","), "RecordID,SessionID,PitcherID,ToPitcher,CoachOnly");
     check("a formula-shaped note stayed text", n4.records()[0].CoachOnly, "=watch the elbow");
-    check("the offense app may not send notes", (() => { const x = rt4.post(JSON.stringify(upload(rt4.key, { app: "offense", record: { id: "o000001" }, tables: { notes: { columns: ["A"], rows: [] } } }))); return x.ok + " / " + x.error; })(), "false / unknown table notes");
+    /* receiver 4 (offense v52): the Offense Chart sends hitter notes now */
+    check("receiver 4: the offense app may send notes", (() => { const x = rt4.post(JSON.stringify(upload(rt4.key, { app: "offense", record: { id: "o000001" }, tables: { pitches: { columns: ["PA"], rows: [[1]] }, notes: { columns: ["HitterID", "ToHitter"], rows: [["h1", "Stay through it"]] } } }))); return x.ok + " / " + x.status; })(), "true / stored");
+    check("  onto Offense_Notes, made on first use", (b4.getSheetByName("Offense_Notes") || { records: () => [] }).records().map(r => r.HitterID + ":" + r.ToHitter).join(","), "h1:Stay through it");
   }
 
   console.log("\nRECEIVER 3 · a notes update replaces that record's notes, and nothing else");
@@ -566,6 +568,20 @@ async function part3() {
     check("  and the date and charter", r[0] && (r[0].Date + " / " + r[0].Coach), "2027-04-18 / Coach V");
     const op = book.getSheetByName("Offense_Pitches");
     check("every pitch reached Offense_Pitches", op.rows().length, 6);
+    /* v52: hitter notes, one row per hitter who came up */
+    const on = book.getSheetByName("Offense_Notes");
+    check("v52: a notes row for each hitter who came up", on ? on.rows().length : 0, 3);
+    check("  keyed by HitterID, with both names", on && (() => { const r = on.records()[0]; return !!r.HitterID + " " + !!r.HitterLast + " " + !!r.HitterFirst; })(), "true true true");
+    /* a note written on the filed game after it reached the dashboard */
+    const post0 = st.posts;
+    await pg.evaluate(() => { const g = A[0];   /* newest first */
+      const key = hitterKey(paHitter(g.pas[0]));
+      g.hnotes = g.hnotes || {}; g.hnotes[key] = { note: "See it deep", comments: "" }; g.notesDirty = true; saveArchive(); uploadPending(); });
+    check("v52: an edited note goes up on its own", await until(async () => !(await offArch())[0].notesDirty), true);
+    check("  as one more post", st.posts - post0, 1);
+    check("  replacing that game's note rows, not adding to them", on.rows().length, 3);
+    check("  with the new note in", on.records().filter(r => r.ToHitter === "See it deep").length, 1);
+    check("  and the pitches untouched", op.rows().length, 6);
     const orow = op.records()[0];
     check("rows carry Level and Opponent", orow.Level + " / " + orow.Opponent, "Varsity / Northview");
     check("RecordID is column A", op.header()[0], "RecordID");

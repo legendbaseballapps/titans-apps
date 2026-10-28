@@ -15,6 +15,17 @@ const { chromium } = require("playwright");
 const fs = require("fs");
 const BASE = process.env.BASE || "http://localhost:8807";
 const SEED = +(process.env.SEED || 7);
+/* DECK_SHOTS=<folder>: instead of writing demo-data.json, stop each app part-way
+   and screenshot it for the head coach deck (Oct 27). The test-only banners (no
+   service worker in this browser) are hidden; the iPad shows "Ready to use offline". */
+const SHOTS = process.env.DECK_SHOTS || "";
+const GAME_STOP = 11;          /* the 2nd hitter of the 3rd inning, 2 pitches in */
+const PEN_STOP = 14;           /* Hall, 14 pitches into his pen, after Smith's full one */
+async function shot(pg, name){
+  await pg.addStyleTag({ content: "#netBar,#storeBar{display:none !important}" });
+  await pg.waitForTimeout(300);
+  await pg.screenshot({ path: SHOTS + "/" + name + ".png" });
+}
 
 function rng(seed){ let a = seed >>> 0; return function(){ a |= 0; a = a + 0x6D2B79F5 | 0;
   let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
@@ -287,8 +298,22 @@ async function buildGame(b){
     });
     __t.clk("#suDone");
   }, { THEM, OPP, rid: STAFF[0].rid });
-  let curP = 0, noted = {};
+  let curP = 0, noted = {}, idx = -1;
   for (const a of g){
+    idx++;
+    if (SHOTS && idx === GAME_STOP){
+      await pg.evaluate(({ a }) => {
+        a.pitches.slice(0, 2).forEach(function(q){
+          __t.clk('#types button[data-type="' + q.t + '"]');
+          __t.clk("#callPad button:nth-child(" + (q.call[0]*5 + q.call[1] + 1) + ")");
+          __t.clk("#zone .cell:nth-child(" + (q.r*5 + q.c + 1) + ")");
+          __t.clk('.mods button[data-mod="' + (q.e === "SW" ? "W" : q.e === "F" ? "F" : "T") + '"]');
+        });
+        __t.clk('#types button[data-type="' + a.pitches[2].t + '"]');
+      }, { a });
+      await shot(pg, "deck-pitch-chart");
+      await ctx.close(); return null;
+    }
     if (a.p !== curP){
       await pg.evaluate(({ i, rid }) => { __t.clk("#pitchers .addp"); __t.set('select[data-pick="' + i + '"]', rid, ["change"]); },
                         { i: a.p, rid: STAFF[a.p].rid });
@@ -379,6 +404,10 @@ async function buildOffense(b){
       __t.clk("#btnNextPA");
     }, { a });
   }
+  if (SHOTS){
+    await pg.click("#tab-report"); await pg.click('[data-rp="0"]');
+    await shot(pg, "deck-offense-report");
+  }
   const out = await pg.evaluate(() => ({ main: localStorage.getItem("titans-offense-v1"),
                                          lineup: localStorage.getItem("titans-offense-lineup-v1") }));
   await ctx.close();
@@ -407,7 +436,8 @@ async function buildPen(b){
         __t.clk('#zone button[data-r="' + q.r + '"][data-c="' + q.c + '"]');
         __t.clk('#velo button[data-v="' + q.velo + '"]');
       });
-    }, { id: ids[i], list: plan[i] });
+    }, { id: ids[i], list: SHOTS && i === 1 ? plan[i].slice(0, PEN_STOP) : plan[i] });
+    if (SHOTS && i === 1){ await shot(pg, "deck-bullpen"); await ctx.close(); return null; }
   }
   const out = await pg.evaluate(() => ({ main: localStorage.getItem("titans-bullpen-v1") }));
   await ctx.close();
@@ -417,6 +447,7 @@ async function buildPen(b){
 (async () => {
   const b = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium",
     args: ["--host-resolver-rules=MAP script.google.com ~NOTFOUND, MAP *.googleusercontent.com ~NOTFOUND", "--no-proxy-server"] });
+  if (SHOTS){ await buildGame(b); await buildOffense(b); await buildPen(b); await b.close(); console.log("shots in " + SHOTS); return; }
   const game = await buildGame(b);
   const off = await buildOffense(b);
   const pen = await buildPen(b);

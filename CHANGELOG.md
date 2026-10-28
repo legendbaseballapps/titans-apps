@@ -17,9 +17,11 @@ old one — tap the amber stamp to fix it.
 
 | App | Source & folder | Live on GitHub Pages |
 |---|---|---|
-| **Bullpen Chart** | **v44** | **v36** (pushed Oct 19, with **receiver 2** redeployed first; same URL and key). **v37 to v44 waiting: redeploy receiver 3 FIRST, then push.** Notes confirmed from a real iPad Oct 19 (`Bullpen_Notes` made on first use, both notes in their columns) | Real-iPad upload test **passed Oct 19** (practice pen stayed off the Sheet, real pen landed) |
-| **Pitch Chart** (game) | **v34** | **v20** — **v21 to v34 waiting to be pushed** (receiver 3 must be deployed before v27+ goes out) |
-| **Offense Chart** | **v51** | v40 — **v41 to v51 waiting to be pushed** |
+| **Bullpen Chart** | **v44** | **v44** (Jim pushed Oct 26) | Real-iPad upload test **passed Oct 19** (practice pen stayed off the Sheet, real pen landed) |
+| **Pitch Chart** (game) | **v34** | **v34** (Jim pushed Oct 26) |
+| **Offense Chart** | **v52** | v51 (Jim pushed Oct 26) — **v52 waiting: redeploy receiver 4 FIRST, then push** |
+| **Receiver** | **receiver 4** | Redeploy as a new version of the same deployment (URL and key unchanged). Includes receiver 3 (game notes) |
+| **Demo page** | `demo/index.html` | Pushed Oct 26 for the player meeting. Rebuild with `tools/demo-build.js` |
 
 **The site moved Oct 14, 2026** to the program-owned account: **legendbaseballapps.github.io/titans-apps** (repo transferred from vaughnzj, so the live files, including the real `roster.js`, moved as they were). Every iPad installs from the new link; History saved under the old address does not carry over. The Coach's Guides in the pending builds (bullpen v31, game v23, offense v42) carry the new address, so pushing those builds is what puts it on the iPads.
 
@@ -1019,6 +1021,29 @@ Not logged at the time.
 ---
 
 ## Offense Chart
+
+### v52 · Oct 26, 2026
+**Headline:** Hitter cards with To the hitter / Coach only notes, and a filed game opens from History.
+
+- **Why:** Jim showed the apps to players Oct 26: *"They loved the idea we have for emailing out post-performance
+  evaluation forms. The hitters want it too."* The head coach approved collecting emails; the hitting coach writes the
+  notes; cards go the next morning (E-011).
+- **Report > Hitter cards** (a chip beside At the plate): one card per hitter who came up, in batting order. His line,
+  quality at-bats with the reasons, pitches per at-bat, chased out of the zone, hard contact, strikeouts, free bases,
+  as counts. Under them, **To the hitter** (he reads it) and **Coach only** (he never does), saved as typed, keyed by
+  roster id (`O.hnotes`).
+- **History > Summary** opens a filed game on the same Report page, with *← History*, History lit; pitches read-only,
+  notes editable. Export there exports that game. Same pattern as the Pitch Chart and Bullpen.
+- **Upload:** a `notes` table (Level, Date, Opponent, HitterID, Hitter, HitterLast, HitterFirst, Spot, PA, Pitches,
+  ToHitter, CoachOnly, Practice) to `Offense_Notes`. A note changed on a game already up sets `notesDirty`, the pill says
+  *notes waiting*, and the next upload sends only the notes (`update: "notes"`), which receiver 4 swaps in.
+- **Fixed on the way:** `HitterLast` and `HitterFirst` were blank on every exported row since the roster pickers came
+  in, because `manPerson()` dropped them. Now stamped, and older at-bats fill them from the roster by id.
+- Clear pitches also clears the hitter notes.
+- **Receiver 4:** `offense` may send `notes` (to `Offense_Notes`, made on first use).
+- Tests: new `tools/hitter-notes.js` (58 checks, light and dark); upload suite 215 (offense notes stored, a notes-only
+  re-send replaces that game's rows); every other suite unchanged. The re-send queue, the notes in the first upload
+  and the dirty flag were each broken on purpose and caught.
 
 ### v51 · Oct 22, 2026
 **Headline:** Readability in light and dark mode, all 3 apps (Bullpen v44, Pitch Chart v34, Offense v51).

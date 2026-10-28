@@ -32,13 +32,13 @@
    - It never touches any other rows, and never touches Coaches or Config.
    - Text is stored as text: nothing an app sends can become a formula. */
 
-var VERSION = "receiver 3 (Oct 2026)";
+var VERSION = "receiver 4 (Oct 2026)";
 
 /* Which tables each app may send, and the tab each one lands on. */
 var APPS = {
   bullpen: { pitches: "Bullpen_Pitches", notes: "Bullpen_Notes" },   /* notes: receiver 2, bullpen v36 */
   game:    { pitches: "Game_Pitches", innings: "Game_Innings", notes: "Game_Notes" },   /* notes: receiver 3, game v27 */
-  offense: { pitches: "Offense_Pitches" }
+  offense: { pitches: "Offense_Pitches", notes: "Offense_Notes" }   /* notes: receiver 4, offense v52 */
 };
 var SCHEMAS = [1];
 
