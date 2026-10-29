@@ -19,8 +19,9 @@ old one — tap the amber stamp to fix it.
 |---|---|---|
 | **Bullpen Chart** | **v44** | **v44** (Jim pushed Oct 26) | Real-iPad upload test **passed Oct 19** (practice pen stayed off the Sheet, real pen landed) |
 | **Pitch Chart** (game) | **v34** | **v34** (Jim pushed Oct 26) |
-| **Offense Chart** | **v52** | v51 (Jim pushed Oct 26) — **v52 waiting: redeploy receiver 4 FIRST, then push** |
+| **Offense Chart** | **v52** | **v52** (Jim pushed Oct 28) |
 | **Receiver** | **receiver 4** | Redeploy as a new version of the same deployment (URL and key unchanged). Includes receiver 3 (game notes) |
+| **Player cards** | **cards 1**, **reflections 1** (`cards/`) | Not set up yet. Push `cards/lt-logo.png`, then follow `claude/player-cards-setup.md`. Starts in test mode |
 | **Demo page** | `demo/index.html` | Pushed Oct 26 for the player meeting. Rebuild with `tools/demo-build.js` |
 
 **The site moved Oct 14, 2026** to the program-owned account: **legendbaseballapps.github.io/titans-apps** (repo transferred from vaughnzj, so the live files, including the real `roster.js`, moved as they were). Every iPad installs from the new link; History saved under the old address does not carry over. The Coach's Guides in the pending builds (bullpen v31, game v23, offense v42) carry the new address, so pushing those builds is what puts it on the iPads.
@@ -43,6 +44,19 @@ network first, so a corrected roster reaches every iPad on the next open with si
 is only for app code.
 
 ---
+
+## Player cards
+
+### cards 1 and reflections 1 · Oct 28, 2026
+
+**Headline:** after every pen and game, each player gets his own card by email, writes a 2-minute reflection on his own page, and the coaches see it; a sore arm or a rough day emails the right coaches right away.
+
+- `cards/Code.gs`, a new Apps Script project (Titans Player Cards) on the program account. Pen cards about 7 pm, game cards (pitchers and hitters) about 7 am, 1 reminder a day later. Each player's private page lists every card he has had, with his pen trend, and holds the reflection form: arm (or body) 1 to 5, how he feels about today 1 to 5, START, STOP, CONTINUE, and an optional "Anything bothering you?". The next card asks whether he did last time's START.
+- Urgent heads-up: a 1 or 2, or a flag word, emails that level's pitching or hitting coaches (new **Notify** column on Coaches), or `ADMIN_EMAIL` if nobody matches.
+- `cards/Reflections.gs`, a second small project (Titans Reflections): the coaches' page, newest first, filter by level, player and flagged, plus who hasn't reflected yet. Runs as the coach who opens it, so it needs both the Sheet shared with him and his account on Coaches.
+- New tabs, made by `setup()`: Players (emails and Send yes/no, never in `roster.js`), Player_Links, Cards, Reflections.
+- `SEND_MODE` off / test / live. Test sends every email to `TEST_TO`. Nothing filed before `CARDS_FROM` (the moment `setup()` ran) ever gets a card.
+- Tests: `tools/cards/fixture.js` builds a stand-in Sheet through the real apps and receiver; `tools/cards/cards.js` (173 checks), `tools/cards/mutate.js` (27 of 27 bugs caught), `tools/cards/page-check.js` (24 checks in a browser at phone width). `tools/receiver/mock-gas.js` gained MailApp, HtmlService, ScriptApp, Session and UrlFetchApp stand-ins; `upload.js` still 215 of 215.
 
 ## Bullpen Chart
 

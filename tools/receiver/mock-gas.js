@@ -102,11 +102,19 @@ class Book {
   failNext(n) { this.failing[n] = true; }
 }
 
-function makeRuntime(codePath) {
+function makeRuntime(codePath, opts) {
+  opts = opts || {};
   const books = {};
   const props = {};
   const logs = [];
   let locked = false;
+  /* Card-script extras (Oct 2026): mail, pages, triggers, who is running it, fetch. */
+  const mail = [];
+  const triggers = [];
+  const session = { active: "owner@example.com", effective: "owner@example.com" };
+  const fetchMap = opts.fetch || {};
+  let quota = opts.quota == null ? 100 : opts.quota;
+  let trigN = 0;
   const sandbox = {
     console,
     SpreadsheetApp: {
@@ -132,12 +140,39 @@ function makeRuntime(codePath) {
       createTextOutput(s) { return { content: s, setMimeType() { return this; }, getContent() { return this.content; } }; }
     },
     Utilities: { getUuid: () => crypto.randomUUID() },
-    Logger: { log: m => logs.push(String(m)) }
+    Logger: { log: m => logs.push(String(m)) },
+    MailApp: {
+      sendEmail(m) { if (quota <= 0) throw new Error("Service invoked too many times for one day: email."); mail.push(JSON.parse(JSON.stringify(m))); quota -= 1 + (m.cc ? String(m.cc).split(",").length : 0); },
+      getRemainingDailyQuota() { return quota; }
+    },
+    HtmlService: {
+      createHtmlOutput(h) { return { content: h, title: "", setTitle(t) { this.title = t; return this; }, addMetaTag() { return this; }, getContent() { return this.content; } }; }
+    },
+    ScriptApp: {
+      getProjectTriggers() { return triggers.slice(); },
+      deleteTrigger(t) { const i = triggers.indexOf(t); if (i >= 0) triggers.splice(i, 1); },
+      newTrigger(fn) {
+        const t = { fn, hour: null, uid: String(1000 + (++trigN)), getHandlerFunction() { return this.fn; }, getUniqueId() { return this.uid; } };
+        const b = { timeBased() { return b; }, everyDays() { return b; }, atHour(h) { t.hour = h; return b; }, create() { triggers.push(t); return t; } };
+        return b;
+      },
+      getService() { return { getUrl: () => "https://script.google.com/macros/s/MOCK/exec" }; }
+    },
+    Session: {
+      getActiveUser() { return { getEmail: () => session.active }; },
+      getEffectiveUser() { return { getEmail: () => session.effective }; },
+      getScriptTimeZone() { return "America/Denver"; }
+    },
+    UrlFetchApp: {
+      fetch(url) { if (!(url in fetchMap)) throw new Error("mock fetch: no " + url); return { getContentText: () => fetchMap[url] }; }
+    }
   };
   vm.createContext(sandbox);
   vm.runInContext(fs.readFileSync(codePath, "utf8"), sandbox, { filename: codePath });
   return {
-    sandbox, props, logs,
+    sandbox, props, logs, mail, triggers, session,
+    setQuota(n) { quota = n; },
+    get quota() { return quota; },
     newBook(id) { books[id] = new Book(id); return books[id]; },
     book(id) { return books[id]; },
     post(body) { return JSON.parse(sandbox.doPost({ postData: { contents: body, type: "text/plain" } }).getContent()); },
