@@ -21,8 +21,9 @@ old one — tap the amber stamp to fix it.
 | **Pitch Chart** (game) | **v34** | **v34** (Jim pushed Oct 26) |
 | **Offense Chart** | **v52** | **v52** (Jim pushed Oct 28) |
 | **Receiver** | **receiver 4** | Redeploy as a new version of the same deployment (URL and key unchanged). Includes receiver 3 (game notes) |
-| **Player cards** | **cards 1**, **reflections 1** (`cards/`) | Not set up yet. Push `cards/lt-logo.png`, then follow `claude/player-cards-setup.md`. Starts in test mode |
-| **Demo page** | `demo/index.html` | Pushed Oct 26 for the player meeting. Rebuild with `tools/demo-build.js` |
+| **Player cards** | **cards 2**, **reflections 2** (`cards/`) | **cards 3** waiting (paste Code.gs, then a New version); reflections 2 live. Test mode. Next: the test-mode run, then emails and go-live |
+| **Demo page** | `demo/index.html` | **Waiting:** push the Nov 2 rebuild (adds Load the 7th inning). Rebuild with `tools/demo-build.js`, then `LIVE=1`, then `tools/demo-page.py` |
+| **Sample card page** | `cards/sample.html`, `cards/sample-sw.js` | **Waiting:** push both for the player meeting (QR code). Rebuild with `tools/cards/sample-page.js` |
 
 **The site moved Oct 14, 2026** to the program-owned account: **legendbaseballapps.github.io/titans-apps** (repo transferred from vaughnzj, so the live files, including the real `roster.js`, moved as they were). Every iPad installs from the new link; History saved under the old address does not carry over. The Coach's Guides in the pending builds (bullpen v31, game v23, offense v42) carry the new address, so pushing those builds is what puts it on the iPads.
 
@@ -45,7 +46,40 @@ is only for app code.
 
 ---
 
+## Demo page
+
+### Load the 7th inning · Nov 2, 2026
+
+**Headline:** a second button on the demo page starts both games at the 7th, nobody out, so a room can chart a live at-bat together.
+
+- Pitch Chart: Borcherding on to close it out, Gavin Hughes leading off, fastball selected. Offense Chart: Ryan Dieker up against Drew Lindqvist. Bullpen Chart gets the same 3 pens. All Practice.
+- The full 7-inning game and its button are unchanged (`tools/demo-data.json` keeps `keys` as they were; the new set is `live`).
+- Build: `LIVE=1 node tools/demo-build.js` (stops the same seeded games at the start of the 7th), then `python3 tools/demo-page.py`.
+- Tests: `tools/demo-live-check.js` loads it, charts a 4-pitch strikeout in the Pitch Chart and a pitch in the Offense Chart; `tools/demo-check.js` still all ok.
+
 ## Player cards
+
+### Sample card page · Nov 2, 2026
+
+**Headline:** players scan one QR code at the meeting, pick pitcher or hitter, and see a real card and fill in a real reflection on their own phone.
+
+- `cards/sample.html`: built by `tools/cards/sample-page.js` from the real `cards/Code.gs` on the stand-in Sheet, so the cards and form match what players will get. Made-up names (Jake Miller, Ryan Torres); the build stops if a roster name or a Google address shows up.
+- Pitchers get a Bullpen card and a Game card (with the Deadly Sins) and the reflection; hitters get the hitter card and reflection. Sending shows "What your coaches see" on the phone, with the flag line at a 1 or 2. Nothing is saved or sent.
+- One file, logo inside, no outside requests. `cards/sample-sw.js` keeps it working with no signal once it has loaded.
+- Tests: `tools/cards/sample-check.js`, 17 checks at phone width, including offline reload.
+
+### cards 3 · Oct 29, 2026
+
+**Headline:** "Happy thought" is now "Positive thought" in the pre-pitch process, on the card and in the reflection question (Jim), to match the season review deck.
+
+### cards 2 and reflections 2 · Oct 29, 2026
+
+**Headline:** the cards now carry the pitcher mental game: every card shows the pre-pitch and reset processes, every reflection asks whether he used them, and each pitcher's game card counts his Deadly Sins.
+
+- **Stay on green** box on every card (pen, pitcher game, hitter game): "Every pitch: Breathe · Focal point · Happy thought · Execute" and the yellow-light reset (step off, time limit, flush it, full pre-pitch process). Wording from the Titans Pitcher Mental Game training.
+- **2 new reflection questions, required, pitchers and hitters:** "Pre-pitch process: Breathe, Focal point, Happy thought, Execute. How often did you run it?" (Every pitch / Most / Some / Rarely) and "When you hit a yellow light (squeezed, big hit, error), did you reset?" (Every time / Sometimes / No / No yellow lights). Saved as **PrePitch** and **Reset** on the Reflections tab; the columns are added on the first save, no setup run needed. Shown on his saved reflection, in the heads-up email and on the coaches' page (reflections 2).
+- **The Deadly Sins** on the pitcher game card, the 5 the chart can count: leadoff free base, two-out free base, 4-pitch free base, 0-2 extra-base hit, 0-2 free base. The export lists at-bats by lineup spot, so the order inside each inning is rebuilt from the batting order (the inning starts with the spot after the last hitter of the inning before). Outs before each at-bat come from the results (DP = 2); a caught stealing or pickoff isn't seen, so a rare two-out free base can be missed. An IBB counts as a free base. Games with no innings get no section. Bad body language and fielding position stay with the coaches.
+- Tests: `cards.js` 191 checks, `mutate.js` 37 of 37, `page-check.js` 25.
 
 ### cards 1 and reflections 1 · Oct 28, 2026
 

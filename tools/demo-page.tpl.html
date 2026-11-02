@@ -61,6 +61,15 @@ button{font-family:var(--cond);font-weight:700;font-size:18px;letter-spacing:.07
     <div id="status"></div>
   </div>
 
+  <div class="card warn" id="liveCard">
+    <h2>For a live at-bat: start at the 7th</h2>
+    <p>The same game, stopped at the start of the 7th with nobody out, so a room can chart an at-bat together.</p>
+    <p id="liveWho"></p>
+    <p>Bullpen Chart gets the same 3 pens. Practice, like the rest.</p>
+    <button id="goLive">Load the 7th inning</button>
+    <div id="statusLive"></div>
+  </div>
+
   <div class="links">
     <a href="../game/index.html">Pitch Chart<span>Our pitchers vs Ridgeview</span></a>
     <a href="../offense/index.html">Offense Chart<span>Our hitters vs Ridgeview</span></a>
@@ -71,6 +80,7 @@ button{font-family:var(--cond);font-weight:700;font-size:18px;letter-spacing:.07
 <script>
 (function(){
   var DATA = /*DATA*/null;
+  var LIVE = /*LIVE*/null;
   function pc(g){ var n = 0; (g.lineup || []).forEach(function(sp){ sp.men.forEach(function(b){ b.abs.forEach(function(a){ n += a.pitches.length; }); }); }); return n; }
   function row(app, text){ var tr = document.createElement("tr");
     tr.innerHTML = "<td>" + app + "</td><td>" + text + "</td>"; document.getElementById("what").appendChild(tr); }
@@ -83,18 +93,29 @@ button{font-family:var(--cond);font-weight:700;font-size:18px;letter-spacing:.07
   var pens = S.pitchers.filter(function(p){ return p.pitches.length; });
   row("Bullpen Chart", "&ldquo;" + S.tpl + "&rdquo; &middot; " + pens.map(function(p){ return p.name + " " + p.pitches.length; }).join(", ") + " pitches");
 
-  document.getElementById("go").onclick = function(){
-    var st = document.getElementById("status");
-    if(!confirm("Replace everything charted in the 3 apps on this iPad with the demo data?")) return;
+  function load(keys, st, msg){
+    if(!confirm("Replace everything charted in the 3 apps on this device with the demo data?")) return;
     try{
-      Object.keys(DATA).forEach(function(k){ localStorage.setItem(k, DATA[k]); });
-      var bad = Object.keys(DATA).filter(function(k){ return localStorage.getItem(k) !== DATA[k]; });
+      Object.keys(keys).forEach(function(k){ localStorage.setItem(k, keys[k]); });
+      var bad = Object.keys(keys).filter(function(k){ return localStorage.getItem(k) !== keys[k]; });
       if(bad.length) throw new Error("did not stick: " + bad.join(", "));
-      st.className = "ok"; st.textContent = "Loaded. Open an app below.";
+      st.className = "ok"; st.textContent = msg;
     }catch(e){
-      st.className = "bad"; st.textContent = "Could not save on this iPad (" + e.message + "). Private Browsing blocks it.";
+      st.className = "bad"; st.textContent = "Could not save on this device (" + e.message + "). Private Browsing blocks it.";
     }
-  };
+  }
+  document.getElementById("go").onclick = function(){ load(DATA, document.getElementById("status"), "Loaded. Open an app below."); };
+  if(!LIVE){ document.getElementById("liveCard").hidden = true; }
+  else {
+    var LG = JSON.parse(LIVE["dugout-pitch-chart-v2"]), LO = JSON.parse(LIVE["titans-offense-v1"]);
+    var lp = LG.pitchers[LG.curP] || {}, up = LG.lineup[LG.curB % LG.lineup.length] || {}, man = (up.men || []).slice(-1)[0] || {};
+    var oup = LO.pas[LO.pas.length - 1] || {}, opit = LO.pitchers[LO.cp] || {};
+    document.getElementById("liveWho").innerHTML = "<b>Pitch Chart:</b> " + (lp.name || "") + " on to finish it, " +
+      (man.name || "their leadoff man") + " up. <b>Offense Chart:</b> " + (oup.hfirst ? oup.hfirst + " " : "") + (oup.hlast || "") +
+      " up against " + (opit.name || "their reliever") + ".";
+    var ALL = {}; Object.keys(DATA).forEach(function(k){ ALL[k] = DATA[k]; }); Object.keys(LIVE).forEach(function(k){ ALL[k] = LIVE[k]; });
+    document.getElementById("goLive").onclick = function(){ load(ALL, document.getElementById("statusLive"), "Loaded at the 7th. Open the Pitch Chart or Offense Chart below."); };
+  }
 })();
 </script>
 </body>

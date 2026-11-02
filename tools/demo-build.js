@@ -19,6 +19,13 @@ const SEED = +(process.env.SEED || 7);
    and screenshot it for the head coach deck (Oct 27). The test-only banners (no
    service worker in this browser) are hidden; the iPad shows "Ready to use offline". */
 const SHOTS = process.env.DECK_SHOTS || "";
+/* LIVE=1 (Nov 2026, players' apps deck): also save both games stopped at the start of
+   the 7th, nobody out and no pitch thrown, so the room can chart a live at-bat. The
+   Pitch Chart has Borcherding on to close it out; the Offense Chart has our leadoff man
+   up against their reliever. Saved as "live" beside the full-game "keys"; the full game
+   stays exactly as it was. */
+const LIVE = process.env.LIVE === "1";
+const LIVE_INN = 7;
 const GAME_STOP = 11;          /* the 2nd hitter of the 3rd inning, 2 pitches in */
 const PEN_STOP = 14;           /* Hall, 14 pitches into his pen, after Smith's full one */
 async function shot(pg, name){
@@ -278,7 +285,7 @@ async function fresh(b, path){
   return { ctx, pg };
 }
 
-async function buildGame(b){
+async function buildGame(b, stopInn){
   const { ctx, pg } = await fresh(b, "/game/index.html");
   const g = GAME_PLAN.g;
   await pg.evaluate(({ THEM, OPP, rid }) => {
@@ -319,6 +326,10 @@ async function buildGame(b){
                         { i: a.p, rid: STAFF[a.p].rid });
       curP = a.p;
     }
+    if (stopInn && a.inn === stopInn){
+      const out = await pg.evaluate(() => ({ main: localStorage.getItem("dugout-pitch-chart-v2") }));
+      await ctx.close(); return out;
+    }
     await pg.evaluate(({ a, note, last }) => {
       if(note){ __t.set("#fNotes", note, ["input"]); }
       a.pitches.forEach(function(q, k){
@@ -356,7 +367,7 @@ async function buildGame(b){
   return out;
 }
 
-async function buildOffense(b){
+async function buildOffense(b, stopInn){
   const { ctx, pg } = await fresh(b, "/offense/index.html");
   const g = OFF_PLAN.g;
   await pg.evaluate(({ OPP, US, P0 }) => {
@@ -382,6 +393,11 @@ async function buildOffense(b){
         __t.set('[data-pi="1"] select[data-pf="hand"]', P.hand, ["input","change"]);
       }, { P: THEIR_P[a.p] });
       curP = a.p;
+    }
+    if (stopInn && OFF_PLAN.g.indexOf(a) === OFF_PLAN.g.findIndex(x => x.inn === stopInn)){
+      const out = await pg.evaluate(() => ({ main: localStorage.getItem("titans-offense-v1"),
+                                             lineup: localStorage.getItem("titans-offense-lineup-v1") }));
+      await ctx.close(); return out;
     }
     await pg.evaluate(({ a }) => {
       var TY = ["FB","CT","SL","CB","CH","SP"];
@@ -448,6 +464,24 @@ async function buildPen(b){
   const b = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium",
     args: ["--host-resolver-rules=MAP script.google.com ~NOTFOUND, MAP *.googleusercontent.com ~NOTFOUND", "--no-proxy-server"] });
   if (SHOTS){ await buildGame(b); await buildOffense(b); await buildPen(b); await b.close(); console.log("shots in " + SHOTS); return; }
+  if (LIVE){
+    const lg = await buildGame(b, LIVE_INN), lo = await buildOffense(b, LIVE_INN);
+    await b.close();
+    const file = __dirname + "/demo-data.json", data = JSON.parse(fs.readFileSync(file, "utf8"));
+    data.live = { built: new Date().toISOString(), keys: {
+      "dugout-pitch-chart-v2": lg.main, "dugout-pitch-chart-archive-v1": "[]",
+      "titans-offense-v1": lo.main, "titans-offense-lineup-v1": lo.lineup, "titans-offense-archive-v1": "[]" } };
+    /* same date as the full game, so History reads the same */
+    ["dugout-pitch-chart-v2", "titans-offense-v1"].forEach(k => { const o = JSON.parse(data.live.keys[k]);
+      o.date = JSON.parse(data.keys[k]).date; if (k === "dugout-pitch-chart-v2") o.nextType = "FB";  /* Hall's slider stayed set */
+      data.live.keys[k] = JSON.stringify(o); });
+    fs.writeFileSync(file, JSON.stringify(data));
+    const G = JSON.parse(lg.main), O = JSON.parse(lo.main);
+    const lead = GAME_PLAN.g.find(x => x.inn === LIVE_INN), olead = OFF_PLAN.g.find(x => x.inn === LIVE_INN);
+    console.log("live: pitch chart inning " + G.inning + ", outs " + G.outs + ", up " + THEM[lead.spot][0] + " (plan " + lead.res + ")" +
+      "; offense PAs " + O.pas.length + ", up spot " + (olead.spot + 1) + " " + US[olead.spot] + " (plan " + olead.res + ")");
+    return;
+  }
   const game = await buildGame(b);
   const off = await buildOffense(b);
   const pen = await buildPen(b);

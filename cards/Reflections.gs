@@ -18,7 +18,7 @@
      4. Put the /exec URL in the cards script's REFLECTIONS_URL property, so the
         heads-up emails link here. Each coach approves a one-time Google prompt. */
 
-var VERSION = "reflections 1 (Oct 2026)";
+var VERSION = "reflections 2 (Oct 2026)";
 
 function doGet(e) {
   var q = (e && e.parameter) || {};
@@ -54,6 +54,8 @@ function doGet(e) {
       '<span class="ev">' + e_(r.Level) + " &middot; " + e_(r.Event) + "</span>" +
       (flag ? '<span class="tag">' + e_(flag) + "</span>" : "") + "</div>" +
       '<div class="nums"><span>' + (r.Kind === "hit" ? "Body" : "Arm") + " <b>" + e_(r["Arm/Body"]) + "</b>/5</span><span>Feel <b>" + e_(r.Feel) + "</b>/5</span>" +
+      (r.PrePitch ? "<span>Pre-pitch <b>" + e_(r.PrePitch) + "</b></span>" : "") +
+      (r.Reset ? "<span>Reset <b>" + e_(r.Reset) + "</b></span>" : "") +
       (r.LastStart ? "<span>Last START: " + e_(r.LastStart) + " &rarr; <b>" + e_(r.DidLastStart || "no answer") + "</b></span>" : "") + "</div>" +
       line_("START", r.Start) + line_("STOP", r.Stop) + line_("CONTINUE", r.Continue) + line_("Bothering him", r.Bothering) +
       '<div class="when">' + e_(String(r.When).replace("T", " ").slice(0, 16)) + " UTC" +

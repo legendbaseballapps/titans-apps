@@ -93,6 +93,10 @@ function ok(c, m) { if (c) pass++; else { fail++; console.log("FAIL " + m); } }
     await pg.click('.scale[data-name="feel"] button[data-v="5"]');
     ok(await pg.$eval('.scale[data-name="arm"] button[data-v="4"]', e => e.className === "on"), "the tapped rating lights up");
     await pg.click("#go");
+    ok((await pg.textContent("#msg")).includes("pre-pitch and reset"), "asks for the pre-pitch and reset answers");
+    await pg.click('.scale[data-name="pre"] button[data-v="Most"]');
+    await pg.click('.scale[data-name="reset"] button[data-v="Every time"]');
+    await pg.click("#go");
     ok((await pg.textContent("#msg")).includes("START, STOP and CONTINUE"), "asks for START, STOP and CONTINUE");
     await pg.fill('input[name="start"]', "Finish the change-up out front");
     await pg.fill('input[name="stop"]', "Rushing from the stretch");
@@ -101,12 +105,14 @@ function ok(c, m) { if (c) pass++; else { fail++; console.log("FAIL " + m); } }
     await pg.waitForFunction(() => /Thanks/.test(document.getElementById("f").textContent));
     await shot("page-thanks");
     const R = b.getSheetByName("Reflections").records();
-    ok(R.length === 1 && R[0]["Arm/Body"] === 4 && R[0].Feel === 5 && R[0].Start === "Finish the change-up out front", "the browser save reached the Reflections tab");
+    ok(R.length === 1 && R[0]["Arm/Body"] === 4 && R[0].Feel === 5 && R[0].PrePitch === "Most" && R[0].Reset === "Every time" && R[0].Start === "Finish the change-up out front", "the browser save reached the Reflections tab");
     await pg.goto(BASE + "/exec?t=" + st + "&r=" + rid("bullpen", "2027-01-19") + "&k=pen");
     ok((await pg.textContent("#f")).includes("Last time you said you\u2019d start: Finish the change-up out front"), "the next card asks about last time's START");
     await pg.click('.scale[data-name="did"] button[data-v="Partly"]');
     await pg.click('.scale[data-name="arm"] button[data-v="2"]');
     await pg.click('.scale[data-name="feel"] button[data-v="3"]');
+    await pg.click('.scale[data-name="pre"] button[data-v="Every pitch"]');
+    await pg.click('.scale[data-name="reset"] button[data-v="Sometimes"]');
     await pg.fill('input[name="start"]', "Long toss on off days");
     await pg.fill('input[name="stop"]', "Skipping the warm-up");
     await pg.fill('input[name="cont"]', "Same routine");
@@ -116,7 +122,7 @@ function ok(c, m) { if (c) pass++; else { fail++; console.log("FAIL " + m); } }
     await pg.waitForFunction(() => /Thanks/.test(document.getElementById("f").textContent));
     ok((await pg.textContent("#f")).includes("A coach will check in with you"), "flagged: tells him a coach will check in");
     const R2 = b.getSheetByName("Reflections").records();
-    ok(R2[1].Flag === "Physical" && R2[1].DidLastStart === "Partly", "flag and Did-you saved");
+    ok(R2[1].Flag === "Physical" && R2[1].DidLastStart === "Partly" && R2[1].PrePitch === "Every pitch" && R2[1].Reset === "Sometimes", "flag, Did-you and process answers saved");
     const heads = rt.mail.filter(m => /Heads-up/.test(m.subject));
     ok(heads.length === 1, "one heads-up email");
     if (SHOTS) { fs.writeFileSync(path.join(SHOTS, "flag-email.html"), heads[0].htmlBody); }

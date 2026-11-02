@@ -33,13 +33,14 @@
      function either ends in _ (private) or refuses to run unless it was started
      from the editor or one of this project's own triggers. */
 
-var VERSION = "cards 1 (Oct 2026)";
+var VERSION = "cards 3 (Oct 2026)";
 
 var PLAYERS_HEAD = ["PlayerID", "Last", "First", "Class", "Level", "Player email", "Parent email", "Send"];
 var LINKS_HEAD = ["PlayerID", "Token", "Made"];
 var CARDS_HEAD = ["Key", "RecordID", "PlayerID", "Kind", "Date", "Event", "Status", "SentTo", "SentAt",
                   "ReminderAt", "ReflectionAt"];
 var REFL_HEAD = ["When", "PlayerID", "Player", "Level", "Kind", "RecordID", "Date", "Event", "Arm/Body", "Feel",
+                 "PrePitch", "Reset",
                  "DidLastStart", "LastStart", "Start", "Stop", "Continue", "Bothering", "Flag", "FlaggedTo"];
 
 var DEFAULT_LOGO = "https://legendbaseballapps.github.io/titans-apps/cards/lt-logo.png";
@@ -47,6 +48,9 @@ var DEFAULT_ROSTER = "https://legendbaseballapps.github.io/titans-apps/bullpen/r
 var REMIND_HOURS = 20;       /* runs are 12 h apart, so this is the run a day later */
 var MAIL_RESERVE = 10;       /* keep this many sends a day for urgent flags */
 var TEXT_MAX = 300;          /* characters per reflection answer */
+/* The 2 process questions on every reflection (Titans Pitcher Mental Game). */
+var PRE_ANS = ["Every pitch", "Most", "Some", "Rarely"];
+var RESET_ANS = ["Every time", "Sometimes", "No", "No yellow lights"];
 
 /* Program goals for one outing. Config can override any of them with a row whose
    Setting matches the name here (for example "Strikes goal" / 62). */
@@ -408,6 +412,7 @@ function penCard_(d, rec, pid) {
       .concat(anyVelo ? [b.vn ? Math.round(b.vsum / b.vn) + " / " + b.vtop : "&ndash;"] : []);
   })));
   body += section_("Where it went", penGrid_(st));
+  body += processBox_();
   var pre = st.graded ? st.spot + " of " + st.graded + " on the spot" + (ps && ps.graded ? " (" + ps.spot + " last pen)." : ".")
           : st.n + " pitches, " + st.strike + " strikes.";
   return {key: rid + "|" + pid + "|pen", kind: "pen", rid: rid, pid: pid, who: who, date: date, event: event,
@@ -467,6 +472,86 @@ function innSum_(rows) {
   return o;
 }
 function ip_(outs) { return Math.floor(outs / 3) + "." + (outs % 3); }
+
+/* The 5 Deadly Sins the chart can count (Titans Pitcher Mental Game). Bad body language
+   and not fielding position stay with the coach's eye. */
+var SINS = [{k: "lead", name: "Leadoff free base"}, {k: "two", name: "Two-out free base"},
+            {k: "four", name: "4-pitch free base"}, {k: "xbh02", name: "0-2 extra-base hit"},
+            {k: "fb02", name: "0-2 free base"}];
+var FREE = {BB: 1, IBB: 1, HBP: 1};
+var XBH = {"2B": 1, "3B": 1, HR: 1};
+var OUTS_OF = {K: 1, Kc: 1, GO: 1, FO: 1, LO: 1, PO: 1, FC: 1, SAC: 1, SF: 1, DP: 2};
+/* One game's at-bats in the order they happened. The export lists them by lineup spot,
+   so the order inside an inning comes from the batting order: the inning starts with the
+   spot after the last hitter of the inning before, and goes around from there. Each
+   at-bat carries the count before every pitch and the outs before it. Returns null for a
+   game with no innings (charted before the Pitch Chart kept them). */
+function gameAbs_(rows) {
+  var by = {}, order = [], n = 0;
+  for (var i = 0; i < rows.length; i++) {
+    var r = rows[i];
+    if (s_(r.Inning) === "") return null;
+    var k = s_(r.Spot) + "|" + s_(r.Batter) + "|" + s_(r.AB);
+    if (!by[k]) { by[k] = {rows: [], spot: num_(r.Spot), ab: num_(r.AB), pid: s_(r.PitcherID)}; order.push(k); }
+    by[k].rows.push(r);
+    n = Math.max(n, num_(r.Spot));
+  }
+  if (!order.length || !n) return null;
+  var abs = order.map(function (k) {
+    var a = by[k], last = a.rows[a.rows.length - 1];
+    a.inning = num_(last.Inning); a.result = s_(last.ABResult);
+    var b = 0, st = 0, was02 = false;
+    a.pitches = 0;
+    a.rows.forEach(function (p, j) {
+      var c = s_(p.Call);
+      if (!c) return;
+      a.pitches++;
+      if (b === 0 && st === 2) was02 = true;
+      a.before = {b: b, s: st};
+      if (j === a.rows.length - 1) return;
+      if (c === "ball") b++;
+      else if (c === "strike" || c === "swing&miss") st++;
+      else if (c === "foul" && st < 2) st++;
+    });
+    a.was02 = was02 || (b === 0 && st === 2);
+    a.allBalls = a.rows.every(function (p) { return s_(p.Call) === "ball"; });
+    return a;
+  }).filter(function (a) { return a.result; });
+  var innings = {};
+  abs.forEach(function (a) { (innings[a.inning] = innings[a.inning] || []).push(a); });
+  var next = 1, outList = [];
+  Object.keys(innings).map(Number).sort(function (x, y) { return x - y; }).forEach(function (inn) {
+    var list = innings[inn];
+    list.sort(function (x, y) {
+      var dx = (x.spot - next + n) % n, dy = (y.spot - next + n) % n;
+      return dx !== dy ? dx - dy : x.ab - y.ab;
+    });
+    var outs = 0;
+    list.forEach(function (a, i) {
+      a.leadoff = i === 0 && a.spot === next;
+      a.outsBefore = outs;
+      outs += OUTS_OF[a.result] || 0;
+      outList.push(a);
+    });
+    next = (list[list.length - 1].spot % n) + 1;
+  });
+  return outList;
+}
+function sins_(rows, pid) {
+  var abs = gameAbs_(rows);
+  if (!abs) return null;
+  var o = {lead: 0, two: 0, four: 0, xbh02: 0, fb02: 0};
+  abs.forEach(function (a) {
+    if (a.pid !== pid) return;
+    var free = !!FREE[a.result];
+    if (free && a.leadoff) o.lead++;
+    if (free && a.outsBefore === 2) o.two++;
+    if (a.result === "BB" && a.pitches === 4 && a.allBalls) o.four++;
+    if (XBH[a.result] && a.before && a.before.b === 0 && a.before.s === 2) o.xbh02++;
+    if (free && a.result !== "IBB" && a.was02) o.fb02++;
+  });
+  return o;
+}
 function pitchCard_(d, rec, pid) {
   var rid = s_(rec.RecordID), rows = rowsOf_(d.game, rid, "PitcherID", pid);
   var inns = rowsOf_(d.inn, rid, "PitcherID", pid);
@@ -519,6 +604,14 @@ function pitchCard_(d, rec, pid) {
       ["left", "center", "center", "center"]) +
     '<div style="font-size:12px;color:#5A6781;margin:6px 2px 0">' + CHECK + " met the goal today. Season: " + nGames +
     (nGames === 1 ? " game, " : " games, ") + ip_(sInn.outs) + " innings.</div>");
+  var sins = sins_(d.game.filter(function (r) { return s_(r.RecordID) === rid; }), pid);
+  if (sins) {
+    var total = SINS.reduce(function (a, k) { return a + sins[k.k]; }, 0);
+    body += section_("The Deadly Sins", table_html_(["", "Today"], SINS.map(function (k) {
+      return [e_(k.name), sins[k.k] ? "<b>" + sins[k.k] + "</b>" : '<span style="color:#1F7A4A;font-weight:700">0</span>'];
+    }), ["left", "center"]) + read_(total ? (total === 1 ? "1 sin today." : total + " sins today.") + " Each one starts with the pitch before it: stay on green and win the next one."
+                                          : "None today. Nothing free."));
+  }
   /* Execution against the call */
   var ex = {called: 0, spot: 0, close: 0, miss: 0, up: 0, down: 0, inn: 0, out: 0, by: {}};
   rows.forEach(function (r) {
@@ -546,6 +639,7 @@ function pitchCard_(d, rec, pid) {
     var b = ex.by[k];
     return [nb_(TYPE_LONG[k] || k), String(b.n), pct_(b.strike, b.n) + "%", b.called ? pct_(b.good, b.called) + "%" : "&ndash;"];
   })));
+  body += processBox_();
   var where = opp ? (" vs " + opp) : "";
   return {key: rid + "|" + pid + "|pitch", kind: "pitch", rid: rid, pid: pid, who: who, date: date,
           event: (opp ? "vs " + opp + ", " : "") + shortDate_(date),
@@ -647,6 +741,7 @@ function hitCard_(d, rec, pid) {
   body += section_("Your swings", tiles_([[o.oz ? o.ozsw + " of " + o.oz : "0", "Chased"], [o.ip ? o.hard + " of " + o.ip : "0", "Hit hard"],
                                           [o.k, "Strikeouts"], [o.free, "Free bases"]]) +
     grid_(cells, "Catcher&rsquo;s view &middot; &#9679; swung &middot; &#9675; took &middot; orange = chased off the plate"));
+  body += processBox_();
   return {key: rid + "|" + pid + "|hit", kind: "hit", rid: rid, pid: pid, who: who, date: date,
           event: (opp ? ha + opp + ", " : "") + shortDate_(date),
           subject: "Your game card: " + (opp ? ha + opp + ", " : "") + shortDate_(date),
@@ -657,6 +752,12 @@ function hitCard_(d, rec, pid) {
           body: body, level: level, role: "hitting", more: "See all your games"};
 }
 
+/* Every card: the pre-pitch and reset processes, in the program's own words. */
+function processBox_() {
+  return section_("Stay on green", '<table role="presentation" width="100%" cellpadding="0" cellspacing="0">' +
+    '<tr><td style="padding:6px 0;font-size:14.5px;line-height:1.45;color:' + INK + '"><b>Every pitch:</b> Breathe &middot; Focal point &middot; Positive thought &middot; Execute</td></tr>' +
+    '<tr><td style="padding:6px 0;font-size:14.5px;line-height:1.45;color:' + INK + '"><b>Yellow light</b> (squeezed, big hit, error): step off, take your time limit, flush it, then your full pre&#8209;pitch process.</td></tr></table>');
+}
 /* =========================================================== HTML (email-safe) */
 var NAVY = "#16305C", ORANGE = "#C85C1C", INK = "#16233A", MUTED = "#5A6781", LINE = "#D2D9E6", BG = "#ECEFF5",
     SOFT = "#F4F6FA";
@@ -822,13 +923,18 @@ function formHtml_(t, c, last) {
       return '<button type="button" data-v="' + n + '"><b>' + n + "</b><span>" + labels[n - 1] + "</span></button>";
     }).join("") + "</div>";
   }
+  function pick(name, opts) {
+    return '<div class="scale small" data-name="' + name + '">' + opts.map(function (v) {
+      return '<button type="button" data-v="' + e_(v) + '"><b>' + e_(v) + "</b></button>"; }).join("") + "</div>";
+  }
   return '<form id="f" class="box" onsubmit="return false">' +
     '<div class="org">Prepare &middot; Compete &middot; Evaluate</div><h2>Your reflection</h2>' +
     (last ? '<div class="q"><p>Last time you said you&rsquo;d start: <b>' + e_(last) + "</b>. Did you?</p>" +
-      '<div class="scale small" data-name="did">' + ["Yes", "Partly", "Not yet"].map(function (v) {
-        return '<button type="button" data-v="' + v + '"><b>' + v + "</b></button>"; }).join("") + "</div></div>" : "") +
+      pick("did", ["Yes", "Partly", "Not yet"]) + "</div>" : "") +
     '<div class="q"><p>' + arm + "</p>" + scale("arm", ["Hurting", "Sore", "OK", "Good", "Great"]) + "</div>" +
     '<div class="q"><p>How do you feel about today?</p>' + scale("feel", ["Rough", "Not great", "OK", "Good", "Great"]) + "</div>" +
+    '<div class="q"><p>Pre-pitch process: Breathe, Focal point, Positive thought, Execute. How often did you run it?</p>' + pick("pre", PRE_ANS) + "</div>" +
+    '<div class="q"><p>When you hit a yellow light (squeezed, big hit, error), did you reset?</p>' + pick("reset", RESET_ANS) + "</div>" +
     '<div class="q"><label>START <span>one thing to start doing</span><input name="start" maxlength="' + TEXT_MAX + '"></label></div>' +
     '<div class="q"><label>STOP <span>one thing to stop doing</span><input name="stop" maxlength="' + TEXT_MAX + '"></label></div>' +
     '<div class="q"><label>CONTINUE <span>one thing to keep doing</span><input name="cont" maxlength="' + TEXT_MAX + '"></label></div>' +
@@ -840,8 +946,9 @@ function formHtml_(t, c, last) {
     "s.querySelectorAll('button').forEach(function(x){x.className=''});b.className='on';v[s.getAttribute('data-name')]=b.getAttribute('data-v');});});" +
     "var f=document.getElementById('f'),m=document.getElementById('msg'),g=document.getElementById('go');" +
     "g.addEventListener('click',function(){var o={t:" + JSON.stringify(String(t)) + ",r:" + JSON.stringify(c.rid) + ",k:" + JSON.stringify(c.kind) + "," +
-    "did:v.did||'',arm:Number(v.arm||0),feel:Number(v.feel||0),start:f.elements['start'].value.trim(),stop:f.elements['stop'].value.trim(),cont:f.elements['cont'].value.trim(),bother:f.elements['bother'].value.trim()};" +
+    "did:v.did||'',arm:Number(v.arm||0),feel:Number(v.feel||0),pre:v.pre||'',reset:v.reset||'',start:f.elements['start'].value.trim(),stop:f.elements['stop'].value.trim(),cont:f.elements['cont'].value.trim(),bother:f.elements['bother'].value.trim()};" +
     "if(!o.arm||!o.feel){m.textContent='Pick a number for both questions.';return;}" +
+    "if(!o.pre||!o.reset){m.textContent='Answer the pre-pitch and reset questions.';return;}" +
     "if(!o.start||!o.stop||!o.cont){m.textContent='Write one line for START, STOP and CONTINUE.';return;}" +
     "g.disabled=true;m.textContent='Sending...';" +
     "google.script.run.withSuccessHandler(function(r){if(r&&r.ok){f.innerHTML='<h2>Thanks. Your coaches will read it.</h2><p>'+(r.flag?'A coach will check in with you.':'See you at the next one.')+'</p>';}else{g.disabled=false;m.textContent=(r&&r.error)||'That did not save. Try again.';}})" +
@@ -852,6 +959,7 @@ function savedHtml_(r) {
   return '<div class="box"><div class="org">Prepare &middot; Compete &middot; Evaluate</div><h2>Your reflection</h2>' +
     '<p class="ok">Sent ' + e_(shortDate_(s_(r.When).slice(0, 10))) + ". Your coaches have it.</p>" +
     line("Did you start it?", r.DidLastStart) + line("Arm/body:", r["Arm/Body"] + " of 5") + line("Feel:", r.Feel + " of 5") +
+    line("Pre-pitch process:", r.PrePitch) + line("Reset:", r.Reset) +
     line("START", r.Start) + line("STOP", r.Stop) + line("CONTINUE", r.Continue) + line("Bothering you:", r.Bothering) + "</div>";
 }
 function pageDoc_(title, inner) {
@@ -866,7 +974,7 @@ function pageDoc_(title, inner) {
     ".item .k{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:" + MUTED + ";width:64px}.item .ev{flex:1;font-weight:600;color:" + INK + "}" +
     ".ok{color:#1F7A4A;font-weight:600}.todo{color:" + ORANGE + ";font-weight:600;font-size:14px}.empty{color:" + MUTED + "}" +
     ".q{margin:14px 0}.q p{margin:0 0 6px;font-weight:600}.scale{display:flex;gap:6px}.scale button{flex:1;padding:8px 2px;border:1px solid " + LINE + ";border-radius:8px;background:" + SOFT + ";font:inherit;color:" + INK + "}" +
-    ".scale button b{display:block;font-size:18px}.scale button span{display:block;font-size:11px;color:" + MUTED + "}.scale button.on{background:" + NAVY + ";color:#fff;border-color:" + NAVY + "}.scale button.on span{color:#BFD0EC}" +
+    ".scale button b{display:block;font-size:18px}.scale.small button b{font-size:15px;line-height:1.2}.scale button span{display:block;font-size:11px;color:" + MUTED + "}.scale button.on{background:" + NAVY + ";color:#fff;border-color:" + NAVY + "}.scale button.on span{color:#BFD0EC}" +
     "label{display:block;font-weight:700;font-family:" + COND + ";letter-spacing:1px}label span{font-family:" + SANS + ";font-weight:400;letter-spacing:0;color:" + MUTED + ";font-size:13px;margin-left:4px}" +
     "input,textarea{display:block;width:100%;box-sizing:border-box;margin-top:6px;padding:10px;border:1px solid " + LINE + ";border-radius:8px;font:inherit;font-size:16px}" +
     ".go{width:100%;padding:14px;border:0;border-radius:8px;background:" + ORANGE + ";color:#fff;font-family:" + COND + ";font-weight:700;font-size:16px;letter-spacing:1.2px;text-transform:uppercase}" +
@@ -892,6 +1000,9 @@ function saveReflection(o) {
   var ans = {start: txt(o.start), stop: txt(o.stop), cont: txt(o.cont), bother: txt(o.bother),
              did: ["Yes", "Partly", "Not yet"].indexOf(s_(o.did)) >= 0 ? s_(o.did) : ""};
   if (!ans.start || !ans.stop || !ans.cont) return {ok: false, error: "Write one line for START, STOP and CONTINUE."};
+  ans.pre = PRE_ANS.indexOf(s_(o.pre)) >= 0 ? s_(o.pre) : "";
+  ans.reset = RESET_ANS.indexOf(s_(o.reset)) >= 0 ? s_(o.reset) : "";
+  if (!ans.pre || !ans.reset) return {ok: false, error: "Answer the pre-pitch and reset questions."};
   var lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
@@ -903,7 +1014,7 @@ function saveReflection(o) {
     var level = (c && c.level) || s_(who.Level);
     var row = {When: new Date(now_()).toISOString(), PlayerID: pid, Player: (s_(who.First) + " " + s_(who.Last)).trim(),
                Level: level, Kind: kind, RecordID: rid, Date: s_(card.Date), Event: s_(card.Event),
-               "Arm/Body": arm, Feel: feel, DidLastStart: last ? ans.did : "", LastStart: last,
+               "Arm/Body": arm, Feel: feel, PrePitch: ans.pre, Reset: ans.reset, DidLastStart: last ? ans.did : "", LastStart: last,
                Start: ans.start, Stop: ans.stop, Continue: ans.cont, Bothering: ans.bother, Flag: flag.join(", ")};
     if (flag.length) {
       to = flagTo_(ss, kind === "hit" ? "hitting" : "pitching", level, cfg);
@@ -911,6 +1022,7 @@ function saveReflection(o) {
                           htmlBody: flagDoc_(row, cfg), body: flagText_(row, cfg)});
       row.FlaggedTo = cfg.mode === "off" ? "(SEND_MODE off) " + to : to;
     }
+    sheet_(ss, "Reflections", REFL_HEAD);           /* adds PrePitch and Reset to a tab made before they existed */
     var rt = table_(ss, "Reflections");
     append_(rt.sheet, [row]);
     var log = table_(ss, "Cards");
@@ -945,6 +1057,7 @@ function flagDoc_(r, cfg) {
     '<p style="font-size:16px"><b>' + e_(r.Player) + "</b> (" + e_(r.Level || "no level") + ") flagged <b>" + e_(r.Flag.toLowerCase()) +
     "</b> in his reflection after " + e_(r.Event) + ".</p>" +
     '<table style="border-collapse:collapse;font-size:15px">' + line("Arm/body", r["Arm/Body"] + " of 5") + line("Feel", r.Feel + " of 5") +
+    line("Pre-pitch process", r.PrePitch) + line("Reset", r.Reset) +
     line("Bothering him", r.Bothering) + line("START", r.Start) + line("STOP", r.Stop) + line("CONTINUE", r.Continue) + "</table>" +
     '<p style="font-size:15px">Please check in with him today. If you are worried about his safety, follow the school&rsquo;s student support process right away.</p>' +
     (cfg.reflUrl ? '<p><a href="' + e_(cfg.reflUrl) + '">All reflections</a></p>' : "") +

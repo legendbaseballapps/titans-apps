@@ -350,7 +350,7 @@ const PEN1 = REC["bullpen2027-01-12"], PEN2 = REC["bullpen2027-01-19"], LIVE = R
   ok(/How&rsquo;s your body\?/.test(raw({ t: ht, r: OFF, k: "hit" })), "card page: body question for a hitter");
 
   const save = o => rt.call("saveReflection", o);
-  const good = { t: st, r: PEN1, k: "pen", arm: 4, feel: 4, start: "Finish the change-up out front", stop: "Rushing from the stretch", cont: "Attacking with the fastball", bother: "" };
+  const good = { t: st, r: PEN1, k: "pen", arm: 4, feel: 4, pre: "Most", reset: "Every time", start: "Finish the change-up out front", stop: "Rushing from the stretch", cont: "Attacking with the fastball", bother: "" };
   eq(save(Object.assign({}, good, { t: "0".repeat(40) })).ok, false, "save: bad token refused");
   eq(save(Object.assign({}, good, { t: ht })).ok, false, "save: another player's token refused for this card");
   eq(save(Object.assign({}, good, { arm: 0 })).ok, false, "save: rating 0 refused");
@@ -375,7 +375,7 @@ const PEN1 = REC["bullpen2027-01-12"], PEN2 = REC["bullpen2027-01-19"], LIVE = R
   const v2 = get({ t: st, r: PEN2, k: "pen" });
   ok(v2.includes("Last time you said you'd start: Finish the change-up out front . Did you?"), "next card asks about last time's START");
   /* formulas and long text */
-  eq(save({ t: st, r: PEN2, k: "pen", did: "Partly", arm: 3, feel: 3, start: "=IMPORTXML(\"http://x\")", stop: "+1", cont: "x".repeat(400), bother: "" }).ok, true, "save: odd text accepted");
+  eq(save({ t: st, r: PEN2, k: "pen", did: "Partly", arm: 3, feel: 3, pre: "Most", reset: "Every time", start: "=IMPORTXML(\"http://x\")", stop: "+1", cont: "x".repeat(400), bother: "" }).ok, true, "save: odd text accepted");
   R = tab(rt, "Reflections");
   eq(R[1].Start, "=IMPORTXML(\"http://x\")", "a formula-looking START is kept as text");
   eq(rt.b.flags.formula, 0, "no cell became a formula");
@@ -385,19 +385,19 @@ const PEN1 = REC["bullpen2027-01-12"], PEN2 = REC["bullpen2027-01-19"], LIVE = R
 
   /* flags: pitcher, arm 2 -> pitching coaches; his pen has no level -> every pitching coach */
   rt.mail.length = 0;
-  const f1 = save({ t: st, r: LIVE, k: "pen", arm: 2, feel: 4, start: "a", stop: "b", cont: "c", bother: "" });
+  const f1 = save({ t: st, r: LIVE, k: "pen", arm: 2, feel: 4, pre: "Most", reset: "Every time", start: "a", stop: "b", cont: "c", bother: "" });
   eq(f1.flag, true, "arm 2 flags");
   eq(rt.mail.length, 1, "one heads-up email");
   ok(/^\[TEST for a@example\.com, c@example\.com, d@example\.com\] Heads-up: Colten Smith, physical flag/.test(rt.mail[0].subject), "pen flag: every pitching coach (no level on a pen), test redirect");
   ok(rt.mail[0].htmlBody.includes("2 of 5"), "heads-up shows the rating");
   /* pitcher game: Varsity -> Varsity pitching coach + Both */
   rt.mail.length = 0;
-  save({ t: st, r: GAME, k: "pitch", arm: 5, feel: 1, start: "a", stop: "b", cont: "c", bother: "" });
+  save({ t: st, r: GAME, k: "pitch", arm: 5, feel: 1, pre: "Most", reset: "Every time", start: "a", stop: "b", cont: "c", bother: "" });
   ok(/^\[TEST for a@example\.com, d@example\.com\] Heads-up: Colten Smith, mental flag/.test(rt.mail[0].subject), "game flag: Varsity pitching coaches only");
   /* hitter: flag word in the bothering box -> hitting coaches for his level */
   rt.mail.length = 0;
   const bt = tokenOf(rt, BOBO);
-  save({ t: bt, r: OFF, k: "hit", arm: 4, feel: 4, start: "a", stop: "b", cont: "c", bother: "Really stressed about school" });
+  save({ t: bt, r: OFF, k: "hit", arm: 4, feel: 4, pre: "Most", reset: "Every time", start: "a", stop: "b", cont: "c", bother: "Really stressed about school" });
   ok(/^\[TEST for b@example\.com, d@example\.com\] Heads-up: Ethan Bobo, mental flag/.test(rt.mail[0].subject), "hitter flag word: hitting coaches");
   eq(tab(rt, "Reflections").find(r => r.PlayerID === BOBO).Flag, "Mental", "Flag column says Mental");
   /* baseball talk in START/STOP/CONTINUE is not a flag; pain is */
@@ -410,7 +410,7 @@ const PEN1 = REC["bullpen2027-01-12"], PEN2 = REC["bullpen2027-01-19"], LIVE = R
   eq(ft(3, 3, { start: "", stop: "", cont: "", bother: "" }).length, 0, "3 and 3: no flag");
   /* off: a flag is still saved, but no email goes anywhere */
   rt.props.SEND_MODE = "off"; rt.mail.length = 0;
-  save({ t: ht, r: OFF, k: "hit", arm: 4, feel: 2, start: "a", stop: "b", cont: "c", bother: "" });
+  save({ t: ht, r: OFF, k: "hit", arm: 4, feel: 2, pre: "Most", reset: "Every time", start: "a", stop: "b", cont: "c", bother: "" });
   eq(rt.mail.length, 0, "SEND_MODE off: the heads-up is not emailed");
   ok(/^\(SEND_MODE off\)/.test(tab(rt, "Reflections").find(r => r.PlayerID === HAZEN).FlaggedTo), "and FlaggedTo says so");
   rt.b.getSheetByName("Reflections").data = rt.b.getSheetByName("Reflections").data.filter(r => r[1] !== HAZEN);
@@ -418,7 +418,7 @@ const PEN1 = REC["bullpen2027-01-12"], PEN2 = REC["bullpen2027-01-19"], LIVE = R
   /* no coach set up for a role -> the admin */
   const co = rt.b.getSheetByName("Coaches"); co.data = co.data.slice(0, 1);
   rt.mail.length = 0;
-  save({ t: ht, r: OFF, k: "hit", arm: 1, feel: 4, start: "a", stop: "b", cont: "c", bother: "" });
+  save({ t: ht, r: OFF, k: "hit", arm: 1, feel: 4, pre: "Most", reset: "Every time", start: "a", stop: "b", cont: "c", bother: "" });
   ok(/^\[TEST for admin@example\.com\] Heads-up: Troy Hazen/.test(rt.mail[0].subject), "nobody set to Notify: ADMIN_EMAIL hears it");
   /* reminders stop once he reflects */
   const m0 = rt.mail.length;
@@ -434,9 +434,9 @@ const PEN1 = REC["bullpen2027-01-12"], PEN2 = REC["bullpen2027-01-19"], LIVE = R
   rt.clock.set(Date.now());
   rt.call("runEvening"); rt.call("runMorning");
   const st = tokenOf(rt, SMITH), bt = tokenOf(rt, BOBO);
-  rt.call("saveReflection", { t: st, r: PEN1, k: "pen", arm: 4, feel: 4, start: "<script>alert(1)</script>", stop: "b", cont: "c", bother: "" });
-  rt.call("saveReflection", { t: st, r: GAME, k: "pitch", arm: 2, feel: 4, start: "a", stop: "b", cont: "c", bother: "" });
-  rt.call("saveReflection", { t: bt, r: OFF, k: "hit", arm: 5, feel: 5, start: "Hunt the fastball", stop: "b", cont: "c", bother: "" });
+  rt.call("saveReflection", { t: st, r: PEN1, k: "pen", arm: 4, feel: 4, pre: "Most", reset: "Every time", start: "<script>alert(1)</script>", stop: "b", cont: "c", bother: "" });
+  rt.call("saveReflection", { t: st, r: GAME, k: "pitch", arm: 2, feel: 4, pre: "Most", reset: "Every time", start: "a", stop: "b", cont: "c", bother: "" });
+  rt.call("saveReflection", { t: bt, r: OFF, k: "hit", arm: 5, feel: 5, pre: "Most", reset: "Every time", start: "Hunt the fastball", stop: "b", cont: "c", bother: "" });
   const cp = makeRuntime(process.env.CARDS_REFL || path.join(ROOT, "cards", "Reflections.gs"));
   const cb = cp.newBook("S");
   rt.b.order.forEach(n => { cb.insertSheet(n).data = JSON.parse(JSON.stringify(rt.b.getSheetByName(n).data)); });
@@ -454,6 +454,68 @@ const PEN1 = REC["bullpen2027-01-12"], PEN2 = REC["bullpen2027-01-19"], LIVE = R
   ok(/Still waiting/.test(all) && /Live at-bats, Jan 26/.test(all) && /Troy Hazen/.test(all), "coaches page: cards still waiting on a reflection");
   const book = cp.book("S");
   ok(!book.order.some(n => /Player_Links/.test(n)) || !all.includes(st), "coaches page never prints a player's private link");
+}
+
+/* ========================================================== 9. mental game: process questions, Stay on green, Deadly Sins */
+{
+  const rt = world();
+  ready(rt, "test");
+  rt.call("runEvening"); rt.call("runMorning");
+  ok(rt.mail.filter(m => /card/.test(m.subject)).every(m => text(m.htmlBody).includes("Stay on green Every pitch: Breathe Focal point Positive thought Execute")), "every card carries the pre-pitch process");
+  ok(rt.mail.filter(m => /card/.test(m.subject)).every(m => /Yellow light<\/b> \(squeezed, big hit, error\): step off/.test(m.htmlBody)), "every card carries the reset process");
+  const st = tokenOf(rt, SMITH), save = o => rt.call("saveReflection", o);
+  const base = { t: st, r: PEN1, k: "pen", arm: 4, feel: 4, start: "a", stop: "b", cont: "c", bother: "" };
+  eq(save(base).ok, false, "save: no process answers refused");
+  eq(save(Object.assign({}, base, { pre: "Most" })).ok, false, "save: reset unanswered refused");
+  eq(save(Object.assign({}, base, { pre: "Always", reset: "Every time" })).ok, false, "save: a made-up answer refused");
+  /* a Reflections tab made by cards 1, before the 2 columns existed */
+  const R = rt.b.getSheetByName("Reflections");
+  R.data[0] = R.data[0].filter(h => h !== "PrePitch" && h !== "Reset");
+  eq(save(Object.assign({}, base, { pre: "Most", reset: "No yellow lights" })).ok, true, "save: both answered");
+  const r = tab(rt, "Reflections")[0];
+  eq(r.PrePitch, "Most", "PrePitch stored");
+  eq(r.Reset, "No yellow lights", "Reset stored, the column added to an older tab");
+  const view = rt.call("doGet", { parameter: { t: st, r: PEN2, k: "pen" } }).getContent();
+  ok(/Pre-pitch process: Breathe, Focal point, Positive thought, Execute\. How often did you run it\?/.test(view) && /data-name="reset"/.test(view), "the form asks both");
+  ok(text(rt.call("doGet", { parameter: { t: st, r: PEN1, k: "pen" } }).getContent()).includes("Pre-pitch process: Most Reset: No yellow lights"), "his saved reflection shows both answers");
+  rt.mail.length = 0;
+  save({ t: st, r: LIVE, k: "pen", arm: 2, feel: 4, pre: "Some", reset: "No", start: "a", stop: "b", cont: "c", bother: "" });
+  ok(text(rt.mail[0].htmlBody).includes("Pre-pitch process Some Reset No"), "the heads-up shows both answers");
+  const cp = makeRuntime(process.env.CARDS_REFL || path.join(ROOT, "cards", "Reflections.gs"));
+  const cb = cp.newBook("S");
+  rt.b.order.forEach(n => { cb.insertSheet(n).data = JSON.parse(JSON.stringify(rt.b.getSheetByName(n).data)); });
+  cp.props.SEASON_SHEET_ID = "S"; cp.session.active = "a@example.com";
+  ok(text(cp.sandbox.doGet({ parameter: {} }).getContent()).includes("Pre-pitch Most Reset No yellow lights"), "coaches page shows both answers");
+
+  /* Deadly Sins on the demo game: Smith walked the leadoff man in the 2nd after 0-2; Hall walked the leadoff man in the 6th */
+  const sm = text(cardOf(rt, GAME, SMITH));
+  ok(sm.includes("The Deadly Sins Today Leadoff free base 1 Two-out free base 0 4-pitch free base 0 0-2 extra-base hit 0 0-2 free base 1 2 sins today."), "Smith: leadoff and 0-2 free base");
+  ok(text(cardOf(rt, GAME, HALL)).includes("Leadoff free base 1 Two-out free base 0 4-pitch free base 0 0-2 extra-base hit 0 0-2 free base 0 1 sin today."), "Hall: leadoff free base");
+  ok(text(cardOf(rt, GAME, BORCH)).includes("None today. Nothing free."), "Borcherding: none");
+  ok(!/Deadly Sins/.test(cardOf(rt, PEN2, SMITH)) && !/Deadly Sins/.test(cardOf(rt, OFF, HAZEN)), "Deadly Sins only on the pitcher game card");
+
+  /* a made-up game that commits every countable sin once, plus the edge cases */
+  const GH = FIX.Game_Pitches[0], GP = rt.b.getSheetByName("Game_Pitches");
+  const row = (inn, spot, ab, n, call, res) => GH.map(h => ({ RecordID: "syn1", Level: "JV", Date: "2027-04-09", Opponent: "Test", Inning: inn, Spot: spot,
+    Batter: "B" + spot, AB: ab, Pitch: n, Type: n === "" ? "" : "FB", Call: call, PitcherID: "synP", Pitcher: "Syn", PitcherLast: "Syn", PitcherFirst: "P", ABResult: res })[h] ?? "");
+  const ab = (inn, spot, abn, calls, res) => calls.length ? calls.forEach((c, i) => GP.data.push(row(inn, spot, abn, i + 1, c, res))) : GP.data.push(row(inn, spot, abn, "", "", res));
+  ab(1, 1, 1, ["ball", "ball", "ball", "ball"], "BB");                       /* leadoff, 4 pitches */
+  ab(1, 2, 1, ["strike", "strike", "strike"], "K");
+  ab(1, 3, 1, ["in play"], "GO");
+  ab(1, 4, 1, ["strike", "strike", "ball"], "HBP");                          /* 2 outs, after 0-2 */
+  ab(1, 5, 1, ["strike", "foul", "foul", "in play"], "2B");                  /* 0-2: the foul with 2 strikes stays 0-2 */
+  ab(1, 6, 1, ["in play"], "FO");
+  ab(2, 7, 1, [], "IBB");                                                     /* leadoff, no pitch */
+  ab(2, 8, 1, ["strike", "strike", "strike"], "K");
+  ab(2, 9, 1, ["ball", "strike", "strike", "strike"], "K");
+  ab(2, 1, 2, ["strike", "ball", "ball", "ball", "ball"], "BB");             /* spot 1 bats after 9; 2 outs; not 4-pitch */
+  ab(2, 2, 2, ["strike", "strike", "swing&miss"], "K");
+  rt.b.getSheetByName("Records").data.push(["syn1", "game", "v34", 1, "", "JV", "2027-04-09", "Coach V", "", "", "2027-04-09T20:00:00Z", "2027-04-09T20:00:01Z", 30]);
+  const sy = text(cardOf(rt, "syn1", "synP"));
+  ok(sy.includes("Leadoff free base 2 Two-out free base 2 4-pitch free base 1 0-2 extra-base hit 1 0-2 free base 1 7 sins today."), "made-up game: every sin counted once, IBB leads off, the order wraps from 9 to 1");
+  /* a game charted before innings were kept: no section, nothing guessed */
+  GP.data.forEach((r, i) => { if (i && r[0] === "syn1") r[GH.indexOf("Inning")] = ""; });
+  ok(!/Deadly Sins/.test(cardOf(rt, "syn1", "synP")), "no innings: no Deadly Sins section");
 }
 
 console.log(pass + " card checks" + (fail ? ", " + fail + " FAILED" : ""));
