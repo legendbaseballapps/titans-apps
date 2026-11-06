@@ -1,5 +1,5 @@
-/* sample 3 (Nov 2026): keeps the sample card page working with no signal once it has loaded. */
-var CACHE = "titans-sample-3";
+/* sample 4 (Nov 2026): keeps the sample card page working with no signal once it has loaded. */
+var CACHE = "titans-sample-4";
 self.addEventListener("install", function (e) { e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(["sample.html"]); })); self.skipWaiting(); });
 self.addEventListener("activate", function (e) { e.waitUntil(caches.keys().then(function (k) { return Promise.all(k.filter(function (n) { return n.indexOf("titans-sample-") === 0 && n !== CACHE; }).map(function (n) { return caches.delete(n); })); })); });
 self.addEventListener("fetch", function (e) {
