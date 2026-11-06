@@ -41,6 +41,7 @@ const M = [
   ["counter counts later games", 'counterLine_(freeSaved_(d, seasonRecs), G.saveGoal)', 'counterLine_(freeSaved_(d, d.byRec), G.saveGoal)'],
   ["counter ignores Config goal", 'o.saveGoal = v(SAVE_GOAL);', 'o.saveGoal = SAVE_GOAL.v;'],
   ["K per walk counts hit batters", 'if (a.result === "BB" || a.result === "IBB") sBB++;', 'if (FREE[a.result]) sBB++;'],
+  ["missed goal shows nothing", 'p == null ? "" : (met ? CHECK : RING),', 'p == null ? "" : (met ? CHECK : ""),'],
   ["older Reflections tab not extended", 'sheet_(ss, "Reflections", REFL_HEAD);           /* adds', '/* adds'],
   ["page shows other players' cards", 'return s_(r.PlayerID) === pid && /^(sent|test)$/.test(s_(r.Status));', 'return /^(sent|test)$/.test(s_(r.Status));']
 ];

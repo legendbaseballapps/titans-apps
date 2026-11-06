@@ -1,4 +1,4 @@
-/* Titans Coaching Dashboard
+/* Titans Coaches Dashboard
    =========================
    A standalone Apps Script web app that reads the season Sheet the upload receiver
    fills. Page 1 is the Program overview: the 150 free-base counter with its pace line
@@ -12,7 +12,7 @@
 
    Setup, once (full steps in claude/dashboard-google-setup.md, Step 5):
      1. script.google.com, signed in as the program account > New project
-        "Titans Coaching Dashboard" > paste this file over Code.gs > Save.
+        "Titans Coaches Dashboard" > paste this file over Code.gs > Save.
      2. Project Settings: time zone America/Denver. Script property SEASON_SHEET_ID,
         the same ID the receiver and the cards use.
      3. Deploy > New deployment > Web app. Execute as: User accessing the web app.
@@ -171,7 +171,7 @@ function metrics_(o) {
 /* =========================================================== the overview */
 function overview_(c, coach) {
   var S = c.S, goal = S.saveGoal;
-  var head = '<div class="head"><div class="org">Legend Titans Baseball &middot; Coaching dashboard</div>' +
+  var head = '<div class="head"><div class="org">Legend Titans Baseball &middot; Coaches dashboard</div>' +
     "<h1>Program overview</h1><p>" + (S.season ? e_(S.season) + " spring games" : "Spring games") +
     (c.asOf ? " through " + e_(longDate_(c.asOf)) : "") + " &middot; " + c.prog.nGames + " of " + c.scheduled +
     " games charted &middot; signed in as " + e_(coach.Name || coach["Google account"]) + "</p></div>";
@@ -285,7 +285,7 @@ function e_(v) {
 function box_(title, msg) { return '<div class="card"><h2>' + e_(title) + "</h2><p>" + msg + "</p></div>"; }
 function page_(inner) {
   var html = '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
-    '<title>Titans Coaching Dashboard</title><base target="_top"><style>' +
+    '<title>Titans Coaches Dashboard</title><base target="_top"><style>' +
     "body{margin:0;background:#ECEFF5;font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif;color:#16233A}" +
     ".wrap{max-width:1120px;margin:0 auto;padding:14px 16px 40px}" +
     ".head,.card{background:#fff;border:1px solid #D2D9E6;border-radius:10px;padding:16px 18px;margin-top:12px}" +
@@ -313,5 +313,5 @@ function page_(inner) {
     ".ok{color:#1F7A4A;font-weight:800}.ring{display:inline-block;width:9px;height:9px;border:2px solid #8FB8E8;border-radius:50%;vertical-align:-1px}" +
     "@media print{body{background:#fff}.card,.head{break-inside:avoid;border-color:#bbb}}" +
     '</style></head><body><div class="wrap">' + inner + "</div></body></html>";
-  return HtmlService.createHtmlOutput(html).setTitle("Titans Coaching Dashboard").addMetaTag("viewport", "width=device-width, initial-scale=1");
+  return HtmlService.createHtmlOutput(html).setTitle("Titans Coaches Dashboard").addMetaTag("viewport", "width=device-width, initial-scale=1");
 }

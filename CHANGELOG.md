@@ -21,10 +21,10 @@ old one — tap the amber stamp to fix it.
 | **Pitch Chart** (game) | **v34** | **v34** (Jim pushed Oct 26) |
 | **Offense Chart** | **v52** | **v52** (Jim pushed Oct 28) |
 | **Receiver** | **receiver 4** | Redeploy as a new version of the same deployment (URL and key unchanged). Includes receiver 3 (game notes) |
-| **Player cards** | **cards 4**, **reflections 2** (`cards/`) | **cards 3** deployed Nov 2. **cards 4 (Nov 6) waiting:** paste and deploy as a New version. Test mode. Next: the test-mode run, then emails and go-live |
+| **Player cards** | **cards 4.1**, **reflections 2** (`cards/`) | **cards 3** deployed Nov 2. **cards 4.1 (Nov 6) waiting:** paste and deploy as a New version (replaces cards 4, never deployed). Test mode. Next: the test-mode run, then emails and go-live |
 | **Demo page** | `demo/index.html` | **Live Nov 2** (adds Load the 7th inning; checked against the site). Rebuild with `tools/demo-build.js`, then `LIVE=1`, then `tools/demo-page.py` |
-| **Sample card page** | **sample 2** (`cards/sample.html`, `cards/sample-sw.js`) | **sample 1 live Nov 2. sample 2 (Nov 6) waiting:** push both files. For the player meeting Nov 12 (QR code). Rebuild with `tools/cards/sample-page.js` |
-| **Coaching dashboard** | **dashboard 1** (`dashboard/Code.gs`): Program overview | **Not set up yet.** New Apps Script project on the program account, Execute as: User accessing the web app (steps in the file header) |
+| **Sample card page** | **sample 3** (`cards/sample.html`, `cards/sample-sw.js`) | **sample 2 live Nov 6. sample 3 (Nov 6) waiting:** push both files (open ring for not yet). For the player meeting Nov 12 (QR code). Rebuild with `tools/cards/sample-page.js` |
+| **Coaches dashboard** | **dashboard 1** (`dashboard/Code.gs`): Program overview | **Live Nov 6** as Titans Coaches Dashboard (Execute as: User accessing the web app). Checked by Jim from vaughnzj@gmail.com: Program overview, "0 of 80 games charted". The Coaches tab header must read exactly `Google account` (B1 said "Google Account" and turned him away; fixed) |
 
 **The site moved Oct 14, 2026** to the program-owned account: **legendbaseballapps.github.io/titans-apps** (repo transferred from vaughnzj, so the live files, including the real `roster.js`, moved as they were). Every iPad installs from the new link; History saved under the old address does not carry over. The Coach's Guides in the pending builds (bullpen v31, game v23, offense v42) carry the new address, so pushing those builds is what puts it on the iPads.
 
@@ -58,7 +58,7 @@ is only for app code.
 - Build: `LIVE=1 node tools/demo-build.js` (stops the same seeded games at the start of the 7th), then `python3 tools/demo-page.py`.
 - Tests: `tools/demo-live-check.js` loads it, charts a 4-pitch strikeout in the Pitch Chart and a pitch in the Offense Chart; `tools/demo-check.js` still all ok.
 
-## Coaching dashboard
+## Coaches dashboard (Titans Coaches Dashboard)
 
 ### dashboard 1 · Nov 6, 2026
 
@@ -73,6 +73,15 @@ is only for app code.
 - Tests: `tools/dashboard/dashboard.js` (120 checks, every number worked out separately from the rows, the cards and the dashboard agree on the counter, laptop and phone widths with no sideways scroll); `tools/dashboard/mutate.js` (15 of 15 bugs caught).
 
 ## Player cards
+
+### cards 4.1 and sample 3 · Nov 6, 2026
+
+**Headline:** a missed goal on the pitcher game card now shows the same open ring as the deck and the dashboard; the old grey dot couldn't be seen (Jim: "I want everything to match").
+
+- Met = green check, not yet = open blue ring. The key under the table names both.
+- Goal labels now say "or more" / "or less" on every row (goal 60% or more, ERA goal 3.50 or less), the same wording as the dashboard.
+- `cards/sample.html` rebuilt as sample 3.
+- Tests: `tools/cards/cards.js` 208 checks; `tools/cards/mutate.js` 42 of 42 caught; page and sample checks pass.
 
 ### cards 4 and sample 2 · Nov 6, 2026
 

@@ -1,4 +1,4 @@
-/* Coaching dashboard, page 1 (Program overview), on the stand-in Sheet (Nov 2026).
+/* Coaches dashboard, page 1 (Program overview), on the stand-in Sheet (Nov 2026).
 
      cd titans-apps && node tools/dashboard/dashboard.js [screenshot-folder]
 

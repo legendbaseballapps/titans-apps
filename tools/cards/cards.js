@@ -234,11 +234,11 @@ const PEN1 = REC["bullpen2027-01-12"], PEN2 = REC["bullpen2027-01-19"], LIVE = R
   const outs = sum("Outs");
   ok(gt.includes("Varsity vs Ridgeview Tue, Apr 6 Starter"), "game card: level, opponent, date, role");
   ok(gt.includes(Math.floor(outs / 3) + "." + (outs % 3) + " Innings " + sum("Pitches") + " Pitches " + sum("BattersFaced") + " Batters " + sum("Runs") + " / " + sum("Earned") + " Runs / ER"), "game card: outing tiles");
-  ok(gt.includes("First-pitch strikes goal 60% " + sum("FirstPitchStrikes") + " of " + sum("FirstPitches")), "game card: first-pitch strikes today");
-  ok(gt.includes("Strikes goal 60% " + sum("Strikes") + " of " + sum("Pitches")), "game card: strikes today");
-  ok(gt.includes("Strikeouts goal 22% " + sum("K") + " of " + sum("BattersFaced")), "game card: strikeouts today");
+  ok(gt.includes("First-pitch strikes goal 60% or more " + sum("FirstPitchStrikes") + " of " + sum("FirstPitches")), "game card: first-pitch strikes today");
+  ok(gt.includes("Strikes goal 60% or more " + sum("Strikes") + " of " + sum("Pitches")), "game card: strikes today");
+  ok(gt.includes("Strikeouts goal 22% or more " + sum("K") + " of " + sum("BattersFaced")), "game card: strikeouts today");
   const ip = outs / 3;
-  ok(gt.includes("ERA goal 3.50 " + (sum("Earned") * 7 / ip).toFixed(2)), "game card: season ERA");
+  ok(gt.includes("ERA goal 3.50 or less " + (sum("Earned") * 7 / ip).toFixed(2)), "game card: season ERA");
   ok(gt.includes("Fastball command was there all day."), "game card: note to him");
   ok(!gt.includes("tempo with runners"), "game card: coach-only note never shown");
   ok(!/Hall|Borcherding|Reyes/.test(gt), "game card: no other names");
@@ -525,6 +525,13 @@ const PEN1 = REC["bullpen2027-01-12"], PEN2 = REC["bullpen2027-01-19"], LIVE = R
   const sm = cardOf(rt, GAME, SMITH), smt = text(sm);
   ok(smt.includes("Pitch Relentless: program goals") && !/Nothing Free/i.test(sm), "goals section is Pitch Relentless, Nothing Free is gone");
   ok(!/Stay on green/i.test(sm) && /get back to green and win the next one/.test(sm), "Get back to green wording, no Stay on green");
+  /* cards 4.1: met is a green check, not yet is the same open ring the deck and dashboard use */
+  const RING = /border:2px solid #8FB8E8;border-radius:50%/;
+  const goalRows = sm.split("Pitch Relentless: program goals")[1].split("met the goal today")[0].split("<tr>").slice(2);
+  ok(goalRows.length >= 5 && goalRows.slice(0, 5).every(r => (/&#10003;/.test(r) ? !RING.test(r) : RING.test(r) || !/of \d/.test(r))), "each outing goal shows a check or an open ring");
+  ok(goalRows.slice(0, 5).some(r => RING.test(r)), "a missed goal shows the open ring");
+  ok(!/color:#5A6781">&middot;<\/span>/.test(sm), "the old grey dot is gone");
+  ok(/not yet\. Season:/.test(text(sm)), "the key names both markers");
   /* K per walk, season to date, worked out here from the innings and at-bats */
   const inn = FIX.Game_Innings.slice(1).map(r => Object.fromEntries(FIX.Game_Innings[0].map((h, i) => [h, r[i]])));
   const gp = FIX.Game_Pitches.slice(1).map(r => Object.fromEntries(FIX.Game_Pitches[0].map((h, i) => [h, r[i]])));

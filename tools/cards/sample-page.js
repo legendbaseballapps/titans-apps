@@ -21,7 +21,7 @@ const ROSTER = fs.readFileSync(path.join(ROOT, "bullpen", "roster.js"), "utf8");
 const LOGO = "data:image/jpeg;base64," + require("child_process").execFileSync("python3", ["-c", "import sys,io;from PIL import Image;im=Image.open(sys.argv[1]).convert(\"RGB\").resize((160,79),Image.LANCZOS);b=io.BytesIO();im.save(b,\"JPEG\",quality=85,optimize=True);sys.stdout.buffer.write(b.getvalue())", path.join(ROOT, "cards", "lt-logo.png")]).toString("base64");
 const PITCHER = { id: "ad6bxsq", first: "Jake", last: "Miller" };
 const HITTER = { id: "fro8j13", first: "Ryan", last: "Torres" };
-const VERSION = "sample 2 (Nov 2026)";
+const VERSION = "sample 3 (Nov 2026)";
 
 const rt = makeRuntime(path.join(ROOT, "cards", "Code.gs"), { fetch: { "https://legendbaseballapps.github.io/titans-apps/bullpen/roster.js": ROSTER } });
 const b = rt.newBook("S");

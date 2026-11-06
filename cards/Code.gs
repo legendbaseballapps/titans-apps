@@ -33,7 +33,7 @@
      function either ends in _ (private) or refuses to run unless it was started
      from the editor or one of this project's own triggers. */
 
-var VERSION = "cards 4 (Nov 2026)";
+var VERSION = "cards 4.1 (Nov 2026)";
 
 var PLAYERS_HEAD = ["PlayerID", "Last", "First", "Class", "Level", "Player email", "Parent email", "Send"];
 var LINKS_HEAD = ["PlayerID", "Token", "Made"];
@@ -635,19 +635,19 @@ function pitchCard_(d, rec, pid) {
   var today = {fps: [t.fps, t.fp], strike: [t.strikes, t.pitches], free: [t.free, t.bf], k: [t.k, t.bf], hard: [hard, bip]};
   var season = {fps: [sInn.fps, sInn.fp], strike: [sInn.strikes, sInn.pitches], free: [sInn.free, sInn.bf],
                 k: [sInn.k, sInn.bf], hard: [sHard, sBip]};
-  var CHECK = '<span style="color:#1F7A4A;font-weight:700">&#10003;</span>', DOT = '<span style="color:#5A6781">&middot;</span>';
+  var CHECK = '<span style="color:#1F7A4A;font-weight:700">&#10003;</span>', RING = '<span style="display:inline-block;width:9px;height:9px;border:2px solid #8FB8E8;border-radius:50%;vertical-align:-1px"></span>';
   var goalRows = GOALS.map(function (g) {
     var a = today[g.k], s = season[g.k], gv = G[g.k];
     var p = a[1] ? Math.round(a[0] * 100 / a[1]) : null;
     var met = p != null && (g.more ? p >= gv : p <= gv);
-    return ["<b>" + e_(g.name) + '</b><div style="font-size:12px;color:#5A6781">goal ' + gv + "%" + (g.more ? "" : " or less") + "</div>",
+    return ["<b>" + e_(g.name) + '</b><div style="font-size:12px;color:#5A6781">goal ' + gv + "%" + (g.more ? " or more" : " or less") + "</div>",
             a[1] ? a[0] + " of " + a[1] + '<div style="font-size:12px;color:#5A6781">' + p + "%</div>" : "&ndash;",
-            p == null ? "" : (met ? CHECK : DOT),
+            p == null ? "" : (met ? CHECK : RING),
             s[1] ? Math.round(s[0] * 100 / s[1]) + "%" : "&ndash;"];
   });
-  goalRows.push(["<b>ERA</b><div style=\"font-size:12px;color:#5A6781\">goal " + G.era.toFixed(2) + "</div>", "", "",
+  goalRows.push(["<b>ERA</b><div style=\"font-size:12px;color:#5A6781\">goal " + G.era.toFixed(2) + " or less</div>", "", "",
                  ip ? (sInn.er * 7 / ip).toFixed(2) : "&ndash;"]);
-  goalRows.push(["<b>WHIP</b><div style=\"font-size:12px;color:#5A6781\">goal " + G.whip.toFixed(2) + "</div>", "", "",
+  goalRows.push(["<b>WHIP</b><div style=\"font-size:12px;color:#5A6781\">goal " + G.whip.toFixed(2) + " or less</div>", "", "",
                  ip ? ((sBB + sInn.hits) / ip).toFixed(2) : "&ndash;"]);
   goalRows.push(["<b>Strikeouts per walk</b><div style=\"font-size:12px;color:#5A6781\">goal " + G.kbb.toFixed(1) + " or more</div>", "", "",
                  sBB ? (sInn.k / sBB).toFixed(1) : (sInn.k ? sInn.k + " K, no walks" : "&ndash;")]);
@@ -659,7 +659,7 @@ function pitchCard_(d, rec, pid) {
                                           [t.runs + " / " + t.er, "Runs / ER"]]));
   body += section_("Pitch Relentless: program goals", table_html_(["", "Today", "", "Season"], goalRows,
       ["left", "center", "center", "center"]) +
-    '<div style="font-size:12px;color:#5A6781;margin:6px 2px 0">' + CHECK + " met the goal today. Season: " + nGames +
+    '<div style="font-size:12px;color:#5A6781;margin:6px 2px 0">' + CHECK + " met the goal today &middot; " + RING + " not yet. Season: " + nGames +
     (nGames === 1 ? " game, " : " games, ") + ip_(sInn.outs) + " innings.</div>" +
     counterLine_(freeSaved_(d, seasonRecs), G.saveGoal));
   var sins = sins_(d.game.filter(function (r) { return s_(r.RecordID) === rid; }), pid);
