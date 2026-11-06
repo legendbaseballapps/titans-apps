@@ -21,9 +21,10 @@ old one — tap the amber stamp to fix it.
 | **Pitch Chart** (game) | **v34** | **v34** (Jim pushed Oct 26) |
 | **Offense Chart** | **v52** | **v52** (Jim pushed Oct 28) |
 | **Receiver** | **receiver 4** | Redeploy as a new version of the same deployment (URL and key unchanged). Includes receiver 3 (game notes) |
-| **Player cards** | **cards 2**, **reflections 2** (`cards/`) | **cards 3** waiting (paste Code.gs, then a New version); reflections 2 live. Test mode. Next: the test-mode run, then emails and go-live |
-| **Demo page** | `demo/index.html` | **Waiting:** push the Nov 2 rebuild (adds Load the 7th inning). Rebuild with `tools/demo-build.js`, then `LIVE=1`, then `tools/demo-page.py` |
-| **Sample card page** | `cards/sample.html`, `cards/sample-sw.js` | **Waiting:** push both for the player meeting (QR code). Rebuild with `tools/cards/sample-page.js` |
+| **Player cards** | **cards 4**, **reflections 2** (`cards/`) | **cards 3** deployed Nov 2. **cards 4 (Nov 6) waiting:** paste and deploy as a New version. Test mode. Next: the test-mode run, then emails and go-live |
+| **Demo page** | `demo/index.html` | **Live Nov 2** (adds Load the 7th inning; checked against the site). Rebuild with `tools/demo-build.js`, then `LIVE=1`, then `tools/demo-page.py` |
+| **Sample card page** | **sample 2** (`cards/sample.html`, `cards/sample-sw.js`) | **sample 1 live Nov 2. sample 2 (Nov 6) waiting:** push both files. For the player meeting Nov 12 (QR code). Rebuild with `tools/cards/sample-page.js` |
+| **Coaching dashboard** | **dashboard 1** (`dashboard/Code.gs`): Program overview | **Not set up yet.** New Apps Script project on the program account, Execute as: User accessing the web app (steps in the file header) |
 
 **The site moved Oct 14, 2026** to the program-owned account: **legendbaseballapps.github.io/titans-apps** (repo transferred from vaughnzj, so the live files, including the real `roster.js`, moved as they were). Every iPad installs from the new link; History saved under the old address does not carry over. The Coach's Guides in the pending builds (bullpen v31, game v23, offense v42) carry the new address, so pushing those builds is what puts it on the iPads.
 
@@ -57,7 +58,32 @@ is only for app code.
 - Build: `LIVE=1 node tools/demo-build.js` (stops the same seeded games at the start of the 7th), then `python3 tools/demo-page.py`.
 - Tests: `tools/demo-live-check.js` loads it, charts a 4-pitch strikeout in the Pitch Chart and a pitch in the Offense Chart; `tools/demo-check.js` still all ok.
 
+## Coaching dashboard
+
+### dashboard 1 · Nov 6, 2026
+
+**Headline:** the dashboard's first page, the Program overview: the 150 free-base counter with its pace line, each team's share of 150, the free-base battle game by game, and the 9 program goals by level.
+
+- **Counter:** each spring game saves its batters faced × that level's 2026 free-base rate (Varsity 17.9%, JV 20.3%, Sophomore 18.2%, Freshman 17.7%), minus the walks and hit batters given up. Same math as the player cards.
+- **Pace:** each team's share (49, 43, 34, 24) × the part of its 2027 schedule already played (Varsity 23, JV 19, Sophomore 19, Freshman 19 regular-season games; scrimmages out). Shows ahead or behind. Playoff games still count toward 150.
+- **Free-base battle:** every game with free bases, batters, saved, and a check at 3 or fewer (2026 averaged 5.3).
+- **Goals table:** free bases, first-pitch strikes, strikes, strikeouts, strikeouts per walk, unearned runs, hard contact, WHIP and ERA for each level and the program, each with a check or an open ring.
+- Config can change the 150, any 2026 rate, any share, each level's games scheduled, the 3-a-game budget and any goal. Practice rows and bullpens never count.
+- Runs as the coach who opens it: the Sheet must be shared with him and he must be on the Coaches tab.
+- Tests: `tools/dashboard/dashboard.js` (120 checks, every number worked out separately from the rows, the cards and the dashboard agree on the counter, laptop and phone widths with no sideways scroll); `tools/dashboard/mutate.js` (15 of 15 bugs caught).
+
 ## Player cards
+
+### cards 4 and sample 2 · Nov 6, 2026
+
+**Headline:** the cards now match the locked 2027 goals and the season review: Pitch Relentless, Get Back to Green, strikeouts per walk, and the program's 150 counter on every pitcher game card.
+
+- Goals section renamed **Pitch Relentless: program goals**. The Deadly Sins line ends "get back to green and win the next one"; a clean game reads "None today. Pitch relentless."
+- The mental game box is now **Get back to green** on every card. Same pre-pitch and reset steps; the yellow light adds "it happens to everyone."
+- **Strikeouts per walk** (goal 2.0 or more) in the Season column of the pitcher game card, under ERA and WHIP. Walks only, no hit batters.
+- **Program goal line** under the goals: "X of 150 free bases saved so far, N games in", counting every level's spring games up to that game. Team number only. Behind the 2026 rate it says so plainly.
+- `cards/sample.html` rebuilt from cards 4 (sample 2), so the QR page at the Nov 12 meeting shows the new card.
+- Tests: `tools/cards/cards.js` 204 checks (was 191); `tools/cards/mutate.js` 41 of 41 caught; page and sample checks pass.
 
 ### Sample card page · Nov 2, 2026
 

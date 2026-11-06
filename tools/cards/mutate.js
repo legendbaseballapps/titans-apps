@@ -37,6 +37,10 @@ const M = [
   ["process box missing on the hitter card", 'chased off the plate"));\n  body += processBox_();', 'chased off the plate"));'],
   ["process answers not required", 'if (!ans.pre || !ans.reset) return {ok: false, error: "Answer the pre-pitch and reset questions."};', ''],
   ["any process answer accepted", 'ans.pre = PRE_ANS.indexOf(s_(o.pre)) >= 0 ? s_(o.pre) : "";', 'ans.pre = s_(o.pre);'],
+  ["counter uses one rate for every level", 'L.saved = L.bf * d.goals.base[lv] / 100 - L.free;', 'L.saved = L.bf * d.goals.base.Varsity / 100 - L.free;'],
+  ["counter counts later games", 'counterLine_(freeSaved_(d, seasonRecs), G.saveGoal)', 'counterLine_(freeSaved_(d, d.byRec), G.saveGoal)'],
+  ["counter ignores Config goal", 'o.saveGoal = v(SAVE_GOAL);', 'o.saveGoal = SAVE_GOAL.v;'],
+  ["K per walk counts hit batters", 'if (a.result === "BB" || a.result === "IBB") sBB++;', 'if (FREE[a.result]) sBB++;'],
   ["older Reflections tab not extended", 'sheet_(ss, "Reflections", REFL_HEAD);           /* adds', '/* adds'],
   ["page shows other players' cards", 'return s_(r.PlayerID) === pid && /^(sent|test)$/.test(s_(r.Status));', 'return /^(sent|test)$/.test(s_(r.Status));']
 ];

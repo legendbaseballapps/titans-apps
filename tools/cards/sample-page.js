@@ -21,7 +21,7 @@ const ROSTER = fs.readFileSync(path.join(ROOT, "bullpen", "roster.js"), "utf8");
 const LOGO = "data:image/jpeg;base64," + require("child_process").execFileSync("python3", ["-c", "import sys,io;from PIL import Image;im=Image.open(sys.argv[1]).convert(\"RGB\").resize((160,79),Image.LANCZOS);b=io.BytesIO();im.save(b,\"JPEG\",quality=85,optimize=True);sys.stdout.buffer.write(b.getvalue())", path.join(ROOT, "cards", "lt-logo.png")]).toString("base64");
 const PITCHER = { id: "ad6bxsq", first: "Jake", last: "Miller" };
 const HITTER = { id: "fro8j13", first: "Ryan", last: "Torres" };
-const VERSION = "sample 1 (Nov 2026)";
+const VERSION = "sample 2 (Nov 2026)";
 
 const rt = makeRuntime(path.join(ROOT, "cards", "Code.gs"), { fetch: { "https://legendbaseballapps.github.io/titans-apps/bullpen/roster.js": ROSTER } });
 const b = rt.newBook("S");
@@ -107,7 +107,7 @@ if (/script\.google\.com|googleusercontent/.test(html)) throw new Error("sample 
 fs.writeFileSync(path.join(ROOT, "cards", "sample.html"), html);
 fs.writeFileSync(path.join(ROOT, "cards", "sample-sw.js"),
 `/* ${VERSION}: keeps the sample card page working with no signal once it has loaded. */
-var CACHE = "titans-sample-1";
+var CACHE = "titans-sample-${VERSION.split(" ")[1]}";
 self.addEventListener("install", function (e) { e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(["sample.html"]); })); self.skipWaiting(); });
 self.addEventListener("activate", function (e) { e.waitUntil(caches.keys().then(function (k) { return Promise.all(k.filter(function (n) { return n.indexOf("titans-sample-") === 0 && n !== CACHE; }).map(function (n) { return caches.delete(n); })); })); });
 self.addEventListener("fetch", function (e) {

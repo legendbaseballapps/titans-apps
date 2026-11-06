@@ -33,7 +33,7 @@
      function either ends in _ (private) or refuses to run unless it was started
      from the editor or one of this project's own triggers. */
 
-var VERSION = "cards 3 (Oct 2026)";
+var VERSION = "cards 4 (Nov 2026)";
 
 var PLAYERS_HEAD = ["PlayerID", "Last", "First", "Class", "Level", "Player email", "Parent email", "Send"];
 var LINKS_HEAD = ["PlayerID", "Token", "Made"];
@@ -63,7 +63,19 @@ var GOALS = [
 ];
 var SEASON_GOALS = [
   {k: "era",  name: "ERA",  setting: "ERA goal",  v: 3.5},
-  {k: "whip", name: "WHIP", setting: "WHIP goal", v: 1.5}
+  {k: "whip", name: "WHIP", setting: "WHIP goal", v: 1.5},
+  {k: "kbb",  name: "Strikeouts per walk", setting: "Strikeouts per walk goal", v: 2.0}
+];
+/* The program goal (locked Nov 2026): 150 fewer free bases than 2026, spring games only.
+   Each game "saves" its batters faced x that level's 2026 free-base rate, minus the
+   walks and hit batters it actually gave up. The dashboard uses the same math.
+   Config can override any of these with a row of the same Setting name. */
+var SAVE_GOAL = {setting: "Free bases saved goal", v: 150};
+var BASE_RATES = [
+  {level: "Varsity",   setting: "2026 free-base rate Varsity",   v: 17.9},
+  {level: "JV",        setting: "2026 free-base rate JV",        v: 20.3},
+  {level: "Sophomore", setting: "2026 free-base rate Sophomore", v: 18.2},
+  {level: "Freshman",  setting: "2026 free-base rate Freshman",  v: 17.7}
 ];
 
 /* Same names and orders the 3 apps use. */
@@ -279,6 +291,9 @@ function goals_(ss) {
   function v(g) { var x = Number(cfg[g.setting.toLowerCase()]); return isFinite(x) && x > 0 ? x : g.v; }
   var o = {};
   GOALS.concat(SEASON_GOALS).forEach(function (g) { o[g.k] = v(g); });
+  o.saveGoal = v(SAVE_GOAL);
+  o.base = {};
+  BASE_RATES.forEach(function (b) { o.base[b.level] = v(b); });
   return o;
 }
 /* Who gets a card from one record, in the order they appear. */
@@ -552,6 +567,46 @@ function sins_(rows, pid) {
   });
   return o;
 }
+/* Program free bases saved, every level, over the given game records (spring games only:
+   the Pitch Chart never files a pen, and practice rows were dropped in load_). A level
+   with no 2026 rate is left out rather than guessed. */
+function freeSaved_(d, recIds) {
+  var o = {saved: 0, games: 0, levels: {}};
+  var seen = {};
+  d.inn.forEach(function (r) {
+    var rid = s_(r.RecordID);
+    if (!recIds[rid]) return;
+    var lv = levelName_(s_(r.Level) || s_((d.byRec[rid] || {}).Team));
+    var rate = d.goals.base[lv];
+    if (!rate) return;
+    var L = o.levels[lv] = o.levels[lv] || {bf: 0, free: 0, games: {}};
+    L.bf += num_(r.BattersFaced); L.free += num_(r.FreeBases); L.games[rid] = 1;
+    seen[rid] = 1;
+  });
+  Object.keys(o.levels).forEach(function (lv) {
+    var L = o.levels[lv];
+    L.saved = L.bf * d.goals.base[lv] / 100 - L.free;
+    o.saved += L.saved;
+  });
+  o.games = Object.keys(seen).length;
+  return o;
+}
+function levelName_(s) {
+  s = String(s || "").trim().toLowerCase();
+  if (/^v/.test(s)) return "Varsity";
+  if (/^j/.test(s)) return "JV";
+  if (/^so/.test(s)) return "Sophomore";
+  if (/^f/.test(s)) return "Freshman";
+  return "";
+}
+function counterLine_(c, goal) {
+  if (!c.games) return "";
+  var n = Math.round(c.saved), g = c.games + (c.games === 1 ? " game" : " games");
+  var txt = n >= 0 ? "<b>" + n + " of " + goal + "</b> free bases saved so far, " + g + " in."
+                   : "<b>" + (-n) + "</b> more free bases than 2026's rate so far, " + g + " in. The goal is " + goal + " saved.";
+  return '<div style="margin:10px 2px 0;padding:10px 12px;background:#F4F6FA;border-left:4px solid #C85C1C;font-size:14px;line-height:1.4;color:#16233A">' +
+         '<span style="font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#C85C1C">Program goal</span><br>' + txt + "</div>";
+}
 function pitchCard_(d, rec, pid) {
   var rid = s_(rec.RecordID), rows = rowsOf_(d.game, rid, "PitcherID", pid);
   var inns = rowsOf_(d.inn, rid, "PitcherID", pid);
@@ -594,23 +649,26 @@ function pitchCard_(d, rec, pid) {
                  ip ? (sInn.er * 7 / ip).toFixed(2) : "&ndash;"]);
   goalRows.push(["<b>WHIP</b><div style=\"font-size:12px;color:#5A6781\">goal " + G.whip.toFixed(2) + "</div>", "", "",
                  ip ? ((sBB + sInn.hits) / ip).toFixed(2) : "&ndash;"]);
+  goalRows.push(["<b>Strikeouts per walk</b><div style=\"font-size:12px;color:#5A6781\">goal " + G.kbb.toFixed(1) + " or more</div>", "", "",
+                 sBB ? (sInn.k / sBB).toFixed(1) : (sInn.k ? sInn.k + " K, no walks" : "&ndash;")]);
   var nGames = Object.keys(sInn.games).length;
   var body = "";
   var note = noteOf_(d.gameNotes, rid, "PitcherID", pid, "ToPitcher");
   if (note) body += note_(note);
   body += section_("Your outing", tiles_([[ip_(t.outs), "Innings"], [t.pitches, "Pitches"], [t.bf, "Batters"],
                                           [t.runs + " / " + t.er, "Runs / ER"]]));
-  body += section_("Nothing Free: program goals", table_html_(["", "Today", "", "Season"], goalRows,
+  body += section_("Pitch Relentless: program goals", table_html_(["", "Today", "", "Season"], goalRows,
       ["left", "center", "center", "center"]) +
     '<div style="font-size:12px;color:#5A6781;margin:6px 2px 0">' + CHECK + " met the goal today. Season: " + nGames +
-    (nGames === 1 ? " game, " : " games, ") + ip_(sInn.outs) + " innings.</div>");
+    (nGames === 1 ? " game, " : " games, ") + ip_(sInn.outs) + " innings.</div>" +
+    counterLine_(freeSaved_(d, seasonRecs), G.saveGoal));
   var sins = sins_(d.game.filter(function (r) { return s_(r.RecordID) === rid; }), pid);
   if (sins) {
     var total = SINS.reduce(function (a, k) { return a + sins[k.k]; }, 0);
     body += section_("The Deadly Sins", table_html_(["", "Today"], SINS.map(function (k) {
       return [e_(k.name), sins[k.k] ? "<b>" + sins[k.k] + "</b>" : '<span style="color:#1F7A4A;font-weight:700">0</span>'];
-    }), ["left", "center"]) + read_(total ? (total === 1 ? "1 sin today." : total + " sins today.") + " Each one starts with the pitch before it: stay on green and win the next one."
-                                          : "None today. Nothing free."));
+    }), ["left", "center"]) + read_(total ? (total === 1 ? "1 sin today." : total + " sins today.") + " Each one starts with the pitch before it: get back to green and win the next one."
+                                          : "None today. Pitch relentless."));
   }
   /* Execution against the call */
   var ex = {called: 0, spot: 0, close: 0, miss: 0, up: 0, down: 0, inn: 0, out: 0, by: {}};
@@ -752,11 +810,11 @@ function hitCard_(d, rec, pid) {
           body: body, level: level, role: "hitting", more: "See all your games"};
 }
 
-/* Every card: the pre-pitch and reset processes, in the program's own words. */
+/* Every card: the pre-pitch and reset processes, in the program's own words (Get Back to Green). */
 function processBox_() {
-  return section_("Stay on green", '<table role="presentation" width="100%" cellpadding="0" cellspacing="0">' +
+  return section_("Get back to green", '<table role="presentation" width="100%" cellpadding="0" cellspacing="0">' +
     '<tr><td style="padding:6px 0;font-size:14.5px;line-height:1.45;color:' + INK + '"><b>Every pitch:</b> Breathe &middot; Focal point &middot; Positive thought &middot; Execute</td></tr>' +
-    '<tr><td style="padding:6px 0;font-size:14.5px;line-height:1.45;color:' + INK + '"><b>Yellow light</b> (squeezed, big hit, error): step off, take your time limit, flush it, then your full pre&#8209;pitch process.</td></tr></table>');
+    '<tr><td style="padding:6px 0;font-size:14.5px;line-height:1.45;color:' + INK + '"><b>Yellow light</b> (squeezed, big hit, error): it happens to everyone. Step off, take your time limit, flush it, then your full pre&#8209;pitch process.</td></tr></table>');
 }
 /* =========================================================== HTML (email-safe) */
 var NAVY = "#16305C", ORANGE = "#C85C1C", INK = "#16233A", MUTED = "#5A6781", LINE = "#D2D9E6", BG = "#ECEFF5",

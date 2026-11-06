@@ -461,8 +461,8 @@ const PEN1 = REC["bullpen2027-01-12"], PEN2 = REC["bullpen2027-01-19"], LIVE = R
   const rt = world();
   ready(rt, "test");
   rt.call("runEvening"); rt.call("runMorning");
-  ok(rt.mail.filter(m => /card/.test(m.subject)).every(m => text(m.htmlBody).includes("Stay on green Every pitch: Breathe Focal point Positive thought Execute")), "every card carries the pre-pitch process");
-  ok(rt.mail.filter(m => /card/.test(m.subject)).every(m => /Yellow light<\/b> \(squeezed, big hit, error\): step off/.test(m.htmlBody)), "every card carries the reset process");
+  ok(rt.mail.filter(m => /card/.test(m.subject)).every(m => text(m.htmlBody).includes("Get back to green Every pitch: Breathe Focal point Positive thought Execute")), "every card carries the pre-pitch process");
+  ok(rt.mail.filter(m => /card/.test(m.subject)).every(m => /Yellow light<\/b> \(squeezed, big hit, error\): it happens to everyone\. Step off/.test(m.htmlBody)), "every card carries the reset process");
   const st = tokenOf(rt, SMITH), save = o => rt.call("saveReflection", o);
   const base = { t: st, r: PEN1, k: "pen", arm: 4, feel: 4, start: "a", stop: "b", cont: "c", bother: "" };
   eq(save(base).ok, false, "save: no process answers refused");
@@ -491,7 +491,7 @@ const PEN1 = REC["bullpen2027-01-12"], PEN2 = REC["bullpen2027-01-19"], LIVE = R
   const sm = text(cardOf(rt, GAME, SMITH));
   ok(sm.includes("The Deadly Sins Today Leadoff free base 1 Two-out free base 0 4-pitch free base 0 0-2 extra-base hit 0 0-2 free base 1 2 sins today."), "Smith: leadoff and 0-2 free base");
   ok(text(cardOf(rt, GAME, HALL)).includes("Leadoff free base 1 Two-out free base 0 4-pitch free base 0 0-2 extra-base hit 0 0-2 free base 0 1 sin today."), "Hall: leadoff free base");
-  ok(text(cardOf(rt, GAME, BORCH)).includes("None today. Nothing free."), "Borcherding: none");
+  ok(text(cardOf(rt, GAME, BORCH)).includes("None today. Pitch relentless."), "Borcherding: none");
   ok(!/Deadly Sins/.test(cardOf(rt, PEN2, SMITH)) && !/Deadly Sins/.test(cardOf(rt, OFF, HAZEN)), "Deadly Sins only on the pitcher game card");
 
   /* a made-up game that commits every countable sin once, plus the edge cases */
@@ -516,6 +516,54 @@ const PEN1 = REC["bullpen2027-01-12"], PEN2 = REC["bullpen2027-01-19"], LIVE = R
   /* a game charted before innings were kept: no section, nothing guessed */
   GP.data.forEach((r, i) => { if (i && r[0] === "syn1") r[GH.indexOf("Inning")] = ""; });
   ok(!/Deadly Sins/.test(cardOf(rt, "syn1", "synP")), "no innings: no Deadly Sins section");
+}
+
+/* ========================================================== 10. cards 4: Pitch Relentless, K per walk, the 150 counter */
+{
+  const rt = world();
+  ready(rt, "test");
+  const sm = cardOf(rt, GAME, SMITH), smt = text(sm);
+  ok(smt.includes("Pitch Relentless: program goals") && !/Nothing Free/i.test(sm), "goals section is Pitch Relentless, Nothing Free is gone");
+  ok(!/Stay on green/i.test(sm) && /get back to green and win the next one/.test(sm), "Get back to green wording, no Stay on green");
+  /* K per walk, season to date, worked out here from the innings and at-bats */
+  const inn = FIX.Game_Innings.slice(1).map(r => Object.fromEntries(FIX.Game_Innings[0].map((h, i) => [h, r[i]])));
+  const gp = FIX.Game_Pitches.slice(1).map(r => Object.fromEntries(FIX.Game_Pitches[0].map((h, i) => [h, r[i]])));
+  const pk = {}, pbb = {};
+  inn.forEach(r => { pk[r.PitcherID] = (pk[r.PitcherID] || 0) + Number(r.K || 0); });
+  const lastPitch = {};
+  gp.forEach(r => { lastPitch[r.RecordID + "|" + r.Spot + "|" + r.AB + "|" + r.Inning] = r; });
+  Object.values(lastPitch).forEach(r => { if (r.ABResult === "BB" || r.ABResult === "IBB") pbb[r.PitcherID] = (pbb[r.PitcherID] || 0) + 1; });
+  [SMITH, HALL, BORCH].forEach(p => {
+    const c = text(cardOf(rt, GAME, p)), k = pk[p] || 0, bb = pbb[p] || 0;
+    const want = bb ? (k / bb).toFixed(1) : (k ? k + " K, no walks" : "–");
+    ok(c.includes("Strikeouts per walk goal 2.0 or more " + want), p + ": K per walk " + want + " (" + k + " K, " + bb + " BB)");
+  });
+  /* The counter: Varsity batters faced x 17.9% minus free bases, every pitcher in the game */
+  const bf = inn.reduce((a, r) => a + Number(r.BattersFaced || 0), 0), fb = inn.reduce((a, r) => a + Number(r.FreeBases || 0), 0);
+  const saved = Math.round(bf * 0.179 - fb);
+  const line = saved >= 0 ? saved + " of 150 free bases saved so far, 1 game in." : (-saved) + " more free bases than 2026's rate so far, 1 game in.";
+  [SMITH, HALL, BORCH].forEach(p => ok(text(cardOf(rt, GAME, p)).includes("Program goal " + line), p + ": counter reads " + line + " (BF " + bf + ", free " + fb + ")"));
+  ok(!/Program goal/.test(cardOf(rt, PEN2, SMITH)) && !/Program goal/.test(cardOf(rt, OFF, HAZEN)), "counter only on the pitcher game card");
+  /* Config overrides: goal and a level's rate */
+  rt.b.getSheetByName("Config").data.push(["Free bases saved goal", 160, ""], ["2026 free-base rate Varsity", 25, ""]);
+  const s2 = Math.round(bf * 0.25 - fb);
+  ok(text(cardOf(rt, GAME, SMITH)).includes(s2 + " of 160 free bases saved"), "Config overrides the goal and the Varsity rate (" + s2 + " of 160)");
+  /* A second game, JV, a day later: counts on the later card, not on the earlier one */
+  rt.b.getSheetByName("Config").data.splice(-2, 2);
+  const IH = FIX.Game_Innings[0], IN = rt.b.getSheetByName("Game_Innings");
+  const jrow = o => IH.map(h => (Object.assign({ RecordID: "jv1", Level: "JV", Date: "2027-04-07", Opponent: "Test", Inning: 1, Pitcher: "J", PitcherID: "jvP", PitcherLast: "J", PitcherFirst: "P" }, o))[h] ?? "");
+  IN.data.push(jrow({ BattersFaced: 100, FreeBases: 5, Outs: 21, Pitches: 90, Strikes: 60, FirstPitches: 30, FirstPitchStrikes: 20, K: 8 }));
+  IN.data.push(jrow({ RecordID: "pr1", Level: "JV", BattersFaced: 30, FreeBases: 0, Practice: "Y" }));
+  rt.b.getSheetByName("Records").data.push(["jv1", "game", "v34", 1, "", "JV", "2027-04-07", "Coach J", "", "", "2027-04-07T20:00:00Z", "2027-04-07T20:00:01Z", 1]);
+  const s3 = Math.round(bf * 0.179 - fb + 100 * 0.203 - 5);
+  ok(text(cardOf(rt, "jv1", "jvP")).includes(s3 + " of 150 free bases saved so far, 2 games in."), "JV game a day later adds its own rate: " + s3 + " of 150, 2 games");
+  ok(text(cardOf(rt, GAME, SMITH)).includes(saved + " of 150") || text(cardOf(rt, GAME, SMITH)).includes((-saved) + " more free bases"), "the earlier card still counts only games up to it");
+  /* Behind the 2026 rate */
+  IN.data.push(jrow({ RecordID: "jv2", Date: "2027-04-08", BattersFaced: 10, FreeBases: 40 }));
+  rt.b.getSheetByName("Records").data.push(["jv2", "game", "v34", 1, "", "JV", "2027-04-08", "Coach J", "", "", "2027-04-08T20:00:00Z", "2027-04-08T20:00:01Z", 1]);
+  const s4 = Math.round(bf * 0.179 - fb + 110 * 0.203 - 45);
+  const want4 = s4 >= 0 ? s4 + " of 150 free bases saved so far, 3 games in." : (-s4) + " more free bases than 2026's rate so far, 3 games in. The goal is 150 saved.";
+  ok(text(cardOf(rt, "jv2", "jvP")).includes(want4), "behind the 2026 rate reads plainly: " + want4);
 }
 
 console.log(pass + " card checks" + (fail ? ", " + fail + " FAILED" : ""));
