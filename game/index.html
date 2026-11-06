@@ -412,6 +412,7 @@ a.topbtn{display:inline-block;text-decoration:none;border:0}
 .callpad button:active{transform:scale(.95)}
 @media (hover:hover){.callpad button:hover{border-color:var(--navy-soft)}}
 .callpad.locked{opacity:.4}
+.callpad.need{outline:3px solid var(--strike);outline-offset:2px;border-radius:4px}
 /* Hollow: a call is a plan, not a record. Same numbers as the location grid. */
 .cmk{font-family:var(--mono);font-weight:600;pointer-events:none;height:22px;
   padding:0 5px;border-radius:11px;display:inline-flex;align-items:center;gap:3px;line-height:1;
@@ -1027,8 +1028,9 @@ footer#foot{max-width:1340px;margin:0 auto;padding:14px 16px 30px;color:var(--te
       <!-- Called spot and actual location, side by side and the same size: what
            you asked for and what the pitcher did, read left to right. The call is
            3x3 on purpose - nobody calls "row 2, column 4", they call fastball
-           away - and it is optional; a pitch with no call simply sits out of the
-           execution numbers rather than being guessed at. -->
+           away. Required since v35 (Jim, Nov 6: "I want the pitch called location
+           to be required"): the location grid refuses a pitch until a call is set,
+           so the game step of the execution ladder grades every pitch. -->
       <div class="gridpair">
         <div class="gridcell">
           <span class="lbl step" id="callLbl">2 &middot; Called spot</span>
@@ -2139,10 +2141,21 @@ function callRead(o){
 function addPitch(r,c){
   if(reviewing()){ nudge("Reviewing — tap Back to the plate first"); return; }
   if(curAB().result){ nudge("At-bat already closed — undo the result to add a pitch"); return; }
+  /* v35: the call is required. Refused out loud, and the call pad is flagged, so
+     the charter knows exactly which tap is missing. */
+  if(!G.call){ nudge("Tap the called spot first, then where it crossed"); flagCall(); return; }
   logPitch(inZone(r,c)?"S":"B", r, c);
 }
 /* A tap that can't do anything has to say so out loud — a silent no-op in the
    middle of an inning is how pitches go missing. */
+var callT=null;
+function flagCall(){
+  var h=document.getElementById("callHint"), pad=document.getElementById("callPad");
+  if(!h || !pad) return;
+  h.textContent="Called spot needed"; h.classList.add("nope"); pad.classList.add("need");
+  clearTimeout(callT);
+  callT=setTimeout(function(){ h.classList.remove("nope"); pad.classList.remove("need"); renderCallPad(); }, 2200);
+}
 var nudgeT=null;
 function nudge(msg){
   var h=document.getElementById("zoneHint");
@@ -3344,7 +3357,7 @@ function renderCallPad(){
   var h = document.getElementById("callHint");
   h.textContent = rev ? "Reviewing \u00b7 read-only"
     : G.call ? "Called \u00b7 now tap where it crossed"
-    : "Tap what you called";
+    : "Tap what was called, every pitch";
 }
 function setCall(r,c){
   if(reviewing()){ nudge("Reviewing — tap Back to the plate first"); return; }
@@ -3397,7 +3410,8 @@ function renderZone(){
   zh.classList.remove("nope");
   zh.textContent = rev ? "Reviewing · this at-bat is read-only"
     : a.result ? "At-bat closed — mark the spray"
-    : "Catcher's view · tap where it crossed";
+    : G.call ? "Catcher's view · tap where it crossed"
+    : "Catcher's view · call first, then where it crossed";
 }
 
 function renderSeq(){
@@ -4648,7 +4662,7 @@ function build(){
    gateWipe(), wipeEverything(), WIPE_KEYS, the #wipeBox markup and its listener. */
 var ALLOW_WIPE = false;
 
-var BUILD = "v34";
+var BUILD = "v35";
 
 /* ======================= DASHBOARD UPLOAD (v25) =======================
    Same receiver as the Bullpen Chart and the Offense Chart. Blank UPLOAD_URL =
