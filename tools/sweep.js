@@ -242,7 +242,7 @@ async function migration(b) {
          into a closed at-bat, correctly. Next batter first, which is what the
          charter would do too. */
       '(function(){ document.getElementById("nextBtn").click();'+
-      ' document.querySelector(\'#zone .cell:nth-child(13)\').click();'+
+      ' document.querySelector(\'#callPad button:nth-child(13)\').click(); document.querySelector(\'#zone .cell:nth-child(13)\').click();'+
       ' var r=document.querySelectorAll("#innLedger tbody tr")[0];'+
       ' return r ? r.cells[0].textContent : "still empty"; })()', "1"],
     /* The step that actually exercises the migration. Everything above survives a
@@ -412,7 +412,7 @@ async function wipeOff(b) {
     ["stylesheet",       null,                            styled('.top'), null, "true"],
     ["call pad cell",    "#callPad button:nth-child(3)",  t("#callHint")],
     ["call pad toggle",  "#callPad button:nth-child(3)",  t("#callHint")],
-    ["zone cell",        "#zone .cell:nth-child(13)",     t("#seq")],
+    ["zone cell",        "#zone .cell:nth-child(13)",     t("#seq"), 'document.querySelector("#callPad button:nth-child(13)").click();'],
     ["pitch type",       "#types button:nth-child(2)",    t("#types button.on")],
     ["mod button",       "#mods button:nth-child(2)",     t("#seq")],
     ["trajectory",       "#trajRow button:nth-child(1)",  c("#trajRow button:nth-child(1)")],
@@ -1158,7 +1158,7 @@ async function wipeOff(b) {
       return "ok";
     }
     function addArm(){ var a = q("#pitchers .addp"); if(a) a.click(); }
-    function pitch(){ q('#zone .cell:nth-child(13)').click(); }
+    function pitch(){ q('#callPad button:nth-child(13)').click(); q('#zone .cell:nth-child(13)').click(); }
     function res(k){ var b = q('#results button[data-res="' + k + '"]'); if(b) b.click(); }
     function next(){ var b = q("#nextBtn"); if(b) b.click(); }
     function ab(k, n){ for(var i=0;i<(n||3);i++) pitch(); res(k); next(); }
@@ -1629,7 +1629,7 @@ async function wipeOff(b) {
       s.dispatchEvent(new Event("change",{bubbles:true}));
       return "ok";
     }
-    function pitch(){ q('#zone .cell:nth-child(13)').click(); }
+    function pitch(){ q('#callPad button:nth-child(13)').click(); q('#zone .cell:nth-child(13)').click(); }
     function res(k){ var b = q('#results button[data-res="' + k + '"]'); if(b) b.click(); }
     function logRow(){
       var b = q("#btnExport"); if(b) b.click();

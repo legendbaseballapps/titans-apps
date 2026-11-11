@@ -132,6 +132,7 @@ function expected(S, cfg) {
     const g = E.perGame[rid], s = Math.round(g.bf * E.cfg.rate[g.lv] / 100 - g.free);
     ok(new RegExp(g.lv + " Ridgeview " + g.free + " " + g.bf + " " + (s > 0 ? "\\+" : "") + s + " ").test(t + " "), "battle row " + g.lv + ": " + g.free + " free, " + g.bf + " BF, saved " + s);
   });
+  ok(/\.ok\{display:inline-block;width:18px;height:18px[^}]*background:#1F7A4A/.test(h) && /\.ring\{[^}]*border:3px solid #16305C/.test(h), "markers: filled green check and heavy navy ring, same as the cards");
   ok(!/va-practice|Mound 1/.test(h) && t.split(" Varsity Ridgeview ").length === 2, "practice game and bullpen never on the page");
   /* the bars: fill = saved / 150, marker = pace / 150 */
   const hero = h.match(/class="bar big[^"]*"><div class="fill" style="width:([\d.]+)%"><\/div><div class="pace" style="left:([\d.]+)%"/);

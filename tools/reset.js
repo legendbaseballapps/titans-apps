@@ -48,8 +48,8 @@ function is(name, got, want) {
     await ev(pg, FILL_SETUP);
     await pg.click("#fPractice");
     await pg.click("#suDone");
-    await pg.click("#zone .cell:nth-child(13)"); await pg.click('#results button[data-res="GO"]'); await pg.click("#nextBtn");
-    await pg.click("#zone .cell:nth-child(13)");
+    await pg.click("#callPad button:nth-child(13)"); await pg.click("#zone .cell:nth-child(13)"); await pg.click('#results button[data-res="GO"]'); await pg.click("#nextBtn");
+    await pg.click("#callPad button:nth-child(13)"); await pg.click("#zone .cell:nth-child(13)");
     await pg.click("#pitchers .addp");
     await ev(pg, '(function(){ var s=document.querySelector(\'#pitchers select[data-pick="1"]\'); s.value=s.options[2].value; s.dispatchEvent(new Event("change",{bubbles:true})); })()');
     await pg.click("#tab-report");
@@ -70,7 +70,7 @@ function is(name, got, want) {
     is("  Setup kept: the lineup", g.lineup[0].men[0].name + " #" + g.lineup[0].men[0].jersey, "Hitter 1 #40");
     is("  lands on Setup, says what happened", await ev(pg, '!document.getElementById("v-setup").hidden && /Pitches cleared/.test(document.getElementById("setupNote").textContent)'), true);
     is("  and is ready to chart again", /^✓ Ready/.test(await ev(pg, 'document.getElementById("readyMsg").textContent')), true);
-    await pg.click("#suDone"); await pg.click("#zone .cell:nth-child(13)");
+    await pg.click("#suDone"); await pg.click("#callPad button:nth-child(13)"); await pg.click("#zone .cell:nth-child(13)");
     is("  charting works again", pitches(await G()), 1);
     is("History untouched", await ev(pg, 'JSON.parse(localStorage.getItem("dugout-pitch-chart-archive-v1")||"[]").length'), 0);
     await pg.click("#tab-setup");

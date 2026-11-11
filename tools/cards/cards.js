@@ -526,7 +526,7 @@ const PEN1 = REC["bullpen2027-01-12"], PEN2 = REC["bullpen2027-01-19"], LIVE = R
   ok(smt.includes("Pitch Relentless: program goals") && !/Nothing Free/i.test(sm), "goals section is Pitch Relentless, Nothing Free is gone");
   ok(!/Stay on green/i.test(sm) && /get back to green and win the next one/.test(sm), "Get back to green wording, no Stay on green");
   /* cards 4.1: met is a green check, not yet is the same open ring the deck and dashboard use */
-  const RING = /border:2px solid #8FB8E8;border-radius:50%/;
+  const RING = /border:3px solid #16305C;border-radius:50%/;
   const goalRows = sm.split("Pitch Relentless: program goals")[1].split("met the goal today")[0].split("<tr>").slice(2);
   ok(goalRows.length >= 5 && goalRows.slice(0, 5).every(r => (/&#10003;/.test(r) ? !RING.test(r) : RING.test(r) || !/of \d/.test(r))), "each outing goal shows a check or an open ring");
   ok(goalRows.slice(0, 5).some(r => RING.test(r)), "a missed goal shows the open ring");

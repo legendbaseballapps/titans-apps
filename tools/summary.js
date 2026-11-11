@@ -85,8 +85,8 @@ function is(name, got, want) {
     await ev(pg, '(function(){ var s=document.getElementById("suPitcher"); s.value=window.TITANS_ROSTER[0].id; s.dispatchEvent(new Event("change",{bubbles:true})); var set=function(id,v){ var e=document.getElementById(id); e.value=v; e.dispatchEvent(new Event("input",{bubbles:true})); }; set("fOpp","Ponderosa"); var d=document.getElementById("fDate"); d.value="2027-04-18"; d.dispatchEvent(new Event("change",{bubbles:true})); })()');
     await ev(pg, FILL_SETUP);   /* v29: the lineup too */
     await pg.click("#tab-chart");
-    await pg.click("#zone .cell:nth-child(13)"); await pg.click('#results button[data-res="GO"]'); await pg.click("#nextBtn");
-    await pg.click("#zone .cell:nth-child(13)"); await pg.click("#zone .cell:nth-child(13)"); await pg.click('#results button[data-res="1B"]'); await pg.click("#nextBtn");
+    await pg.click("#callPad button:nth-child(13)"); await pg.click("#zone .cell:nth-child(13)"); await pg.click('#results button[data-res="GO"]'); await pg.click("#nextBtn");
+    await pg.click("#callPad button:nth-child(13)"); await pg.click("#zone .cell:nth-child(13)"); await pg.click("#callPad button:nth-child(13)"); await pg.click("#zone .cell:nth-child(13)"); await pg.click('#results button[data-res="1B"]'); await pg.click("#nextBtn");
     await pg.click("#tab-report");
     is("Report tab: full page; charting screen hidden", await ev(pg, '!document.getElementById("v-report").hidden && document.getElementById("v-chart").style.display === "none"'), true);
     is("  pitcher chips and live stats hide off the Chart tab", await ev(pg, 'document.getElementById("chartBar").style.display'), "none");

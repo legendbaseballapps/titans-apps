@@ -150,7 +150,7 @@ async function game(b) {
   });
   await pg.waitForTimeout(200);
   const tap = sel => pg.click(sel, { timeout: 3000 });
-  const zone = () => tap("#zone .cell:nth-child(13)");
+  const zone = async () => { await tap("#callPad button:nth-child(13)"); await tap("#zone .cell:nth-child(13)"); };
   const res = k => tap('#results button[data-res="' + k + '"]');
   /* the saved game: the batter on screen, his live at-bat, and every closed one */
   const st = () => pg.evaluate(() => {
@@ -177,7 +177,14 @@ async function game(b) {
   await tap("#nextBtn");
   check("Next Batter with nothing charted stays put", (await st()).live, before);
 
+  /* v35: the called spot is required (Jim, Nov 6) */
+  await tap("#zone .cell:nth-child(13)");
+  check("v35: a location with no call is refused", (await st()).pitches, 0);
+  check("  and the app says so", await pg.evaluate(() => /called spot first/i.test(document.getElementById("zoneHint").textContent)), true);
+  check("  and the call grid lights up", await pg.evaluate(() => document.getElementById("callPad").classList.contains("need")), true);
   await zone();
+  check("  with a call, the same tap logs the pitch", (await st()).pitches, 1);
+  check("  and the pitch carries the call", await pg.evaluate(() => { const G = JSON.parse(localStorage.getItem("dugout-pitch-chart-v2")); let p = null; G.lineup.forEach(sp => sp.men.forEach(m => m.abs.forEach(a => a.pitches.forEach(x => { p = x; })))); return p ? p.cr + "," + p.cc : "none"; }), "2,2");
   await tap("#nextBtn");
   check("a pitch but no result: Next Batter refused", (await st()).live, before);
   await res("GO");

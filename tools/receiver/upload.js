@@ -659,7 +659,7 @@ async function part4() {
     await pg.evaluate(FILL_SETUP);
     await pg.click("#tab-chart");
     check("  a finished Setup does", await onSetup(), false);
-    const zone = () => pg.click("#zone .cell:nth-child(13)");
+    const zone = async () => { await pg.click("#callPad button:nth-child(13)"); await pg.click("#zone .cell:nth-child(13)"); };
     const res = k => pg.click('#results button[data-res="' + k + '"]');
     await zone(); await zone(); await res("1B"); await pg.click("#nextBtn");
     await zone(); await res("GO"); await pg.click("#nextBtn");

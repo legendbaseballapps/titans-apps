@@ -18,13 +18,14 @@ old one — tap the amber stamp to fix it.
 | App | Source & folder | Live on GitHub Pages |
 |---|---|---|
 | **Bullpen Chart** | **v44** | **v44** (Jim pushed Oct 26) | Real-iPad upload test **passed Oct 19** (practice pen stayed off the Sheet, real pen landed) |
-| **Pitch Chart** (game) | **v34** | **v34** (Jim pushed Oct 26) |
-| **Offense Chart** | **v52** | **v52** (Jim pushed Oct 28) |
+| **Pitch Chart** (game) | **v35** | **v34** (Jim pushed Oct 26). **v35 (Nov 6) waiting:** push `game/index.html`, `game/sw.js` and `game/guide.html` (the called spot is required) |
+| **Offense Chart** | **v53** | **v52** (Jim pushed Oct 28). **v53 (Nov 11) waiting:** push `offense/index.html`, `offense/sw.js`, `offense/guide.html` **together with** `demo/index.html` (outs and the inning) |
 | **Receiver** | **receiver 4** | Redeploy as a new version of the same deployment (URL and key unchanged). Includes receiver 3 (game notes) |
-| **Player cards** | **cards 4.1**, **reflections 2** (`cards/`) | **cards 3** deployed Nov 2. **cards 4.1 (Nov 6) waiting:** paste and deploy as a New version (replaces cards 4, never deployed). Test mode. Next: the test-mode run, then emails and go-live |
-| **Demo page** | `demo/index.html` | **Live Nov 2** (adds Load the 7th inning; checked against the site). Rebuild with `tools/demo-build.js`, then `LIVE=1`, then `tools/demo-page.py` |
-| **Sample card page** | **sample 3** (`cards/sample.html`, `cards/sample-sw.js`) | **sample 2 live Nov 6. sample 3 (Nov 6) waiting:** push both files (open ring for not yet). For the player meeting Nov 12 (QR code). Rebuild with `tools/cards/sample-page.js` |
-| **Coaches dashboard** | **dashboard 1** (`dashboard/Code.gs`): Program overview | **Live Nov 6** as Titans Coaches Dashboard (Execute as: User accessing the web app). Checked by Jim from vaughnzj@gmail.com: Program overview, "0 of 80 games charted". The Coaches tab header must read exactly `Google account` (B1 said "Google Account" and turned him away; fixed) |
+| **Player cards** | **cards 4.2**, **reflections 2** (`cards/`) | **cards 4.2 deployed Nov 6** as a New version (Jim: "works and looks great"); reflections 2 live. Test mode. Next: the test-mode run, player and parent emails, then `SEND_MODE` live (school / AD approval done Nov 6) |
+| **Demo page** | `demo/index.html` | **Live Nov 2** (adds Load the 7th inning; checked against the site). **Rebuilt Nov 11 for Offense Chart v53, waiting:** push it with offense v53, never before (the old demo opens v53 at inning 1). Rebuild with `tools/demo-build.js`, then `LIVE=1`, then `tools/demo-page.py` |
+| **Sample card page** | **sample 4** (`cards/sample.html`, `cards/sample-sw.js`) | **sample 3 live Nov 6. sample 4 (Nov 6) waiting:** push both files (bold markers). For the player meeting Nov 12 (QR code). Rebuild with `tools/cards/sample-page.js` |
+| **Coaches dashboard** | **dashboard 1.2** (`dashboard/Code.gs`): Program overview | **dashboard 1 live Nov 6** as Titans Coaches Dashboard (checked by Jim: "0 of 80 games charted"). **dashboard 1.2 waiting:** paste, then Manage deployments > pencil > New version (covers 1.1). The Coaches tab header must read exactly `Google account` |
+| **Dashboard sample page** | **dashboard sample 1** (`dashboard/sample.html`) | **Waiting:** push it; the head coach opens legendbaseballapps.github.io/titans-apps/dashboard/sample.html. Rebuild with `tools/dashboard/sample-page.js` |
 
 **The site moved Oct 14, 2026** to the program-owned account: **legendbaseballapps.github.io/titans-apps** (repo transferred from vaughnzj, so the live files, including the real `roster.js`, moved as they were). Every iPad installs from the new link; History saved under the old address does not carry over. The Coach's Guides in the pending builds (bullpen v31, game v23, offense v42) carry the new address, so pushing those builds is what puts it on the iPads.
 
@@ -60,6 +61,14 @@ is only for app code.
 
 ## Coaches dashboard (Titans Coaches Dashboard)
 
+### dashboard 1.2 and the sample page · Nov 6, 2026
+
+**Headline:** a link the head coach can open on any phone or laptop, no sign-in: the Program overview on a made-up 2027 season through Apr 17, so he can confirm it shows what he wants before real games start.
+
+- `dashboard/sample.html` is made by the real `dashboard/Code.gs` on a stand-in Sheet: all 37 games on the real 2027 schedules through Apr 17, made up to look like a real mid-April (program 38 of 150, behind pace; Freshman ahead; a mix of met and not-yet goals). "Sample data" banner, no names, no Google calls, one file.
+- dashboard 1.2: the cards now stack full width (the team shares no longer sit beside a long table with empty space under them), and the free-base battle shows the newest 10 games.
+- Tests: `tools/dashboard/sample-check.js` (19 checks: every number on the sample worked out again from `tools/dashboard/sample-season.json`, banner, no names, laptop and phone with no sideways scroll); dashboard 121 checks, 15 of 15 caught.
+
 ### dashboard 1 · Nov 6, 2026
 
 **Headline:** the dashboard's first page, the Program overview: the 150 free-base counter with its pace line, each team's share of 150, the free-base battle game by game, and the 9 program goals by level.
@@ -73,6 +82,13 @@ is only for app code.
 - Tests: `tools/dashboard/dashboard.js` (120 checks, every number worked out separately from the rows, the cards and the dashboard agree on the counter, laptop and phone widths with no sideways scroll); `tools/dashboard/mutate.js` (15 of 15 bugs caught).
 
 ## Player cards
+
+### cards 4.2, sample 4 and dashboard 1.1 · Nov 6, 2026
+
+**Headline:** the met / not-yet markers are bold on the cards and the dashboard: a filled green circle with a white check, and a heavy navy ring (Jim: the light ring was still hard to read).
+
+- Same 18 px size for both, so they line up in every row. Same look on the pitcher game card, the sample page and the dashboard's goals and free-base battle tables.
+- Tests: cards 208 checks, 42 of 42 caught; dashboard 121 checks, 15 of 15 caught; page and sample checks pass.
 
 ### cards 4.1 and sample 3 · Nov 6, 2026
 
@@ -611,6 +627,24 @@ execution grading.
 
 ## Pitch Chart (game)
 
+### v35 · Nov 6, 2026
+**Headline:** Every pitch needs a called spot now. Tap the call, then where it crossed.
+
+- **Why:** Jim, Nov 6: *"I want the pitch called location to be required."* The execution ladder on the
+  coaches dashboard grades bullpens, live ABs and games on the same rule (on the spot or next to it). The game
+  step only means something if every pitch carries a call.
+- **What changed:** a location tap with no call is refused. The hint under the location grid says *Tap the
+  called spot first, then where it crossed*, and the call grid gets a red outline for 2 seconds. With a call
+  set, the same tap logs the pitch as before and the call clears for the next pitch.
+- **Hints:** the call grid reads *Tap what was called, every pitch*; the location grid reads *Call first, then
+  where it crossed* until a call is set.
+- **Unchanged:** grading (spot, close, miss), the export columns, the count. A no-pitch IBB still needs no call.
+  Games filed before v35 keep their uncalled pitches, which stay out of the execution numbers.
+- **Guide:** step 2 now says every pitch needs a call; the "skip it whenever you need to" line is gone.
+- **Tests:** every test that taps the location grid now taps a call first. `tools/pa-guard.js` adds 5 checks:
+  no call is refused, the hint says so, the call grid lights up, the tap works with a call, and the pitch
+  carries it.
+
 ### v34 · Oct 22, 2026
 **Headline:** Readability in light and dark mode, all 3 apps (Bullpen v44, Pitch Chart v34, Offense v51).
 
@@ -1104,6 +1138,38 @@ Not logged at the time.
 ---
 
 ## Offense Chart
+
+### v53 · Nov 11, 2026
+**Headline:** Outs and the inning, the same as the Pitch Chart. The dots fill from the result; the inning rolls at the third out.
+
+- **Why:** Jim, Nov 11: *"Let's add the outs and inning to the offense chart."* It gives the dashboard situational
+  hitting (2-out at-bats, leading off an inning), their starter the 2nd and 3rd time through by inning, and it lets
+  the app enforce the quality at-bat rule that a moved runner only counts with fewer than 2 outs.
+- **Where:** out dots and an **Inn** box with **−** and **+**, in the hitter strip beside the count. Same controls and
+  look as the Pitch Chart's count bar.
+- **Outs come from the result**, the Pitch Chart's table: K, Kc, GO, FO, LO, PO, FC, SAC, SF add 1; DP adds 2; hits,
+  walks, HBP and errors add none. Changing or undoing a result moves the dots back by what that at-bat added, so a
+  tapped dot is never counted twice.
+- **A dot tap** is for an out the result can't see (caught stealing, pickoff, out on the bases). If the hitter at the
+  plate hasn't seen a pitch, he takes the new outs; a 3rd out then rolls the inning right away.
+- **The inning rolls at Next hitter** after the third out, so the spray and how it was hit can still be finished. The
+  button reads **End the inning** until then. No runs prompt: the Offense Chart doesn't keep the score.
+- **− / +** fix the inning and start it at 0 outs; a hitter with no pitch yet moves with it.
+- **Moved a runner** is dimmed and refuses a tap when he came up with 2 outs, and the quality at-bat line ignores a
+  stray flag there.
+- **Each at-bat is stamped** with the inning and the outs when he came up, at creation, never recomputed. Reviewing an
+  earlier at-bat shows his inning and outs, and the review bar says them.
+- **Export and upload:** 2 new columns, **Inning** and **Outs** (when the at-bat began), at the END so nothing reading by
+  position moves. Blank on games charted before v53, never a made-up 0. The receiver adds new columns by name; no
+  receiver change. This is the export change the Mar 1 freeze allows.
+- **A game in progress at the upgrade** opens at inning 1, 0 outs; fix it with **+**.
+- **Guide:** a new "Outs and the inning" section; "Things it doesn't do" no longer says outs and innings.
+- **Demo page rebuilt** with v53: the 7th-inning load now opens the Offense Chart at **Inn 7, nobody out**, Dieker up. Every
+  pitch is the same, so the Chart This Inning answer keys still hold (checked: Lindqvist 39, the 4 hitter cards
+  unchanged). **Push the demo page and offense v53 together**: the old demo would open v53 at inning 1.
+- **Tests:** new `tools/offense-innings.js`, 51 checks (outs from results, undo, DP, the moved-runner rule, the roll,
+  dot taps, − / +, reviewing, refresh, export, a new game). Broken 4 ways on purpose; every break caught. Every other
+  suite unchanged and green (sweep keeps its 4 old sample-roster misses).
 
 ### v52 · Oct 26, 2026
 **Headline:** Hitter cards with To the hitter / Coach only notes, and a filed game opens from History.

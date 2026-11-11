@@ -212,7 +212,7 @@ const bannerFull = sel => `(function(){ var b=document.getElementById(${JSON.str
     await ev(FILL_SETUP);   /* v29: the rest of Setup too */
     await ev('document.getElementById("tab-chart").click()');
     await pg.waitForTimeout(200);
-    await ev('(function(){ var z=document.querySelectorAll("#zone button"); z[4].click(); z[12].click(); })()');
+    await ev('(function(){ var z=document.querySelectorAll("#zone button"), k=document.querySelectorAll("#callPad button"); k[4].click(); z[4].click(); k[12].click(); z[12].click(); })()');
     await pg.waitForTimeout(400);
     const gsaved = await ev('localStorage.getItem("dugout-pitch-chart-v2")');
     is("two pitches charted", await ev('(document.getElementById("sPitches")||{}).textContent||"none"'), "2");

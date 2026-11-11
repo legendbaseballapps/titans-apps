@@ -125,7 +125,7 @@ const shown = id => `(function(){ var b=document.getElementById(${JSON.stringify
     is("  Start charting is live", await ev(pg, 'document.getElementById("suDone").disabled'), false);
     await pg.click("#suDone");
     is("  and opens the Chart tab", await ev(pg, 'document.getElementById("v-chart").style.display'), "");
-    await pg.click("#zone .cell:nth-child(13)");
+    await pg.click("#callPad button:nth-child(13)"); await pg.click("#zone .cell:nth-child(13)");
     is("1 pitch: Finish & file appears in the header", await ev(pg, shown("hdrFinish")), true);
     /* measured with Finish & file showing: the widest the bar gets */
     is("  the top row fits on one line at iPad width", await ev(pg, '(function(){ var t=function(id){ return document.getElementById(id).getBoundingClientRect(); }; var a=t("tab-setup"), f=t("hdrFinish"), o=t("fOpp"), br=document.querySelector(".top .brand").getBoundingClientRect(); return f.top < br.bottom && a.top < br.bottom && o.top < br.bottom && f.right <= window.innerWidth; })()'), true);

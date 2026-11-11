@@ -97,7 +97,7 @@ function is(name, got, want) {
   is("both game charts offer SF", [await pages.game.evaluate('!!document.querySelector(\'#results [data-res="SF"]\')'), await pages.offense.evaluate('!!document.querySelector(\'#results [data-res="SF"]\')')], [true, true]);
 
   await pages.bullpen.evaluate('document.querySelector(\'#zone button[data-r="2"][data-c="2"]\').click()');
-  await pages.game.click("#zone .cell:nth-child(13)");
+  await pages.game.click("#callPad button:nth-child(13)"); await pages.game.click("#zone .cell:nth-child(13)");
   await pages.offense.click('#v-chart [data-r="2"][data-c="2"]');
   same("1 pitch: Finish & file shows in the header", await each('getComputedStyle(document.getElementById("hdrFinish")).display !== "none"'));
 

@@ -33,7 +33,7 @@
      function either ends in _ (private) or refuses to run unless it was started
      from the editor or one of this project's own triggers. */
 
-var VERSION = "cards 4.1 (Nov 2026)";
+var VERSION = "cards 4.2 (Nov 2026)";
 
 var PLAYERS_HEAD = ["PlayerID", "Last", "First", "Class", "Level", "Player email", "Parent email", "Send"];
 var LINKS_HEAD = ["PlayerID", "Token", "Made"];
@@ -635,7 +635,9 @@ function pitchCard_(d, rec, pid) {
   var today = {fps: [t.fps, t.fp], strike: [t.strikes, t.pitches], free: [t.free, t.bf], k: [t.k, t.bf], hard: [hard, bip]};
   var season = {fps: [sInn.fps, sInn.fp], strike: [sInn.strikes, sInn.pitches], free: [sInn.free, sInn.bf],
                 k: [sInn.k, sInn.bf], hard: [sHard, sBip]};
-  var CHECK = '<span style="color:#1F7A4A;font-weight:700">&#10003;</span>', RING = '<span style="display:inline-block;width:9px;height:9px;border:2px solid #8FB8E8;border-radius:50%;vertical-align:-1px"></span>';
+  /* Met = a filled green circle with a white check; not yet = a heavy navy ring. Same as the dashboard. */
+  var CHECK = '<span style="display:inline-block;width:18px;height:18px;line-height:18px;border-radius:50%;background:#1F7A4A;color:#FFFFFF;font-size:12px;font-weight:700;text-align:center;vertical-align:middle">&#10003;</span>',
+      RING = '<span style="display:inline-block;width:12px;height:12px;border:3px solid #16305C;border-radius:50%;vertical-align:middle"></span>';
   var goalRows = GOALS.map(function (g) {
     var a = today[g.k], s = season[g.k], gv = G[g.k];
     var p = a[1] ? Math.round(a[0] * 100 / a[1]) : null;

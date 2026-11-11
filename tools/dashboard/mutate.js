@@ -20,8 +20,7 @@ const M = [
   ["level read from the Record only", 'return levelName_(s_(r.Level) || s_((recs[s_(r.RecordID)] || {}).Team));', 'return levelName_(s_((recs[s_(r.RecordID)] || {}).Team) || "Varsity");'],
   ["met marker backwards for or-less goals", 'var met = g.more ? x >= gv - 1e-9 : x <= gv + 1e-9;', 'var met = x >= gv - 1e-9;'],
   ["Date cells not read as dates", 'if (Object.prototype.toString.call(v) === "[object Date]") {', 'if (false) {'],
-  ["phone layout overflows", '.two .card{margin-top:12px;min-width:0}', '.two .card{margin-top:12px}',
-    '"@media(max-width:860px){.two{grid-template-columns:minmax(0,1fr)}}"', '"@media(max-width:860px){.two{grid-template-columns:1fr}}"']
+  ["phone layout overflows", '".scroll{overflow-x:auto}table{', '"table{']
 ];
 let caught = 0;
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "dash-mut-"));

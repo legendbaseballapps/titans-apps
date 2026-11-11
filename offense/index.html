@@ -293,7 +293,7 @@ table.grid tbody tr:nth-child(even){background:var(--surface-2)}
 .phead .rtag{font-size:10.5px;padding:2px 7px}
 
 /* at-bat */
-.batstrip{display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--surface-2);
+.batstrip{display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--surface-2);flex-wrap:wrap;
   border-bottom:1px solid var(--line-soft)}
 .bnum{width:30px;height:30px;border-radius:50%;background:var(--navy);color:#fff;
   display:grid;place-items:center;font-family:var(--mono);font-weight:700;font-size:14px;flex:none}
@@ -301,6 +301,21 @@ table.grid tbody tr:nth-child(even){background:var(--surface-2)}
 .bsub{font-size:11.5px;color:var(--text-3);font-family:var(--cond);letter-spacing:.07em;
   text-transform:uppercase}
 .count{margin-left:auto;font-family:var(--mono);font-size:22px;font-weight:700;letter-spacing:.02em}
+/* v53: outs and inning, the same controls as the Pitch Chart's count bar. The dots
+   fill from the result; a tap sets them for an out the result can't see. */
+.sitbox{display:flex;align-items:center;gap:6px;flex:none}
+.sitbox + .count{margin-left:6px}
+.outs{display:flex;gap:4px;align-items:center;padding:4px}
+.outdot{width:19px;height:19px;border-radius:50%;border:1.5px solid var(--text-3);
+  padding:0;background:transparent;-webkit-appearance:none;appearance:none;cursor:pointer}
+.outdot.on{background:var(--strike);border-color:var(--strike)}
+.innbox{display:flex;align-items:center;gap:5px;padding:0 4px}
+.innbox .il{font-family:var(--cond);font-size:10px;font-weight:600;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--text-2)}
+.innbox .iv{font-family:var(--mono);font-size:17px;font-weight:600;min-width:18px;text-align:center}
+.innbox button{width:26px;height:26px;border-radius:var(--r);border:1px solid var(--line);
+  background:var(--surface);font:inherit;font-size:15px;font-weight:600;padding:0;line-height:1;color:inherit}
+#qfAdv.off{opacity:.45}
 .count small{font-size:11px;color:var(--text-3);font-family:var(--cond);display:block;
   text-align:center;letter-spacing:.1em;font-weight:600}
 .step{display:block;margin:10px 0 5px}
@@ -713,6 +728,10 @@ footer{max-width:1340px;margin:0 auto;padding:14px 16px 30px;color:var(--text-3)
           </div>
           <button class="btn sm" id="btnSub" style="margin-left:auto"
             title="A pinch hitter takes this spot in the order">Sub</button>
+          <div class="sitbox">
+            <div class="outs" id="outs" title="Tap a dot to set the outs"></div>
+            <div class="innbox"><span class="il">Inn</span><button id="innDown" title="Back an inning">&minus;</button><span class="iv" id="innNow">1</span><button id="innUp" title="On an inning">+</button></div>
+          </div>
           <div class="count"><span id="cnt">0&ndash;0</span><small id="cntLbl">Count</small></div>
         </div>
         <div class="pbody">
@@ -862,7 +881,7 @@ footer{max-width:1340px;margin:0 auto;padding:14px 16px 30px;color:var(--text-3)
    gateWipe(), wipeEverything(), WIPE_KEYS, the #wipeBox markup and its listener. */
 var ALLOW_WIPE = false;
 
-var BUILD = "v52";
+var BUILD = "v53";
 
 /* ======================= DASHBOARD UPLOAD (v45) =======================
    Same receiver as the Bullpen Chart: an Apps Script web app on the program
@@ -1018,7 +1037,7 @@ function qabReasons(a){
   if(a.result === "SAC" || a.result === "SF") r.push("SAC");
   if(bip && a.run) r.push("RUN");
   if(n >= 7) r.push("P7");
-  if(bip && a.adv) r.push("ADV");
+  if(bip && a.adv && a.outs !== 2) r.push("ADV");
   if(bip && n && countBefore(a, n-1).s === 2) r.push("K2");
   return r;
 }
@@ -1094,6 +1113,8 @@ function emptyGame(){
   return { v:1, sample:false, date:isoToday(), opp:"", who:"", home:"H",
            lineup:[], pitchers:[], cp:0, pas:[], cur:0, created:Date.now(),
            level:"", practice:false, rid:newRid(),
+           /* v53: the inning on screen and the outs in it. */
+           inning:1, outs:0,
            /* v52: To the hitter / Coach only, per hitter, keyed by hitterKey(). */
            hnotes:{} };
 }
@@ -1104,8 +1125,12 @@ function newPitcher(name){
               own, carried names the game a pulled read came from. */
            notes:"", tags:{}, carried:null };
 }
-function newPA(spot, pIdx){
+function newPA(spot, pIdx, game){
   var a = { spot:spot, p:pIdx, pitches:[], result:"", traj:"", spray:null, hard:false };
+  /* v53: the inning and the outs when he came up, stamped now and never recomputed,
+     the same way the Pitch Chart stamps a pitch's inning. */
+  var gm = game || (typeof O !== "undefined" ? O : null);   /* a brand-new game passes itself */
+  if(gm){ a.inn = gm.inning || 1; a.outs = gm.outs || 0; }
   /* Stamp WHO, now. See paHitter. O is not built yet on the very first call. */
   if(typeof O !== "undefined" && O && O.lineup && O.lineup[spot]){
     var h = hitterOf(spot);
@@ -1198,7 +1223,7 @@ function freshGame(){
   g.lineup = keep.length ? keep.map(function(id){ return {men:[newMan(id)], cur:0}; })
                          : blankLineup(9);
   g.pitchers = [newPitcher("")];
-  g.pas = [newPA(0,0)];
+  g.pas = [newPA(0,0,g)];
   return g;
 }
 
@@ -1228,7 +1253,7 @@ function archiveGame(silent){
   g.lineup = keepLine;
   g.who = O ? O.who : "";
   g.pitchers = [newPitcher("")];
-  g.pas = [newPA(0,0)];
+  g.pas = [newPA(0,0,g)];
   O = g;                      /* emptyGame(): level back to unpicked, practice off */
   readyNag = false;
   save();
@@ -1258,7 +1283,7 @@ function clearPitches(){
       "Want to keep them? Tap Cancel and use Finish & file. Games already in History are not touched.",
       "Clear pitches", function(){
     O.lineup.forEach(function(sp){ if(sp.men && sp.men.length){ sp.men = [sp.men[0]]; sp.cur = 0; } });
-    O.cp = 0; O.cur = 0;
+    O.cp = 0; O.cur = 0; O.inning = 1; O.outs = 0;
     O.pas = [newPA(0, 0)];
     O.hnotes = {};
     save(); showTab("setup");
@@ -1276,7 +1301,7 @@ function startOver(){
     var g = emptyGame();
     g.lineup = keepLine; g.who = O.who;
     g.pitchers = [newPitcher("")];
-    g.pas = [newPA(0, 0)];
+    g.pas = [newPA(0, 0, g)];
     O = g;
     save(); showTab("setup");
     setupMsg("Started over. Pick the level and fill in Setup.");
@@ -1658,6 +1683,24 @@ function roleDot(i){ return '<span class="prdot" style="background:' + roleShade
 <script>
 /* ===================== the at-bat ===================== */
 function curPA(){ return O.pas[O.cur]; }
+/* v53. Outs come from how the at-bat ended (Pitch Chart's table). outAdv is what
+   this at-bat has already added, so changing or undoing a result moves the dots
+   back by exactly that much and a tapped dot is never counted twice. */
+var OUT_RESULT = {K:1, Kc:1, GO:1, FO:1, LO:1, PO:1, FC:1, DP:2, SAC:1, SF:1};
+function syncOuts(a){
+  if(!a || reviewing()) return;
+  var want = a.result ? (OUT_RESULT[a.result] || 0) : 0, had = a.outAdv || 0;
+  if(want === had) return;
+  a.outAdv = want;
+  O.outs = Math.max(0, Math.min(3, (O.outs || 0) + (want - had)));
+}
+/* A new inning starts at 0 outs. A hitter who hasn't seen a pitch yet moves with
+   it, so his stamp matches what he came up in. */
+function setInning(n){
+  O.inning = Math.max(1, n); O.outs = 0;
+  var a = curPA();
+  if(a && !reviewing() && !a.pitches.length && !a.result){ a.inn = O.inning; a.outs = 0; }
+}
 function livePA(){ return O.pas[O.pas.length-1]; }
 function reviewing(){ return O.cur !== O.pas.length-1; }
 
@@ -1800,6 +1843,8 @@ function toggleQF(k){
   if(reviewing()){ hint("Reviewing an earlier at-bat \u2014 tap Back to the plate"); return; }
   var a = curPA();
   if(!isInPlay(a)){ hint("Only for a ball in play \u2014 tap the result first"); return; }
+  /* v53: the rule is fewer than 2 outs, and now the app knows the outs. */
+  if(k === "adv" && !a.adv && a.outs === 2){ hint("2 outs when he came up \u2014 moving a runner doesn't count"); return; }
   a[k] = !a[k];
   render(); save();
 }
@@ -1837,9 +1882,14 @@ function nextPA(){
   if(!a.pitches.length && a.result !== "IBB"){ hint("Plot the pitch on the grid first"); return; }
   if(!a.result){ hint("Pick how the at-bat ended first"); return; }
   var nextSpot = O.lineup.length ? (a.spot+1) % O.lineup.length : 0;
+  /* v53: the third out rolls the inning here, at Next hitter, so the spray and
+     how it was hit can still be finished on the at-bat that made it. */
+  var rolled = (O.outs || 0) >= 3;
+  if(rolled){ O.inning = (O.inning || 1) + 1; O.outs = 0; }
   O.pas.push(newPA(nextSpot, O.cp));
   O.cur = O.pas.length-1;
   render(); save();
+  if(rolled) hint("Inning " + O.inning + " · nobody out", true);
 }
 function gotoPA(i){ O.cur = Math.max(0, Math.min(O.pas.length-1, i)); render(); }
 
@@ -1949,7 +1999,8 @@ function drawResults(){
   el("hardBtn").className = "hardbtn" + (a.hard ? " on" : "");
   el("qabWrap").hidden = !isInPlay(a);
   el("qfRun").className = a.run ? "on" : "";
-  el("qfAdv").className = a.adv ? "on" : "";
+  el("qfAdv").className = a.adv ? "on" : (a.outs === 2 ? "off" : "");
+  el("qfAdv").title = a.outs === 2 ? "2 outs when he came up: doesn't count" : "";
   var qr = qabReasons(a);
   el("qabNow").innerHTML = qr === null ? "" : qr.length
     ? "<b>Quality at-bat</b> \u00b7 " + qr.map(function(k){ return QAB_SHORT[k]; }).join(", ")
@@ -1997,10 +2048,35 @@ function drawBatStrip(){
     (a.result ? " · " + a.result : "");
   el("cnt").textContent = c.b + "–" + c.s;
   el("cntLbl").textContent = a.result ? "Final" : situOf(c);
+  /* v53. While reviewing, show what HIS at-bat began with; live, the game's now. */
+  var rv = reviewing(), outsShown = rv ? (a.outs || 0) : (O.outs || 0);
+  el("innNow").textContent = String(rv ? (a.inn || "\u2013") : (O.inning || 1));
+  var od = el("outs"); od.innerHTML = "";
+  for(var i=0;i<3;i++){
+    (function(i){
+      var d = document.createElement("button");
+      d.className = "outdot" + (i < outsShown ? " on" : "");
+      d.setAttribute("data-out", String(i+1));
+      d.setAttribute("aria-label", (i+1) + (i ? " outs" : " out"));
+      d.onclick = function(){
+        if(reviewing()){ hint("Reviewing an earlier at-bat \u2014 tap Back to the plate"); return; }
+        var live = curPA();
+        O.outs = (O.outs === i+1) ? i : i+1;
+        /* A hitter who hasn't seen a pitch takes the outs he really came up with. */
+        if(!live.pitches.length && !live.result){
+          if(O.outs >= 3){ setInning((O.inning || 1) + 1); hint("Inning " + O.inning + " \u00b7 nobody out", true); }
+          else live.outs = O.outs;
+        }
+        render(); save();
+      };
+      od.appendChild(d);
+    })(i);
+  }
+  el("btnNextPA").innerHTML = (!rv && (O.outs || 0) >= 3) ? "End the inning &rarr;" : "Next hitter &rarr;";
   el("reviewBar").hidden = !reviewing();
   if(reviewing()){
     el("reviewBar").innerHTML = '<strong>Reviewing</strong><span>This is at-bat '+
-      (O.cur+1)+' of '+O.pas.length+'. Nothing you tap here changes the live at-bat.</span>'+
+      (O.cur+1)+' of '+O.pas.length+(a.inn ? ', inning '+a.inn+', '+(a.outs||0)+(a.outs===1?' out':' outs') : '')+'. Nothing you tap here changes the live at-bat.</span>'+
       '<button class="btn sm pri" id="backLive">Back to the plate</button>';
     el("backLive").onclick = function(){ O.cur = O.pas.length-1; render(); };
   }
@@ -2683,7 +2759,10 @@ var COLS = ["Date","Opponent","HomeAway","Charting","Build","Pitcher","PitcherHa
   "RunScored","MovedRunner",
   /* v45: the level picked on the Setup tab, and Y on a practice game (which is
      never uploaded, but can still be exported by hand). */
-  "Level","Practice"];
+  "Level","Practice",
+  /* v53: the inning and the outs when the at-bat began. Blank on games charted
+     before v53, which never knew them. */
+  "Inning","Outs"];
 /* v45: the rows are built once, as a table, and used twice - the CSV a coach
    exports and the rows the dashboard receives. One source, so they can't drift. */
 function csvOf(game){
@@ -2708,7 +2787,8 @@ function tableOf(game){
         Build:game.build||BUILD, Pitcher:p0.name, PitcherHand:p0.hand, PitcherNotes:p0.notes||"",
         PitcherCarried:p0.carried||"", PA:ai+1, Spot:a.spot+1, Hitter:h.name, HitterLast:h.last||"",
         HitterFirst:h.first||"", HitterID:h.rid||"", Bats:h.hand||"", CountB:0, CountS:0,
-        Situation:"First pitch", PAResult:"IBB", Level:game.level||"", Practice:game.practice?"Y":""});
+        Situation:"First pitch", PAResult:"IBB", Level:game.level||"", Practice:game.practice?"Y":"",
+        Inning:a.inn != null ? a.inn : "", Outs:a.inn != null ? (a.outs || 0) : ""});
       rows.push(COLS.map(function(c){ return row[c]; }));
       return;
     }
@@ -2733,7 +2813,8 @@ function tableOf(game){
         (i===a.pitches.length-1 && a.spray ? sprayDepth(a.spray.x,a.spray.y) : ""),
         (i===a.pitches.length-1 && a.result && isInPlay(a) ? (a.run ? "Y" : "N") : ""),
         (i===a.pitches.length-1 && a.result && isInPlay(a) ? (a.adv ? "Y" : "N") : ""),
-        game.level || "", game.practice ? "Y" : ""
+        game.level || "", game.practice ? "Y" : "",
+        a.inn != null ? a.inn : "", a.inn != null ? (a.outs || 0) : ""
       ]);
     });
   });
@@ -3312,6 +3393,7 @@ function render(){
     el("chartBar").style.display = (tab === "chart" && !gated) ? "" : "none";   /* Bundle D */
     if(tab==="setup"){ drawRoster(); drawLineupSetup(); drawPitchersSetup(); }
     if(tab==="chart"){
+      syncOuts(curPA());
       drawPChips(); drawTypes(); drawZone(); drawSeq(); drawMods();
       drawResults(); drawLineupList(); drawBatStrip(); drawPredict();
       el("chartCols").className = "cols" + (O.hideLU ? " narrow" : "");
@@ -3361,6 +3443,8 @@ function wire(){
   el("btnUndo").onclick   = undoPitch;
   el("hardBtn").onclick   = toggleHard;
   el("btnNextPA").onclick = nextPA;
+  el("innUp").onclick = function(){ if(reviewing()) return; setInning((O.inning || 1) + 1); render(); save(); };
+  el("innDown").onclick = function(){ if(reviewing() || (O.inning || 1) <= 1) return; setInning(O.inning - 1); render(); save(); };
   el("btnSub").onclick    = subOpen;
   el("btnOrder").onclick  = function(){ O.hideLU = !O.hideLU; save(); render(); };
   el("umpFlip").onclick   = flipUmp;
@@ -3746,6 +3830,8 @@ O.lineup = normLineup(O.lineup);
 if(!O.pitchers || !O.pitchers.length) O.pitchers = [newPitcher("")];
 if(!O.pas || !O.pas.length) O.pas = [newPA(0,0)];
 if(O.cur == null || O.cur >= O.pas.length) O.cur = O.pas.length-1;
+if(O.inning == null) O.inning = 1;
+if(O.outs == null) O.outs = 0;
 wire();
 showTab(O.level ? "chart" : "setup");
 drawUpload();

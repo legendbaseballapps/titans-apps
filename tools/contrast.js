@@ -112,7 +112,7 @@ let fails = 0, warns = 0;
       await grab("setup (filled)");
       await pg.click(a.name === "game" ? "#suDone" : "#btnStart"); await pg.waitForTimeout(150);
       if (a.name === "bullpen") for (let i = 0; i < 3; i++) await pg.evaluate('document.querySelector(\'#zone button[data-r="2"][data-c="2"]\').click()');
-      if (a.name === "game") { await pg.click("#zone .cell:nth-child(13)"); await pg.click('#results button[data-res="GO"]'); }
+      if (a.name === "game") { await pg.click("#callPad button:nth-child(13)"); await pg.click("#zone .cell:nth-child(13)"); await pg.click('#results button[data-res="GO"]'); }
       if (a.name === "offense") { await pg.click('#v-chart [data-r="2"][data-c="2"]'); await pg.click('#v-chart [data-r="1"][data-c="3"]'); }
       await grab("chart");
       await pg.click("#tab-report"); await pg.waitForTimeout(150); await grab("report");

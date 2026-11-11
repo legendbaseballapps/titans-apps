@@ -22,7 +22,7 @@
    the program goals. Every number here comes from the Sheet; Config can change any goal,
    any 2026 rate, any team's share of 150 and each level's games on the schedule. */
 
-var VERSION = "dashboard 1 (Nov 2026)";
+var VERSION = "dashboard 1.2 (Nov 2026)";
 
 var LEVELS = ["Varsity", "JV", "Sophomore", "Freshman"];
 
@@ -201,7 +201,7 @@ function overview_(c, coach) {
     "Pace = each share &times; the share of that level's games already played. The marker on each bar is pace.</p></div>";
 
   /* 3. The free-base battle, game by game */
-  var rows = c.games.slice(0, 15).map(function (g) {
+  var rows = c.games.slice(0, 10).map(function (g) {
     var s = Math.round(g.saved);
     return "<tr><td>" + e_(shortDate_(g.date)) + "</td><td>" + e_(g.level) + "</td><td>" + e_(g.opp || "") + "</td>" +
       '<td class="c">' + g.free + '</td><td class="c">' + g.bf + '</td><td class="c ' + (s >= 0 ? "pos" : "neg") + '">' + (s > 0 ? "+" : "") + s + "</td>" +
@@ -211,7 +211,7 @@ function overview_(c, coach) {
     "</b> games at " + S.budget + " free bases or fewer (2026 average: 5.3)</p>" +
     '<div class="scroll"><table><thead><tr><th>Date</th><th>Team</th><th>Opponent</th><th class="c">Free bases</th>' +
     '<th class="c">Batters</th><th class="c">Saved</th><th class="c">' + S.budget + ' or fewer</th></tr></thead><tbody>' + rows + "</tbody></table></div>" +
-    (c.games.length > 15 ? '<p class="note">Newest 15 of ' + c.games.length + " games.</p>" : "") + "</div>";
+    (c.games.length > 10 ? '<p class="note">Newest 10 of ' + c.games.length + " games.</p>" : "") + "</div>";
 
   /* 4. The 9 program goals by level */
   var cols = LEVELS.concat(["Program"]);
@@ -234,7 +234,7 @@ function overview_(c, coach) {
     "Hard contact is the charter's call on every ball in play. ERA and WHIP use innings counted from outs the chart sees, so a " +
     "caught stealing or pickoff is missed and they read slightly high; GameChanger stays the official line.</p></div>";
 
-  return head + counter + '<div class="two">' + shareCard + battle + "</div>" + goals +
+  return head + counter + shareCard + battle + goals +
     '<p class="foot">' + e_(VERSION) + "</p>";
 }
 
@@ -299,8 +299,6 @@ function page_(inner) {
     ".bar{position:relative;height:14px;background:#E3E8EF;border-radius:7px}.bar.big{height:26px;border-radius:13px}" +
     ".bar .fill{position:absolute;left:0;top:0;bottom:0;background:#2B6CB0;border-radius:inherit}" +
     ".bar.under{background:#FBE9DF}.bar .pace{position:absolute;top:-4px;bottom:-4px;width:3px;margin-left:-1px;background:#16233A}" +
-    ".two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 12px}.two .card{margin-top:12px;min-width:0}" +
-    "@media(max-width:860px){.two{grid-template-columns:minmax(0,1fr)}}" +
     ".lvrow{display:grid;grid-template-columns:120px 1fr 120px;gap:12px;align-items:center;margin:12px 0}" +
     "@media(max-width:500px){.lvrow{grid-template-columns:92px 1fr 84px;gap:8px}}" +
     ".lvname{font-weight:700}.lvname span,.lvnum span{display:block;font-size:12px;font-weight:400;color:#5A6781}.lvnum{text-align:right;font-weight:700}" +
@@ -310,7 +308,8 @@ function page_(inner) {
     "td{padding:7px 6px;border-bottom:1px solid #F4F6FA;white-space:nowrap}.c{text-align:center}" +
     ".pos{color:#1F7A4A;font-weight:700}.neg{color:#C85C1C;font-weight:700}.dim{color:#8A93A6}" +
     ".gname span{display:block;font-size:12px;color:#5A6781;white-space:normal}.prog{background:#F4F6FA}" +
-    ".ok{color:#1F7A4A;font-weight:800}.ring{display:inline-block;width:9px;height:9px;border:2px solid #8FB8E8;border-radius:50%;vertical-align:-1px}" +
+    ".ok{display:inline-block;width:18px;height:18px;line-height:18px;border-radius:50%;background:#1F7A4A;color:#fff;font-size:12px;font-weight:700;text-align:center;vertical-align:middle}" +
+    ".ring{display:inline-block;width:12px;height:12px;border:3px solid #16305C;border-radius:50%;vertical-align:middle}" +
     "@media print{body{background:#fff}.card,.head{break-inside:avoid;border-color:#bbb}}" +
     '</style></head><body><div class="wrap">' + inner + "</div></body></html>";
   return HtmlService.createHtmlOutput(html).setTitle("Titans Coaches Dashboard").addMetaTag("viewport", "width=device-width, initial-scale=1");
