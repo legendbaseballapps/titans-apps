@@ -1,0 +1,424 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Chart This Inning</title><meta name="robots" content="noindex"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>[hidden]{display:none!important} body{margin:0}</style></head><body><title>Chart This Inning</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Public+Sans:wght@400;600;700;800&display=swap">
+<style>
+/* Projector caller for a team activity. Layout: navy top bar with the round tabs, then one big step card
+   (situation and the taps on the left, the app's own grids on the right) with Back / Next under it. */
+:root {
+  --navy: #14213D; --navy-2: #22345A; --orange: #C85C1C; --orange-soft: #FCEBDD; --blue: #2B6CB0; --blue-soft: #E3EEFA;
+  --green: #1F7A4A; --green-soft: #E2F2E9; --red: #B83227; --red-soft: #FBE6E3; --gold: #F2B33D;
+  --bg: #EEF1F5; --card: #FFFFFF; --ink: #16233A; --muted: #59657D; --faint: #8C95A8; --line: #D5DBE5; --soft: #F4F6F9;
+  --zone: #DCE6F3; --cell: #FFFFFF; --bar: #14213D; --bar-ink: #FFFFFF;
+  --display: 'Oswald', 'Arial Narrow', Arial, sans-serif; --body: 'Public Sans', -apple-system, 'Helvetica Neue', Arial, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0F1626; --card: #182238; --ink: #E8EDF5; --muted: #A9B4C8; --faint: #7E8AA2; --line: #2C3A57; --soft: #1E2A43;
+  --zone: #263A5E; --cell: #182238; --blue: #6FA4E6; --blue-soft: #1D3354; --orange: #F08A4B; --orange-soft: #3A2516;
+  --green: #4CC28A; --green-soft: #15342A; --red: #F07A6E; --red-soft: #3D1E1C; --navy: #C9D6EE; --bar: #0B1120; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0F1626; --card: #182238; --ink: #E8EDF5; --muted: #A9B4C8; --faint: #7E8AA2; --line: #2C3A57; --soft: #1E2A43;
+  --zone: #263A5E; --cell: #182238; --blue: #6FA4E6; --blue-soft: #1D3354; --orange: #F08A4B; --orange-soft: #3A2516;
+  --green: #4CC28A; --green-soft: #15342A; --red: #F07A6E; --red-soft: #3D1E1C; --navy: #C9D6EE; --bar: #0B1120; color-scheme: dark }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 16px; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bar); }
+.gut { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.wrap { max-width: 1240px; margin: 0 auto; }
+button { font: inherit; cursor: pointer; color: inherit; }
+button:focus-visible, input:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+.num { font-variant-numeric: tabular-nums; }
+
+/* top bar */
+.bar { background: var(--bar); color: var(--bar-ink); padding-block: 12px; }
+.bar .wrap { display: flex; align-items: center; gap: 12px 22px; flex-wrap: wrap; }
+.brand b { display: block; font-family: var(--display); font-weight: 700; font-size: 24px; letter-spacing: 1.5px; text-transform: uppercase; line-height: 1; }
+.brand span { display: block; font-size: 11.5px; letter-spacing: 2px; text-transform: uppercase; color: #C9D3E3; margin-top: 4px; }
+.tabs { display: flex; gap: 4px; background: rgba(255,255,255,.08); padding: 4px; border-radius: 9px; flex-wrap: wrap; }
+.tabs button { border: 0; background: transparent; color: #DCE4F0; font-family: var(--display); font-weight: 500; font-size: 16px; letter-spacing: 1.2px; text-transform: uppercase; padding: 7px 14px; border-radius: 6px; }
+.tabs button[aria-selected="true"] { background: #C85C1C; color: #fff; }
+.demo { margin-left: auto; font-size: 12.5px; color: #C9D3E3; }
+
+main { padding-block: 18px 40px; }
+h1 { font-family: var(--display); font-weight: 600; font-size: 34px; margin: 0; letter-spacing: .3px; text-wrap: balance; }
+.sub { color: var(--muted); margin: 4px 0 0; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; min-width: 0; }
+.lbl { font-size: 12px; font-weight: 800; letter-spacing: 1.6px; text-transform: uppercase; color: var(--muted); }
+
+/* round header: at-bat chips */
+.rhead { display: flex; align-items: flex-end; gap: 10px 20px; flex-wrap: wrap; margin-bottom: 12px; }
+.abs { display: flex; gap: 6px; flex-wrap: wrap; margin-left: auto; }
+.ab { border: 1px solid var(--line); background: var(--card); border-radius: 999px; padding: 5px 12px; font-size: 13.5px; font-weight: 600; color: var(--muted); }
+.ab.on { border-color: var(--orange); color: var(--ink); box-shadow: inset 0 0 0 1px var(--orange); }
+.ab.done { color: var(--ink); }
+.ab .r { font-weight: 800; margin-left: 4px; }
+
+/* the step card */
+.step { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 18px; }
+@media (max-width: 880px) { .step { grid-template-columns: minmax(0, 1fr); } }
+.sit { display: grid; gap: 14px; align-content: start; }
+.who { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.who b { font-family: var(--display); font-weight: 600; font-size: 40px; line-height: 1; }
+.who span { font-size: 17px; color: var(--muted); }
+.board { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.board div { background: var(--soft); border-radius: 10px; padding: 8px 10px; min-width: 0; }
+@media (max-width: 520px) { .board { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.board b { display: block; font-family: var(--display); font-weight: 600; font-size: 30px; line-height: 1.1; }
+.board span { font-size: 11.5px; font-weight: 800; letter-spacing: 1.3px; text-transform: uppercase; color: var(--muted); }
+.taps { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; counter-reset: tap; }
+.taps li { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 12px; align-items: center; background: var(--soft); border-radius: 10px; padding: 10px 12px; }
+.taps li::before { counter-increment: tap; content: counter(tap); display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--navy); color: var(--card); font-family: var(--display); font-weight: 600; font-size: 18px; }
+.taps li.skip { opacity: .55; }
+.taps .k { font-size: 12px; font-weight: 800; letter-spacing: 1.3px; text-transform: uppercase; color: var(--muted); display: block; }
+.taps .v { font-size: 22px; font-weight: 800; }
+.taps .v small { font-size: 15px; font-weight: 600; color: var(--muted); }
+.btnchip { display: inline-block; border: 2px solid var(--navy); border-radius: 8px; padding: 1px 10px; font-size: 19px; font-weight: 800; margin-right: 6px; }
+.talk { border-left: 5px solid var(--orange); background: var(--orange-soft); border-radius: 0 10px 10px 0; padding: 10px 14px; font-size: 16.5px; line-height: 1.45; }
+.talk b { color: var(--orange); font-size: 12px; letter-spacing: 1.4px; text-transform: uppercase; display: block; margin-bottom: 2px; }
+
+.pics { display: grid; gap: 14px; align-content: start; }
+.grids { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.grids.one { grid-template-columns: minmax(0, 340px); justify-content: center; }
+.gridbox { display: grid; gap: 6px; min-width: 0; }
+.gridbox .lbl { text-align: center; }
+.g5 { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); grid-template-rows: repeat(5, minmax(0, 1fr)); gap: 4px; aspect-ratio: 1; max-width: 100%; }
+.g5 i { border: 1px solid var(--line); border-radius: 4px; background: var(--cell); display: grid; place-items: center; font-style: normal; font-family: var(--display); font-weight: 600; font-size: 22px; }
+.g5 i.z { background: var(--zone); }
+.g5 i.call { background: var(--orange); border-color: var(--orange); color: #fff; }
+.g5 i.loc { background: var(--blue); border-color: var(--blue); color: #fff; }
+.g5 i.prev { box-shadow: inset 0 0 0 2px var(--faint); }
+.cv { text-align: center; font-size: 12px; color: var(--faint); }
+.grade { justify-self: center; font-weight: 800; font-size: 14px; letter-spacing: 1px; text-transform: uppercase; border-radius: 999px; padding: 4px 14px; }
+.grade.spot, .grade.close { background: var(--green-soft); color: var(--green); }
+.grade.miss { background: var(--red-soft); color: var(--red); }
+.field { max-width: 360px; justify-self: center; width: 100%; }
+.field svg { width: 100%; height: auto; display: block; overflow: hidden; }
+
+.nav { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
+.nav button { border: 0; border-radius: 10px; padding: 14px 26px; font-weight: 800; font-size: 18px; }
+.nav .back { background: var(--soft); color: var(--ink); border: 1px solid var(--line); }
+.nav .next { background: #C85C1C; color: #fff; margin-left: auto; }
+.nav .next:disabled, .nav .back:disabled { opacity: .4; cursor: default; }
+.nav .where { color: var(--muted); font-size: 14px; }
+.prog { height: 6px; background: var(--soft); border-radius: 3px; overflow: hidden; margin-top: 12px; }
+.prog div { height: 100%; background: #C85C1C; }
+
+/* answer key */
+.key { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 700px) { .key { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.key div { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: var(--soft); }
+.key b { display: block; font-family: var(--display); font-weight: 600; font-size: 30px; line-height: 1.1; }
+.key span { font-size: 12px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); }
+.key em { display: block; font-style: normal; font-size: 13px; color: var(--muted); margin-top: 2px; }
+.qs { margin: 0; padding-left: 22px; display: grid; gap: 8px; font-size: 17px; line-height: 1.4; }
+.qs details { cursor: pointer; }
+.qs summary { font-weight: 700; }
+.qs p { margin: 6px 0 0; color: var(--muted); }
+
+/* how it works + scores */
+.cols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+@media (max-width: 880px) { .cols { grid-template-columns: minmax(0, 1fr); } }
+.cols h2, .card h2 { font-family: var(--display); font-weight: 600; font-size: 20px; letter-spacing: .8px; text-transform: uppercase; margin: 0 0 8px; color: var(--navy); }
+.cols ol, .cols ul { margin: 0; padding-left: 20px; display: grid; gap: 6px; line-height: 1.45; }
+.mono { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: .92em; background: var(--soft); border-radius: 4px; padding: 1px 5px; overflow-wrap: anywhere; }
+.scores { width: 100%; border-collapse: collapse; font-size: 18px; }
+.scores th { text-align: left; font-size: 12px; font-weight: 800; letter-spacing: 1.4px; text-transform: uppercase; color: var(--muted); padding: 8px; border-bottom: 1px solid var(--line); }
+.scores td { padding: 8px; border-bottom: 1px solid var(--soft); }
+.scores input { font: inherit; font-weight: 700; color: var(--ink); background: var(--soft); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; width: 100%; min-width: 120px; }
+.step-n { display: inline-flex; align-items: center; gap: 6px; }
+.step-n button { width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); font-weight: 800; font-size: 20px; }
+.step-n b { min-width: 30px; text-align: center; font-family: var(--display); font-size: 26px; }
+.tot { font-family: var(--display); font-weight: 600; font-size: 30px; }
+tr.lead .tot { color: var(--orange); }
+.scroll { overflow-x: auto; }
+.row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.mini { border: 1px solid var(--line); background: var(--card); border-radius: 8px; padding: 6px 12px; font-weight: 700; }
+.foot { color: var(--faint); font-size: 12.5px; margin-top: 16px; }
+@media (prefers-reduced-motion: no-preference) { .prog div { transition: width .25s ease; } }
+</style>
+
+<header class="bar gut">
+  <div class="wrap">
+    <div class="brand"><b>Chart This Inning</b><span>Legend Titans · players' session</span></div>
+    <nav class="tabs" role="tablist" aria-label="Activity" id="tabs"></nav>
+    <div class="demo"><a href="index.html" style="color:#F2B33D;font-weight:700;text-decoration:none">&lsaquo; Demo page</a> &nbsp;·&nbsp; Demo game vs Ridgeview · practice, nothing is sent</div>
+  </div>
+</header>
+<main class="gut"><div class="wrap" id="view"></div></main>
+
+<script>
+(function () {
+var DATA = {"pitch":[{"name":"Gavin Hughes","no":"21","bats":"L","res":"2B","traj":"FB","hard":true,"spray":{"x":167.9,"y":32.2},"flags":[],"p":[{"t":"FB","e":"B","loc":[4,2],"call":[4,3]},{"t":"CB","e":"X","loc":[2,1],"call":[2,0]}]},{"name":"Owen Marsh","no":"9","bats":"R","res":"GO","traj":null,"hard":false,"spray":{"x":89,"y":104.9},"flags":[],"p":[{"t":"FB","e":"X","loc":[1,2],"call":[1,1]}]},{"name":"Mason Reyes","no":"2","bats":"R","res":"1B","traj":"GB","hard":false,"spray":{"x":63.2,"y":78.3},"flags":[],"p":[{"t":"CB","e":"B","loc":[4,0],"call":[4,1]},{"t":"FB","e":"CS","loc":[1,1],"call":[1,1]},{"t":"FB","e":"X","loc":[2,3],"call":[4,4]}]},{"name":"Tyler Okafor","no":"7","bats":"R","res":"K","traj":null,"hard":false,"spray":null,"flags":[],"p":[{"t":"FB","e":"SW","loc":[2,3],"call":[2,3]},{"t":"CB","e":"B","loc":[4,1],"call":[3,3]},{"t":"FB","e":"B","loc":[4,2],"call":[2,4]},{"t":"FB","e":"B","loc":[1,0],"call":[0,0]},{"t":"CB","e":"F","loc":[2,2],"call":[2,2]},{"t":"FB","e":"SW","loc":[2,1],"call":[4,2]}]},{"name":"Jake Brennan","no":"24","bats":"L","res":"Kc","traj":null,"hard":false,"spray":null,"flags":[],"p":[{"t":"FB","e":"SW","loc":[0,2],"call":[0,2]},{"t":"FB","e":"CS","loc":[2,1],"call":[1,0]},{"t":"FB","e":"B","loc":[0,1],"call":[0,1]},{"t":"FB","e":"B","loc":[2,0],"call":[1,0]},{"t":"CB","e":"CS","loc":[2,3],"call":[3,2]}]}],"off":[{"name":"Dieker","no":"9","bats":"R","res":"1B","traj":"GB","hard":false,"spray":{"x":129.4,"y":78.2},"flags":[],"p":[{"t":"FB","e":"X","loc":[1,1]}]},{"name":"Bobo","no":"1","bats":"L","res":"K","traj":null,"hard":false,"spray":null,"flags":[],"p":[{"t":"FB","e":"F","loc":[2,0]},{"t":"FB","e":"F","loc":[2,1]},{"t":"FB","e":"F","loc":[1,1]},{"t":"FB","e":"SW","loc":[4,1]}]},{"name":"Herbert","no":"2","bats":"L","res":"GO","traj":null,"hard":false,"spray":{"x":117.3,"y":118.7},"flags":["adv"],"p":[{"t":"FB","e":"SW","loc":[2,0]},{"t":"FB","e":"B","loc":[4,2]},{"t":"FB","e":"SW","loc":[3,1]},{"t":"SL","e":"F","loc":[3,3]},{"t":"CH","e":"X","loc":[3,1]}]},{"name":"Pistorius","no":"3","bats":"R","res":"FO","traj":null,"hard":false,"spray":{"x":93.8,"y":32},"flags":[],"p":[{"t":"FB","e":"F","loc":[1,1]},{"t":"SL","e":"B","loc":[4,2]},{"t":"SL","e":"X","loc":[2,1]}]}]};
+
+/* ============================================================ words for the grids and results */
+var ROWW = ["Above the zone", "High", "Middle", "Low", "Below the zone"];
+var COLW = ["Off the plate, left", "Left side", "Middle", "Right side", "Off the plate, right"];
+function spotWords(rc) { return ROWW[rc[0]] + " · " + COLW[rc[1]]; }
+function inZone(rc) { return rc[0] >= 1 && rc[0] <= 3 && rc[1] >= 1 && rc[1] <= 3; }
+var TYPE = {FB: "Fastball", CB: "Curveball", SL: "Slider", CH: "Changeup"};
+var RES = {"1B": "Single", "2B": "Double", GO: "Ground out", FO: "Fly out", K: "Strikeout swinging", Kc: "Strikeout looking"};
+var TRAJ = {GB: "Ground ball", FB: "Fly ball", LD: "Line drive", PU: "Pop up"};
+var AUTO_TRAJ = {GO: 1, FO: 1};   /* these results set "How it was hit" themselves */
+
+/* Where each ball went, in words, to go with the dot on the field (app coordinates, home plate 100,162). */
+var WHERE = {
+  "Gavin Hughes": "Deep right field", "Owen Marsh": "Up the middle, shortstop side of 2nd", "Mason Reyes": "Through the left side into left field",
+  "Dieker": "Through the right side into right field", "Herbert": "To the second baseman", "Pistorius": "Deep center field"
+};
+
+/* Coach talking points, keyed "hitter|pitch number" (pitch 0 = the at-bat's finish). Short, said out loud. */
+var TALK = {
+  pitch: {
+    "Gavin Hughes|1": "Ball one to the leadoff man. First-pitch strikes are one of our 9 goals: 60% or better.",
+    "Gavin Hughes|2": "Called just off the plate, it caught the edge of the zone. Still close, one box off, and he hit it hard.",
+    "Owen Marsh|1": "One pitch, one out. That's the dream at-bat for a pitcher.",
+    "Mason Reyes|3": "Called below the zone and off the plate, it stayed up in the zone: two boxes off, a miss. He singles and the run scores.",
+    "Tyler Okafor|5": "Behind 3-1. One more ball and it's a free base, the stat we're cutting by 150 this year.",
+    "Tyler Okafor|6": "Called below the zone and missed up, but he swung through it. Execution grades the pitch, not the result.",
+    "Jake Brennan|0": "Strike three looking on the curveball. Zero walks this inning.",
+    "end|0": "17 pitches, 0 free bases, 1 run. Notice how many taps it took to catch all of that."
+  },
+  off: {
+    "Dieker|1": "First pitch fastball in the zone and he hit it. A hit is a quality at-bat.",
+    "Bobo|4": "Three fouls, then a swing at a pitch below the zone. That chase shows up on his card.",
+    "Herbert|0": "A ground out, but he moved Dieker to 2nd with 1 out and put a 2-strike pitch in play. Two reasons it's a quality at-bat.",
+    "Pistorius|0": "Fly out on a 1-1 slider. Not a quality at-bat: no hit, no runner moved, fewer than 7 pitches."
+  }
+};
+
+/* ============================================================ build the steps for a round */
+function buildSteps(round) {
+  var abs = DATA[round], steps = [], outs = 0, type = "FB", pitchNo = 0, total = 0;
+  abs.forEach(function (a) { total += a.p.length; });
+  steps.push({kind: "start", round: round});
+  abs.forEach(function (a, ai) {
+    var b = 0, s = 0, prevLocs = [];
+    a.p.forEach(function (q, pi) {
+      pitchNo++;
+      var st = {kind: "pitch", round: round, ai: ai, a: a, q: q, n: pitchNo, total: total, pi: pi + 1, balls: b, strikes: s, outs: outs,
+                typeChange: q.t !== type, prev: prevLocs.slice()};
+      type = q.t;
+      steps.push(st);
+      prevLocs.push(q.loc);
+      if (q.e === "B") b++; else if (q.e === "CS" || q.e === "SW") s++; else if (q.e === "F" && s < 2) s++;
+    });
+    var outsBefore = outs;
+    if (["GO", "FO", "K", "Kc"].indexOf(a.res) >= 0) outs++;
+    steps.push({kind: "end", round: round, ai: ai, a: a, outs: outs, outsBefore: outsBefore, balls: b, strikes: s});
+  });
+  if (round === "pitch") steps.push({kind: "inning", round: round});
+  steps.push({kind: "check", round: round});
+  return steps;
+}
+var STEPS = {pitch: buildSteps("pitch"), off: buildSteps("off")};
+
+/* ============================================================ state */
+var S = {tab: "how", i: {pitch: 0, off: 0}, groups: [
+  {name: "Group 1", r1: 0, r2: 0}, {name: "Group 2", r1: 0, r2: 0}, {name: "Group 3", r1: 0, r2: 0}, {name: "Group 4", r1: 0, r2: 0}
+]};
+try { var sv = JSON.parse(localStorage.getItem("cti-v1") || "null"); if (sv && sv.groups) { S.i = sv.i || S.i; S.groups = sv.groups; } } catch (e) {}
+function save() { try { localStorage.setItem("cti-v1", JSON.stringify({i: S.i, groups: S.groups})); } catch (e) {} }
+var TABS = [["how", "How it works"], ["pitch", "Round 1 · Pitch Chart"], ["off", "Round 2 · Offense Chart"], ["scores", "Scores"]];
+function readHash() { var h = (location.hash || "").replace("#", ""); if (TABS.some(function (t) { return t[0] === h; })) S.tab = h; }
+
+function $(s) { return document.querySelector(s); }
+function esc(x) { return String(x == null ? "" : x).replace(/[&<>"']/g, function (c) { return {"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]; }); }
+
+/* ============================================================ pieces */
+function grid(label, mark, cls, prev) {
+  var cells = "";
+  for (var r = 0; r < 5; r++) for (var c = 0; c < 5; c++) {
+    var on = mark && mark[0] === r && mark[1] === c, was = (prev || []).some(function (p) { return p[0] === r && p[1] === c; });
+    cells += '<i class="' + (inZone([r, c]) ? "z" : "") + (on ? " " + cls : "") + (was && !on ? " prev" : "") + '">' + (on ? (cls === "call" ? "C" : "●") : "") + "</i>";
+  }
+  return '<div class="gridbox"><span class="lbl">' + label + '</span><div class="g5" aria-hidden="true">' + cells + "</div></div>";
+}
+function field(a) {
+  var x = a.spray.x, y = a.spray.y;
+  return '<div class="field"><svg viewBox="-10 -20 220 196" role="img" aria-label="Where the ball went: ' + esc(WHERE[a.name] || "") + '">' +
+    '<path d="M100 162 L-4 58 Q100 -46 204 58 Z" style="fill:var(--green-soft);stroke:var(--line);stroke-width:1.2"/>' +
+    '<path d="M100 162 L56 118 L100 74 L144 118 Z" style="fill:var(--zone);stroke:var(--line);stroke-width:1.5"/>' +
+    '<path d="M100 162 Q' + ((100 + x) / 2) + " " + ((162 + y) / 2 - 18) + " " + x + " " + y + '" style="fill:none;stroke:var(--blue);stroke-width:2.5;stroke-dasharray:' + (a.traj === "GB" ? "6 4" : "none") + '"/>' +
+    '<circle cx="' + x + '" cy="' + y + '" r="7" style="fill:var(--blue);stroke:var(--card);stroke-width:2.5"/>' +
+    '<circle cx="100" cy="162" r="4" style="fill:var(--navy)"/></svg></div>';
+}
+function gradeOf(q) {
+  var d = Math.max(Math.abs(q.loc[0] - q.call[0]), Math.abs(q.loc[1] - q.call[1]));
+  return d === 0 ? ["spot", "On the spot"] : d === 1 ? ["close", "Close · one box off"] : ["miss", "Miss · " + d + " boxes off"];
+}
+function what(q, last, a, strikes) {
+  if (q.e === "X") return '<span class="btnchip">' + a.res + "</span><small>in play: skip the 3 buttons, tap the result</small>";
+  if (q.e === "B") return '<span class="btnchip">Took it</span><small>ball</small>';
+  if (q.e === "CS") return '<span class="btnchip">Took it</span><small>called strike' + (last ? ": strike 3, the app marks Kc" : "") + "</small>";
+  if (q.e === "SW") return '<span class="btnchip">Swing &amp; miss</span><small>' + (last ? "strike 3, the app marks K" : "") + "</small>";
+  if (q.e === "F") return '<span class="btnchip">Foul</span><small>' + (strikes >= 2 ? "count stays" : "") + "</small>";
+  return q.e;
+}
+function talk(round, key) { var t = TALK[round][key]; return t ? '<div class="talk"><b>Talk about it</b>' + esc(t) + "</div>" : ""; }
+function abChips(round, cur) {
+  var steps = STEPS[round], i = S.i[round];
+  return '<div class="abs">' + DATA[round].map(function (a, ai) {
+    var endIdx = steps.findIndex(function (s) { return s.kind === "end" && s.ai === ai; }), done = i > endIdx, on = cur === ai;
+    return '<span class="ab' + (on ? " on" : "") + (done ? " done" : "") + '">' + esc(a.name.split(" ").pop()) + (done ? '<span class="r">' + a.res + "</span>" : "") + "</span>";
+  }).join("") + "</div>";
+}
+
+/* ============================================================ step views */
+var ROUND = {
+  pitch: {app: "Pitch Chart", pitcher: "Borcherding", ph: "RHP", side: "Our pitcher vs Ridgeview's hitters", up: "Gavin Hughes #21 (bats L)"},
+  off: {app: "Offense Chart", pitcher: "Drew Lindqvist", ph: "LHP", side: "Our hitters vs Ridgeview's pitcher", up: "Dieker, 9th in our order"}
+};
+function stepView(round) {
+  var steps = STEPS[round], st = steps[S.i[round]], R = ROUND[round], body = "", cur = st.ai;
+  if (st.kind === "start") {
+    body = '<div class="step"><div class="sit"><div class="who"><b>' + (round === "pitch" ? "Bottom" : "Top") + ' of the 7th, nobody out</b></div>' +
+      '<ol class="taps"><li><div><span class="k">Open</span><span class="v">' + R.app + ' <small>from the demo page, in Safari</small></span></div></li>' +
+      '<li><div><span class="k">Check the mound</span><span class="v">' + R.pitcher + " <small>" + R.ph + "</small></span></div></li>" +
+      '<li><div><span class="k">Check who is up</span><span class="v">' + R.up + "</span></div></li>" +
+      '<li><div><span class="k">Roles</span><span class="v"><small>Tapper on the iPad, Spotter reads the screen out loud, Checker confirms each tap. Switch after every hitter.</small></span></div></li></ol>' +
+      talk(round, "start|0") + "</div>" +
+      '<div class="pics"><div class="card" style="background:var(--soft)"><span class="lbl">' + R.side + '</span><p style="font-size:19px;line-height:1.45;margin:8px 0 0">' +
+      (round === "pitch" ? "Every pitch gets 4 taps: <b>pitch type</b> (only when it changes), <b>where the catcher called it</b>, <b>where it crossed</b>, and <b>what happened</b>. The called spot is required: the app won't take the location until it has one." :
+        "Every pitch gets 3 taps: <b>pitch type</b> (only when it changes), <b>where it crossed</b>, and <b>what happened</b>. No called spot here: we don't know what their catcher called.") +
+      "</p><p style=\"font-size:19px;line-height:1.45\">Hands up when your iPad matches the screen. We go together.</p></div></div></div>";
+  } else if (st.kind === "pitch") {
+    var q = st.q, a = st.a, last = st.pi === a.p.length, g = round === "pitch" ? gradeOf(q) : null;
+    var taps = '<li' + (st.typeChange || st.n === 1 ? "" : ' class="skip"') + '><div><span class="k">Pitch type</span><span class="v">' + q.t + " <small>" + TYPE[q.t] + (st.typeChange || st.n === 1 ? "" : ", already set") + "</small></span></div></li>" +
+      (round === "pitch" ? '<li><div><span class="k">Called spot</span><span class="v">' + spotWords(q.call) + "</span></div></li>" : "") +
+      '<li><div><span class="k">Location</span><span class="v">' + spotWords(q.loc) + "</span></div></li>" +
+      '<li><div><span class="k">What happened</span><span class="v">' + what(q, last, a, st.strikes) + "</span></div></li>";
+    body = '<div class="step"><div class="sit"><div class="who"><b>' + esc(a.name) + "</b><span>" + (round === "pitch" ? "#" + a.no : "Spot " + a.no) + " · bats " + a.bats + "</span></div>" +
+      '<div class="board"><div><b class="num">' + st.n + '<small style="font-size:16px;color:var(--muted)"> / ' + st.total + "</small></b><span>Pitch</span></div><div><b class=\"num\">" + st.balls + "-" + st.strikes + "</b><span>Count</span></div>" +
+      '<div><b class="num">' + st.outs + "</b><span>Outs</span></div><div><b>" + q.t + "</b><span>" + (round === "pitch" ? "Borcherding" : "Lindqvist") + "</span></div></div>" +
+      '<ol class="taps">' + taps + "</ol>" + talk(round, a.name + "|" + st.pi) + "</div>" +
+      '<div class="pics"><div class="grids' + (round === "pitch" ? "" : " one") + '">' +
+      (round === "pitch" ? grid("Called spot", q.call, "call") : "") + grid("Location", q.loc, "loc", st.prev) + "</div>" +
+      '<div class="cv">Catcher\'s view, same as the app. Shaded boxes are the strike zone.' + (st.prev.length ? " Outlined: his earlier pitches this at-bat." : "") + "</div>" +
+      (g ? '<span class="grade ' + g[0] + '">' + g[1] + "</span>" : "") + "</div></div>";
+  } else if (st.kind === "end") {
+    var a2 = st.a, ks = a2.res === "K" || a2.res === "Kc", list = "";
+    if (ks) list = '<li><div><span class="k">Result</span><span class="v">' + a2.res + " <small>already marked by the app</small></span></div></li>";
+    else {
+      list = '<li><div><span class="k">Result</span><span class="v"><span class="btnchip">' + a2.res + "</span><small>" + RES[a2.res] + "</small></span></div></li>";
+      list += '<li' + (AUTO_TRAJ[a2.res] ? ' class="skip"' : "") + '><div><span class="k">How it was hit</span><span class="v">' + TRAJ[a2.traj || (a2.res === "GO" ? "GB" : "FB")] + (AUTO_TRAJ[a2.res] ? " <small>set by the result</small>" : "") + "</span></div></li>";
+      if (a2.hard) list += '<li><div><span class="k">Tap</span><span class="v"><span class="btnchip">Hard contact</span></span></div></li>';
+      if (a2.flags.indexOf("adv") >= 0) list += '<li><div><span class="k">Tap</span><span class="v"><span class="btnchip">Moved a runner</span><small>Dieker to 2nd</small></span></div></li>';
+      list += '<li><div><span class="k">Where it went</span><span class="v">' + esc(WHERE[a2.name]) + " <small>tap the field</small></span></div></li>";
+    }
+    var lastAb = st.ai === DATA[round].length - 1;
+    list += '<li><div><span class="k">Then</span><span class="v">' + (lastAb && round === "pitch" ? '<span class="btnchip">Next Batter</span><small>third out: the inning box opens</small>' : '<span class="btnchip">' + (round === "pitch" ? "Next Batter" : "Next hitter") + "</span>") + "</span></div></li>";
+    body = '<div class="step"><div class="sit"><div class="who"><b>' + esc(a2.name) + "</b><span>" + RES[a2.res] + "</span></div>" +
+      '<div class="board"><div><b class="num">' + a2.p.length + "</b><span>Pitches</span></div><div><b class=\"num\">" + st.outs + "</b><span>Outs now</span></div>" +
+      '<div><b>' + (a2.hard ? "Yes" : "No") + "</b><span>Hard</span></div><div><b>" + (ks ? "–" : TRAJ[a2.traj || (a2.res === "GO" ? "GB" : "FB")].split(" ")[0]) + "</b><span>Hit</span></div></div>" +
+      '<ol class="taps">' + list + "</ol>" + talk(round, a2.name + "|0") + "</div>" +
+      '<div class="pics">' + (a2.spray ? '<span class="lbl" style="text-align:center">Where it went</span>' + field(a2) + '<div class="cv">' + esc(WHERE[a2.name]) + (a2.traj === "GB" ? " · dashed = on the ground" : "") + "</div>"
+        : '<div class="card" style="background:var(--soft);text-align:center"><span class="lbl">Strike 3</span><p style="font-family:var(--display);font-size:64px;margin:6px 0">' + a2.res + '</p><p class="sub">No ball in play, nothing to mark on the field.</p></div>') + "</div></div>";
+  } else if (st.kind === "inning") {
+    body = '<div class="step"><div class="sit"><div class="who"><b>End of the inning</b><span>3 outs</span></div>' +
+      '<ol class="taps"><li><div><span class="k">The app asks</span><span class="v">Runs this inning</span></div></li>' +
+      '<li><div><span class="k">Runs</span><span class="v">1 <small>Hughes scored on the single</small></span></div></li>' +
+      '<li><div><span class="k">Earned</span><span class="v">1 <small>fills in to match; no error on the play</small></span></div></li>' +
+      '<li><div><span class="k">Then</span><span class="v"><span class="btnchip">Confirm</span><small>and open the Report tab</small></span></div></li></ol>' +
+      talk(round, "end|0") + "</div>" +
+      '<div class="pics"><div class="card" style="background:var(--soft)"><span class="lbl">Why the app stops here</span><p style="font-size:19px;line-height:1.45;margin:8px 0 0">The inning can\'t close until somebody enters the runs. That\'s on purpose: runs and earned runs are the only numbers in the whole app a person types in, so the app makes sure they don\'t get forgotten.</p></div></div></div>';
+  } else {
+    body = checkView(round);
+  }
+  var n = S.i[round], tot = steps.length;
+  return '<div class="rhead"><div><h1>' + (round === "pitch" ? "Round 1 · Pitch Chart" : "Round 2 · Offense Chart") + '</h1><p class="sub">' + R.side + "</p></div>" + abChips(round, cur) + "</div>" +
+    '<section class="card">' + body + '<div class="prog"><div style="width:' + (n * 100 / (tot - 1)) + '%"></div></div>' +
+    '<div class="nav"><button class="back" data-go="-1"' + (n === 0 ? " disabled" : "") + '>‹ Back</button><span class="where">Step ' + (n + 1) + " of " + tot + " · arrow keys work too</span>" +
+    '<button class="next" data-go="1"' + (n === tot - 1 ? " disabled" : "") + ">" + (n === tot - 2 ? "Answer key ›" : "Next ›") + "</button></div></section>";
+}
+
+/* What each group's iPad should show once the inning is charted. Read off the real apps with the demo game loaded. */
+function checkView(round) {
+  if (round === "pitch") {
+    return '<div class="sit" style="gap:16px"><div class="who"><b>Check your iPad</b><span>Report tab, Borcherding\'s card</span></div>' +
+      '<div class="key">' +
+      kv("17", "Pitches", "1 inning") + kv("5", "Batters", "Hughes to Brennan") + kv("3 of 5", "First-pitch strikes", "60%") + kv("10 of 17", "Strikes", "59%") +
+      kv("0", "Free bases", "no walks, no HBP") + kv("2", "Strikeouts", "Okafor, Brennan") + kv("13 of 17", "Execution", "on the spot or next to it") + kv("1 / 1", "Runs / earned", "") +
+      "</div><p class=\"sub\">1 point for each box your iPad matches, 8 possible. The header should read 109 pitches for the game.</p>" +
+      '<div class="card" style="background:var(--soft)"><h2>Talk it through</h2><ol class="qs">' +
+      qa("Borcherding hit 13 of 17 spots. Which pitch hurt most?", "Pitch 3 to Reyes: called low and away, it stayed up over the plate. Single, and the run scored.") +
+      qa("Did he meet the first-pitch strike goal (60%)?", "Right on it: 3 of 5. Hughes and Reyes both started 1-0.") +
+      qa("Why does 0 free bases matter so much?", "Free bases are the program goal: 150 fewer than last year. An inning like this is how we get there.") +
+      "</ol></div></div>";
+  }
+  return '<div class="sit" style="gap:16px"><div class="who"><b>Check your iPad</b><span>Report tab</span></div>' +
+    '<div class="key">' +
+    kv("39", "Lindqvist pitches", "26 before the 7th, 13 in it") + kv("Yes", "Dieker QAB", "hit") + kv("No", "Bobo QAB", "4-pitch strikeout") +
+    kv("Yes", "Herbert QAB", "moved a runner, 2-strike contact") + kv("No", "Pistorius QAB", "fly out, 1-1") + kv("2 of 4", "QAB this inning", "") +
+    "</div><p class=\"sub\">Hitter cards show each hitter's whole game: Dieker 1 of 3, Bobo 2 of 4, Herbert 3 of 4, Pistorius 1 of 4. 1 point for each card that matches, plus 1 for Lindqvist's 39.</p>" +
+    '<div class="card" style="background:var(--soft)"><h2>Talk it through</h2><ol class="qs">' +
+    qa("Herbert made an out. Why does he get a quality at-bat?", "He moved Dieker to 2nd with less than 2 outs, and he put a 2-strike pitch in play. Either one counts.") +
+    qa("What would have turned Bobo's at-bat into a quality at-bat?", "Laying off the pitch below the zone, or fouling off 3 more to reach 7 pitches. Contact with 2 strikes counts too.") +
+    qa("Their pitcher threw a first-pitch fastball to Dieker. What does that tell the next hitter?", "Check the scouting card: Lindqvist throws a fastball on the first pitch 9 times out of 10. Be ready to hit it.") +
+    "</ol></div></div>";
+}
+function kv(v, k, e) { return '<div><b class="num">' + v + "</b><span>" + k + "</span>" + (e ? "<em>" + e + "</em>" : "") + "</div>"; }
+function qa(q, a) { return "<li><details><summary>" + esc(q) + "</summary><p>" + esc(a) + "</p></details></li>"; }
+
+function howView() {
+  return '<h1>Chart This Inning</h1><p class="sub">Each group charts the 7th inning of the demo game on its own iPad, pitch by pitch, then checks its Report tab against the answer key. Round 1 is the Pitch Chart (Ridgeview hitting), Round 2 is the Offense Chart (us hitting). About 10 minutes a round.</p>' +
+    '<div class="cols" style="margin-top:16px">' +
+    '<section class="card"><h2>Before Thursday</h2><ol>' +
+    "<li>On wifi, open Safari on each iPad (not the home-screen icons; they keep their own storage).</li>" +
+    '<li>Go to <span class="mono">legendbaseballapps.github.io/titans-apps/demo/</span></li>' +
+    "<li>Tap <b>Load the 7th inning</b>.</li>" +
+    "<li>Open the Pitch Chart and Offense Chart from the links on that page. Close Safari, then open both again once, so they work without signal.</li>" +
+    "<li>Settings › Display › Auto-Lock: Never.</li></ol></section>" +
+    '<section class="card"><h2>Each group</h2><ul>' +
+    "<li><b>Tapper</b> works the iPad.</li><li><b>Spotter</b> reads this screen out loud: type, called spot, location, what happened.</li>" +
+    "<li><b>Checker</b> watches every tap and catches mistakes. Undo last pitch fixes one.</li>" +
+    "<li>Switch roles after every hitter.</li><li>Hands up when your iPad matches. We move together.</li></ul></section>" +
+    '<section class="card"><h2>Scoring</h2><ul>' +
+    "<li>Round 1: 1 point per box on Borcherding's card that matches the key. 8 possible.</li>" +
+    "<li>Round 2: 1 point per hitter card that matches, plus 1 for Lindqvist's pitch count. 5 possible.</li>" +
+    "<li>+2 to the first group with everything right.</li>" +
+    "<li>A group that gets lost taps <b>Load the 7th inning</b> again and re-charts from the top of the 7th to catch up. Back on this screen shows every pitch.</li></ul></section></div>" +
+    '<div class="row" style="margin-top:16px"><button class="mini" data-tab="pitch">Start Round 1 ›</button><span class="sub">Practice game: nothing here is filed or sent to the dashboard.</span></div>';
+}
+function scoresView() {
+  var tot = S.groups.map(function (g) { return g.r1 + g.r2; }), best = Math.max.apply(null, tot.concat([1]));
+  return '<h1>Scores</h1><p class="sub">Names and points stay on this laptop only.</p><section class="card" style="margin-top:14px"><div class="scroll"><table class="scores">' +
+    "<tr><th>Group</th><th>Round 1 · Pitch Chart</th><th>Round 2 · Offense Chart</th><th>Total</th></tr>" +
+    S.groups.map(function (g, i) {
+      return '<tr' + (tot[i] === best ? ' class="lead"' : "") + '><td><input id="gname' + i + '" data-gname="' + i + '" value="' + esc(g.name) + '" aria-label="Group name"></td>' +
+        "<td>" + stepper(i, "r1", g.r1) + "</td><td>" + stepper(i, "r2", g.r2) + '</td><td class="tot num">' + tot[i] + "</td></tr>";
+    }).join("") + '</table></div><div class="row" style="margin-top:12px"><button class="mini" data-groups="1">+ Add a group</button>' +
+    (S.groups.length > 2 ? '<button class="mini" data-groups="-1">Remove the last group</button>' : "") + '<button class="mini" data-reset="1" style="margin-left:auto">Reset scores</button></div></section>';
+}
+function stepper(i, k, v) { return '<span class="step-n"><button data-pt="' + i + "|" + k + '|-1" aria-label="Minus 1">−</button><b class="num">' + v + '</b><button data-pt="' + i + "|" + k + '|1" aria-label="Plus 1">+</button></span>'; }
+
+/* ============================================================ render and input */
+function render() {
+  $("#tabs").innerHTML = TABS.map(function (t) { return '<button role="tab" aria-selected="' + (S.tab === t[0]) + '" data-tab="' + t[0] + '">' + t[1] + "</button>"; }).join("");
+  $("#view").innerHTML = (S.tab === "how" ? howView() : S.tab === "scores" ? scoresView() : stepView(S.tab)) +
+    '<p class="foot">Demo game vs Ridgeview, Oct 26 · every number here was read off the real apps with the demo loaded</p>';
+  save();
+}
+function go(d) {
+  if (S.tab !== "pitch" && S.tab !== "off") return;
+  var n = S.i[S.tab] + d; if (n < 0 || n >= STEPS[S.tab].length) return;
+  S.i[S.tab] = n; render();
+}
+document.addEventListener("click", function (e) {
+  var b = e.target.closest("button"); if (!b) return;
+  if (b.dataset.tab) { S.tab = b.dataset.tab; try { history.replaceState(null, "", "#" + S.tab); } catch (x) {} render(); window.scrollTo(0, 0); }
+  else if (b.dataset.go) go(+b.dataset.go);
+  else if (b.dataset.pt) { var p = b.dataset.pt.split("|"), g = S.groups[+p[0]]; g[p[1]] = Math.max(0, g[p[1]] + (+p[2])); render(); }
+  else if (b.dataset.groups) { if (+b.dataset.groups > 0) S.groups.push({name: "Group " + (S.groups.length + 1), r1: 0, r2: 0}); else S.groups.pop(); render(); }
+  else if (b.dataset.reset) { S.groups.forEach(function (g) { g.r1 = 0; g.r2 = 0; }); S.i = {pitch: 0, off: 0}; render(); }
+});
+document.addEventListener("input", function (e) { var i = e.target.dataset.gname; if (i != null) { S.groups[+i].name = e.target.value; save(); } });
+document.addEventListener("keydown", function (e) {
+  if (e.target.matches("input, textarea")) return;
+  if (e.key === "ArrowRight" || e.key === " " || e.key === "PageDown") { e.preventDefault(); go(1); }
+  else if (e.key === "ArrowLeft" || e.key === "PageUp") { e.preventDefault(); go(-1); }
+});
+window.addEventListener("hashchange", function () { readHash(); render(); });
+readHash(); render();
+})();
+</script>
+</body></html>
