@@ -115,24 +115,16 @@ h1 { font-family: var(--display); font-weight: 600; font-size: 34px; margin: 0; 
 .qs summary { font-weight: 700; }
 .qs p { margin: 6px 0 0; color: var(--muted); }
 
-/* how it works + scores */
+/* how it works */
 .cols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
 @media (max-width: 880px) { .cols { grid-template-columns: minmax(0, 1fr); } }
 .cols h2, .card h2 { font-family: var(--display); font-weight: 600; font-size: 20px; letter-spacing: .8px; text-transform: uppercase; margin: 0 0 8px; color: var(--navy); }
 .cols ol, .cols ul { margin: 0; padding-left: 20px; display: grid; gap: 6px; line-height: 1.45; }
 .mono { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: .92em; background: var(--soft); border-radius: 4px; padding: 1px 5px; overflow-wrap: anywhere; }
-.scores { width: 100%; border-collapse: collapse; font-size: 18px; }
-.scores th { text-align: left; font-size: 12px; font-weight: 800; letter-spacing: 1.4px; text-transform: uppercase; color: var(--muted); padding: 8px; border-bottom: 1px solid var(--line); }
-.scores td { padding: 8px; border-bottom: 1px solid var(--soft); }
-.scores input { font: inherit; font-weight: 700; color: var(--ink); background: var(--soft); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; width: 100%; min-width: 120px; }
-.step-n { display: inline-flex; align-items: center; gap: 6px; }
-.step-n button { width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); font-weight: 800; font-size: 20px; }
-.step-n b { min-width: 30px; text-align: center; font-family: var(--display); font-size: 26px; }
-.tot { font-family: var(--display); font-weight: 600; font-size: 30px; }
-tr.lead .tot { color: var(--orange); }
-.scroll { overflow-x: auto; }
+tr.lead .scroll { overflow-x: auto; }
 .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .mini { border: 1px solid var(--line); background: var(--card); border-radius: 8px; padding: 6px 12px; font-weight: 700; }
+.pill-scout { justify-self: start; background: var(--blue); color: #fff; font-size: 12.5px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; border-radius: 999px; padding: 4px 12px; }
 .scoutcard { display: grid; gap: 10px; border-left: 6px solid var(--blue); }
 .scoutread { font-family: var(--display); font-weight: 500; font-size: 30px; line-height: 1.25; margin: 0; }
 .scoutnote { font-size: 20px; font-weight: 700; color: var(--orange); margin: 0; line-height: 1.4; }
@@ -247,12 +239,10 @@ function buildSteps(round) {
 var STEPS = {pitch: buildSteps("pitch"), off: buildSteps("off")};
 
 /* ============================================================ state */
-var S = {tab: "how", i: {pitch: 0, off: 0}, groups: [
-  {name: "Group 1", r1: 0, r2: 0}, {name: "Group 2", r1: 0, r2: 0}, {name: "Group 3", r1: 0, r2: 0}, {name: "Group 4", r1: 0, r2: 0}
-]};
-try { var sv = JSON.parse(localStorage.getItem("cti-v1") || "null"); if (sv && sv.groups) { S.i = sv.i || S.i; S.groups = sv.groups; } } catch (e) {}
-function save() { try { localStorage.setItem("cti-v1", JSON.stringify({i: S.i, groups: S.groups})); } catch (e) {} }
-var TABS = [["how", "How it works"], ["pitch", "Round 1 · Pitch Chart"], ["off", "Round 2 · Offense Chart"], ["scores", "Scores"]];
+var S = {tab: "how", i: {pitch: 0, off: 0}};
+try { var sv = JSON.parse(localStorage.getItem("cti-v2") || "null"); if (sv && sv.i) S.i = sv.i; } catch (e) {}
+function save() { try { localStorage.setItem("cti-v2", JSON.stringify({i: S.i})); } catch (e) {} }
+var TABS = [["how", "How it works"], ["pitch", "Round 1 · Pitch Chart"], ["off", "Round 2 · Offense Chart"]];
 function readHash() { var h = (location.hash || "").replace("#", ""); if (TABS.some(function (t) { return t[0] === h; })) S.tab = h; }
 
 function $(s) { return document.querySelector(s); }
@@ -314,7 +304,7 @@ function stepView(round) {
       '<div class="pics"><div class="card" style="background:var(--soft)"><span class="lbl">' + R.side + '</span><p style="font-size:19px;line-height:1.45;margin:8px 0 0">' +
       (round === "pitch" ? "Every pitch gets 4 taps: <b>pitch type</b> (only when it changes), <b>where the catcher called it</b>, <b>where it crossed</b>, and <b>what happened</b>. The called spot is required: the app won't take the location until it has one." :
         "Every pitch gets 3 taps: <b>pitch type</b> (only when it changes), <b>where it crossed</b>, and <b>what happened</b>. No called spot here: we don't know what their catcher called.") +
-      "</p><p style=\"font-size:19px;line-height:1.45\">Hands up when your iPad matches the screen. We go together.</p></div></div></div>";
+      "</p><p style=\"font-size:19px;line-height:1.45\"><b>Before every hitter we stop and scout him.</b> Hands up when your iPad matches the screen. We go together.</p></div></div></div>";
   } else if (st.kind === "pitch") {
     var q = st.q, a = st.a, last = st.pi === a.p.length, g = round === "pitch" ? gradeOf(q) : null;
     var taps = '<li' + (st.typeChange || st.n === 1 ? "" : ' class="skip"') + '><div><span class="k">Pitch type</span><span class="v">' + q.t + " <small>" + TYPE[q.t] + (st.typeChange || st.n === 1 ? "" : ", already set") + "</small></span></div></li>" +
@@ -331,7 +321,7 @@ function stepView(round) {
       (g ? '<span class="grade ' + g[0] + '">' + g[1] + "</span>" : "") + "</div></div>";
   } else if (st.kind === "scout") {
     var sc = SCOUT[round][st.a.name], ap = round === "pitch";
-    body = '<div class="step"><div class="sit"><div class="who"><b>Scout ' + esc(st.a.name) + "</b><span>before his first pitch · " + st.outs + (st.outs === 1 ? " out" : " outs") + "</span></div>" +
+    body = '<div class="step"><div class="sit"><span class="pill-scout">Scouting · the most important step</span><div class="who"><b>Scout ' + esc(st.a.name) + "</b><span>before his first pitch · " + st.outs + (st.outs === 1 ? " out" : " outs") + "</span></div>" +
       '<ol class="taps"><li><div><span class="k">Find it on your iPad</span><span class="v">' + (ap ? "Pitch Sequencing and Batter scouting <small>scroll down, below the charting panels</small>" : "The What is coming box <small>scroll down, under This at-bat</small>") + "</span></div></li>" +
       '<li><div><span class="k">Spotter</span><span class="v"><small>Read it to your group. Does your screen match this one?</small></span></div></li>' +
       '<li><div><span class="k">Group</span><span class="v">' + esc(sc.ask) + "</span></div></li></ol>" +
@@ -374,7 +364,7 @@ function stepView(round) {
   return '<div class="rhead"><div><h1>' + (round === "pitch" ? "Round 1 · Pitch Chart" : "Round 2 · Offense Chart") + '</h1><p class="sub">' + R.side + "</p></div>" + abChips(round, cur) + "</div>" +
     '<section class="card">' + body + '<div class="prog"><div style="width:' + (n * 100 / (tot - 1)) + '%"></div></div>' +
     '<div class="nav"><button class="back" data-go="-1"' + (n === 0 ? " disabled" : "") + '>‹ Back</button><span class="where">Step ' + (n + 1) + " of " + tot + " · arrow keys work too</span>" +
-    '<button class="next" data-go="1"' + (n === tot - 1 ? " disabled" : "") + ">" + (n === tot - 2 ? "Answer key ›" : "Next ›") + "</button></div></section>";
+    '<button class="next" data-go="1"' + (n === tot - 1 ? " disabled" : "") + ">" + (n === tot - 2 ? "Check your iPad ›" : "Next ›") + "</button></div></section>";
 }
 
 /* What each group's iPad should show once the inning is charted. Read off the real apps with the demo game loaded. */
@@ -384,7 +374,7 @@ function checkView(round) {
       '<div class="key">' +
       kv("17", "Pitches", "1 inning") + kv("5", "Batters", "Hughes to Brennan") + kv("3 of 5", "First-pitch strikes", "60%") + kv("10 of 17", "Strikes", "59%") +
       kv("0", "Free bases", "no walks, no HBP") + kv("2", "Strikeouts", "Okafor, Brennan") + kv("13 of 17", "Execution", "on the spot or next to it") + kv("1 / 1", "Runs / earned", "") +
-      "</div><p class=\"sub\">1 point for each box your iPad matches, 8 possible. The header should read 109 pitches for the game.</p>" +
+      "</div><p class=\"sub\">Does your Report tab match? The header should read 109 pitches for the game.</p>" +
       '<div class="card" style="background:var(--soft)"><h2>Talk it through</h2><ol class="qs">' +
       qa("Borcherding hit 13 of 17 spots. Which pitch hurt most?", "Pitch 3 to Reyes: called low and away, it stayed up over the plate. Single, and the run scored.") +
       qa("Did he meet the first-pitch strike goal (60%)?", "Right on it: 3 of 5. Hughes and Reyes both started 1-0.") +
@@ -395,7 +385,7 @@ function checkView(round) {
     '<div class="key">' +
     kv("39", "Lindqvist pitches", "26 before the 7th, 13 in it") + kv("Yes", "Dieker QAB", "hit") + kv("No", "Bobo QAB", "4-pitch strikeout") +
     kv("Yes", "Herbert QAB", "moved a runner, 2-strike contact") + kv("No", "Pistorius QAB", "fly out, 1-1") + kv("2 of 4", "QAB this inning", "") +
-    "</div><p class=\"sub\">Hitter cards show each hitter's whole game: Dieker 1 of 3, Bobo 2 of 4, Herbert 3 of 4, Pistorius 1 of 4. 1 point for each card that matches, plus 1 for Lindqvist's 39.</p>" +
+    "</div><p class=\"sub\">Hitter cards show each hitter's whole game: Dieker 1 of 3, Bobo 2 of 4, Herbert 3 of 4, Pistorius 1 of 4. Does your Report tab match?</p>" +
     '<div class="card" style="background:var(--soft)"><h2>Talk it through</h2><ol class="qs">' +
     qa("Herbert made an out. Why does he get a quality at-bat?", "He moved Dieker to 2nd with less than 2 outs, and he put a 2-strike pitch in play. Either one counts.") +
     qa("What would have turned Bobo's at-bat into a quality at-bat?", "Laying off the pitch below the zone, or fouling off 3 more to reach 7 pitches. Contact with 2 strikes counts too.") +
@@ -406,7 +396,7 @@ function kv(v, k, e) { return '<div><b class="num">' + v + "</b><span>" + k + "<
 function qa(q, a) { return "<li><details><summary>" + esc(q) + "</summary><p>" + esc(a) + "</p></details></li>"; }
 
 function howView() {
-  return '<h1>Chart This Inning</h1><p class="sub">Each group charts the 7th inning of the demo game on its own iPad, pitch by pitch, then checks its Report tab against the answer key. Round 1 is the Pitch Chart (Ridgeview hitting), Round 2 is the Offense Chart (us hitting). About 10 minutes a round.</p>' +
+  return '<h1>Chart This Inning</h1><p class="sub">Each group charts the 7th inning of the demo game on its own iPad. Before every hitter, they stop and read his scouting, then decide how to attack him. That part matters most. Round 1 is the Pitch Chart (Ridgeview hitting), Round 2 is the Offense Chart (us hitting). About 10 minutes a round.</p>' +
     '<div class="cols" style="margin-top:16px">' +
     '<section class="card"><h2>Before Thursday</h2><ol>' +
     "<li>On wifi, open Safari on each iPad (not the home-screen icons; they keep their own storage).</li>" +
@@ -419,29 +409,17 @@ function howView() {
     "<li><b>Checker</b> watches every tap and catches mistakes. Undo last pitch fixes one.</li>" +
     "<li>Before each hitter, the Spotter reads his <b>scouting</b> off your iPad and the group decides how to attack him.</li>" +
     "<li>Switch roles after every hitter.</li><li>Hands up when your iPad matches. We move together.</li></ul></section>" +
-    '<section class="card"><h2>Scoring</h2><ul>' +
-    "<li>Round 1: 1 point per box on Borcherding's card that matches the key. 8 possible.</li>" +
-    "<li>Round 2: 1 point per hitter card that matches, plus 1 for Lindqvist's pitch count. 5 possible.</li>" +
-    "<li>+2 to the first group with everything right.</li>" +
+    '<section class="card"><h2>Scouting first</h2><ul>' +
+    "<li><b>Pitch Chart:</b> Pitch Sequencing reads each of their hitters from his earlier at-bats, and Batter scouting shows the tags the app lit and the coach\u2019s notes. It all follows him to the next game against that team.</li>" +
+    "<li><b>Offense Chart:</b> What is coming shows what their pitcher throws in each count, and it updates with every pitch.</li>" +
+    "<li>At the end of each round, check your Report tab against the screen.</li>" +
     "<li>A group that gets lost taps <b>Load the 7th inning</b> again and re-charts from the top of the 7th to catch up. Back on this screen shows every pitch.</li></ul></section></div>" +
     '<div class="row" style="margin-top:16px"><button class="mini" data-tab="pitch">Start Round 1 ›</button><span class="sub">Practice game: nothing here is filed or sent to the dashboard.</span></div>';
 }
-function scoresView() {
-  var tot = S.groups.map(function (g) { return g.r1 + g.r2; }), best = Math.max.apply(null, tot.concat([1]));
-  return '<h1>Scores</h1><p class="sub">Names and points stay on this laptop only.</p><section class="card" style="margin-top:14px"><div class="scroll"><table class="scores">' +
-    "<tr><th>Group</th><th>Round 1 · Pitch Chart</th><th>Round 2 · Offense Chart</th><th>Total</th></tr>" +
-    S.groups.map(function (g, i) {
-      return '<tr' + (tot[i] === best ? ' class="lead"' : "") + '><td><input id="gname' + i + '" data-gname="' + i + '" value="' + esc(g.name) + '" aria-label="Group name"></td>' +
-        "<td>" + stepper(i, "r1", g.r1) + "</td><td>" + stepper(i, "r2", g.r2) + '</td><td class="tot num">' + tot[i] + "</td></tr>";
-    }).join("") + '</table></div><div class="row" style="margin-top:12px"><button class="mini" data-groups="1">+ Add a group</button>' +
-    (S.groups.length > 2 ? '<button class="mini" data-groups="-1">Remove the last group</button>' : "") + '<button class="mini" data-reset="1" style="margin-left:auto">Reset scores</button></div></section>';
-}
-function stepper(i, k, v) { return '<span class="step-n"><button data-pt="' + i + "|" + k + '|-1" aria-label="Minus 1">−</button><b class="num">' + v + '</b><button data-pt="' + i + "|" + k + '|1" aria-label="Plus 1">+</button></span>'; }
-
 /* ============================================================ render and input */
 function render() {
   $("#tabs").innerHTML = TABS.map(function (t) { return '<button role="tab" aria-selected="' + (S.tab === t[0]) + '" data-tab="' + t[0] + '">' + t[1] + "</button>"; }).join("");
-  $("#view").innerHTML = (S.tab === "how" ? howView() : S.tab === "scores" ? scoresView() : stepView(S.tab)) +
+  $("#view").innerHTML = (S.tab === "how" ? howView() : stepView(S.tab)) +
     '<p class="foot">Demo game vs Ridgeview, Oct 26 · every number here was read off the real apps with the demo loaded</p>';
   save();
 }
@@ -454,11 +432,7 @@ document.addEventListener("click", function (e) {
   var b = e.target.closest("button"); if (!b) return;
   if (b.dataset.tab) { S.tab = b.dataset.tab; try { history.replaceState(null, "", "#" + S.tab); } catch (x) {} render(); window.scrollTo(0, 0); }
   else if (b.dataset.go) go(+b.dataset.go);
-  else if (b.dataset.pt) { var p = b.dataset.pt.split("|"), g = S.groups[+p[0]]; g[p[1]] = Math.max(0, g[p[1]] + (+p[2])); render(); }
-  else if (b.dataset.groups) { if (+b.dataset.groups > 0) S.groups.push({name: "Group " + (S.groups.length + 1), r1: 0, r2: 0}); else S.groups.pop(); render(); }
-  else if (b.dataset.reset) { S.groups.forEach(function (g) { g.r1 = 0; g.r2 = 0; }); S.i = {pitch: 0, off: 0}; render(); }
 });
-document.addEventListener("input", function (e) { var i = e.target.dataset.gname; if (i != null) { S.groups[+i].name = e.target.value; save(); } });
 document.addEventListener("keydown", function (e) {
   if (e.target.matches("input, textarea")) return;
   if (e.key === "ArrowRight" || e.key === " " || e.key === "PageDown") { e.preventDefault(); go(1); }
