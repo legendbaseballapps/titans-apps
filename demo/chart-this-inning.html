@@ -133,6 +133,12 @@ tr.lead .tot { color: var(--orange); }
 .scroll { overflow-x: auto; }
 .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .mini { border: 1px solid var(--line); background: var(--card); border-radius: 8px; padding: 6px 12px; font-weight: 700; }
+.scoutcard { display: grid; gap: 10px; border-left: 6px solid var(--blue); }
+.scoutread { font-family: var(--display); font-weight: 500; font-size: 30px; line-height: 1.25; margin: 0; }
+.scoutnote { font-size: 20px; font-weight: 700; color: var(--orange); margin: 0; line-height: 1.4; }
+.stagrow { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+.stag { font-family: var(--display); font-weight: 600; font-size: 20px; border: 2px solid var(--navy); color: var(--navy); border-radius: 8px; padding: 1px 10px; }
+.stagrow small { font-size: 15px; color: var(--muted); margin-right: 8px; }
 .foot { color: var(--faint); font-size: 12.5px; margin-top: 16px; }
 @media (prefers-reduced-motion: no-preference) { .prog div { transition: width .25s ease; } }
 </style>
@@ -186,12 +192,40 @@ var TALK = {
   }
 };
 
+/* ============================================================ scouting, before each hitter
+   Read off the real apps with the 7th inning loaded: what each iPad shows for this hitter
+   before his first pitch. Pitch Chart: the Batter scouting panel and the Pitch Sequencing
+   read line. Offense Chart: the What is coming box for Lindqvist. */
+var SCOUT = {
+  pitch: {
+    "Gavin Hughes": {read: "Hit the fastball · Missed the off-speed · Chased 1 out of the zone.", tags: [], note: "",
+      ask: "What would you start him with?", then: "Fastball below the zone for ball 1, then a curveball he lined for a double. The read said off-speed; it was one box off the spot, and he hit it hard."},
+    "Owen Marsh": {read: "Missed 1 of 1 swing at breaking balls · Hit the fastball.", tags: [], note: "",
+      ask: "What pitch does the read say to stay away from?", then: "A first-pitch fastball, the pitch he's hit. He grounded out, so we got away with it."},
+    "Mason Reyes": {read: "Has hit the breaking ball · Late on the fastball · Chased 2 out of the zone.", tags: [["CHASE", "chases out of the zone"], ["2K", "battles with 2 strikes"]],
+      note: "Leadoff. Jumps on the first-pitch fastball. Start him soft.",
+      ask: "The note says start him soft. Then what?", then: "Curveball first, as the note said. Then fastballs. The third was called below the zone and stayed up: a single, and Hughes scored."},
+    "Tyler Okafor": {read: "Chased 1 out of the zone · Hasn't seen a breaking ball.", tags: [], note: "",
+      ask: "He hasn't seen a breaking ball yet. Do you show him one?", then: "Two curveballs this time, both for balls. He struck out swinging at a fastball."},
+    "Jake Brennan": {read: "Missed 1 of 1 swing at breaking balls · Chased 1 out of the zone · Swings at pitch one.", tags: [["FPS", "swings at the first pitch"]],
+      note: "Best bat in their order. Pull hitter; he chased the curveball down twice.",
+      ask: "He swings at pitch one. What do you throw him first?", then: "A fastball above the zone, and he chased it. Strike three was a curveball he took."}
+  },
+  off: {
+    "Dieker": {read: "0-0 · FB 100% · 5 of 5 · vs right-handed hitters", ask: "What should Dieker look for on the first pitch?", then: "A fastball in the zone, and he singled on it."},
+    "Bobo": {read: "0-0 · FB 86% · 6 of 7 · all hitters", ask: "Lindqvist has thrown 6 of 7 first-pitch fastballs. What's Bobo's plan?", then: "Four fastballs. He fouled off 3, then chased one below the zone for strike 3."},
+    "Herbert": {read: "0-0 · FB 88% · 7 of 8 · all hitters", ask: "With Dieker on 1st and 1 out, what does a quality at-bat look like?", then: "He fought to 1-2, then grounded out on a changeup and moved Dieker to 2nd. A quality at-bat."},
+    "Pistorius": {read: "0-0 · FB 100% · 6 of 6 · vs right-handed hitters", ask: "Every first pitch to a righty has been a fastball. Swing or take?", then: "He fouled it off. He flew out on a 1-1 slider."}
+  }
+};
+
 /* ============================================================ build the steps for a round */
 function buildSteps(round) {
   var abs = DATA[round], steps = [], outs = 0, type = "FB", pitchNo = 0, total = 0;
   abs.forEach(function (a) { total += a.p.length; });
   steps.push({kind: "start", round: round});
   abs.forEach(function (a, ai) {
+    steps.push({kind: "scout", round: round, ai: ai, a: a, outs: outs});
     var b = 0, s = 0, prevLocs = [];
     a.p.forEach(function (q, pi) {
       pitchNo++;
@@ -295,6 +329,18 @@ function stepView(round) {
       (round === "pitch" ? grid("Called spot", q.call, "call") : "") + grid("Location", q.loc, "loc", st.prev) + "</div>" +
       '<div class="cv">Catcher\'s view, same as the app. Shaded boxes are the strike zone.' + (st.prev.length ? " Outlined: his earlier pitches this at-bat." : "") + "</div>" +
       (g ? '<span class="grade ' + g[0] + '">' + g[1] + "</span>" : "") + "</div></div>";
+  } else if (st.kind === "scout") {
+    var sc = SCOUT[round][st.a.name], ap = round === "pitch";
+    body = '<div class="step"><div class="sit"><div class="who"><b>Scout ' + esc(st.a.name) + "</b><span>before his first pitch · " + st.outs + (st.outs === 1 ? " out" : " outs") + "</span></div>" +
+      '<ol class="taps"><li><div><span class="k">Find it on your iPad</span><span class="v">' + (ap ? "Pitch Sequencing and Batter scouting <small>scroll down, below the charting panels</small>" : "The What is coming box <small>scroll down, under This at-bat</small>") + "</span></div></li>" +
+      '<li><div><span class="k">Spotter</span><span class="v"><small>Read it to your group. Does your screen match this one?</small></span></div></li>' +
+      '<li><div><span class="k">Group</span><span class="v">' + esc(sc.ask) + "</span></div></li></ol>" +
+      '<div class="card" style="background:var(--soft)"><details><summary style="cursor:pointer;font-weight:800;font-size:17px">What we did</summary><p style="font-size:17px;line-height:1.45;margin:8px 0 0">' + esc(sc.then) + "</p></details></div></div>" +
+      '<div class="pics"><div class="card scoutcard"><span class="lbl">' + (ap ? "Pitch Sequencing · his read so far" : "What is coming · Drew Lindqvist") + '</span><p class="scoutread">' + esc(sc.read) + "</p>" +
+      (ap && sc.tags.length ? '<span class="lbl">How to pitch him · tags the app lit</span><div class="stagrow">' + sc.tags.map(function (t) { return '<span class="stag">' + t[0] + "</span><small>" + t[1] + "</small>"; }).join("") + "</div>" : "") +
+      (ap && sc.note ? '<span class="lbl">Coach\'s note</span><p class="scoutnote">' + esc(sc.note) + "</p>" : "") +
+      (ap && !sc.tags.length && !sc.note ? '<p class="sub" style="margin:0">No tags or notes on him yet. The read line is all there is.</p>' : "") +
+      "</div><p class=\"cv\">" + (ap ? "The read comes from his earlier at-bats today. Tags light up on their own once the pattern shows." : "Built from every pitch Lindqvist has thrown today, and it updates with each one.") + "</p></div></div>";
   } else if (st.kind === "end") {
     var a2 = st.a, ks = a2.res === "K" || a2.res === "Kc", list = "";
     if (ks) list = '<li><div><span class="k">Result</span><span class="v">' + a2.res + " <small>already marked by the app</small></span></div></li>";
@@ -371,6 +417,7 @@ function howView() {
     '<section class="card"><h2>Each group</h2><ul>' +
     "<li><b>Tapper</b> works the iPad.</li><li><b>Spotter</b> reads this screen out loud: type, called spot, location, what happened.</li>" +
     "<li><b>Checker</b> watches every tap and catches mistakes. Undo last pitch fixes one.</li>" +
+    "<li>Before each hitter, the Spotter reads his <b>scouting</b> off your iPad and the group decides how to attack him.</li>" +
     "<li>Switch roles after every hitter.</li><li>Hands up when your iPad matches. We move together.</li></ul></section>" +
     '<section class="card"><h2>Scoring</h2><ul>' +
     "<li>Round 1: 1 point per box on Borcherding's card that matches the key. 8 possible.</li>" +
