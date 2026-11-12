@@ -19,7 +19,7 @@ old one — tap the amber stamp to fix it.
 |---|---|---|
 | **Bullpen Chart** | **v44** | **v44** (Jim pushed Oct 26) | Real-iPad upload test **passed Oct 19** (practice pen stayed off the Sheet, real pen landed) |
 | **Pitch Chart** (game) | **v35** | **v34** (Jim pushed Oct 26). **v35 (Nov 6) waiting:** push `game/index.html`, `game/sw.js` and `game/guide.html` (the called spot is required) |
-| **Offense Chart** | **v53** | **v52** (Jim pushed Oct 28). **v53 (Nov 11) waiting:** push `offense/index.html`, `offense/sw.js`, `offense/guide.html`, with or after the rebuilt `demo/index.html` (outs and the inning) |
+| **Offense Chart** | **v54** | **v53** (Jim pushed Nov 12, with the rebuilt demo page). **v54 (Nov 12) waiting:** push `offense/index.html`, `offense/sw.js`, `offense/guide.html` (fills a laptop or projector screen; iPads unchanged) |
 | **Receiver** | **receiver 4** | Redeploy as a new version of the same deployment (URL and key unchanged). Includes receiver 3 (game notes) |
 | **Player cards** | **cards 4.2**, **reflections 2** (`cards/`) | **cards 4.2 deployed Nov 6** as a New version (Jim: "works and looks great"); reflections 2 live. Test mode. Next: the test-mode run, player and parent emails, then `SEND_MODE` live (school / AD approval done Nov 6) |
 | **Demo page** | `demo/index.html` | **Live Nov 2** (adds Load the 7th inning; checked against the site). **Rebuilt Nov 11, waiting:** push `demo/index.html`, `demo/chart-this-inning.html`, `demo/Chart-This-Inning-Group-Card.pdf` and `demo/Players-Session-Run-of-Show.pdf`. Safe to push now: live offense v52 ignores the new inning fields (checked). Adds a Players' session card linking Chart This Inning, the group card and the run of show. Offense v53 must not go live BEFORE this demo page (the old demo opens v53 at inning 1). Rebuild with `tools/demo-build.js`, then `LIVE=1`, then `tools/demo-page.py` |
@@ -1138,6 +1138,17 @@ Not logged at the time.
 ---
 
 ## Offense Chart
+
+### v54 · Nov 12, 2026
+**Headline:** On a laptop or projector the Chart screen now fills the screen like the Pitch Chart. iPads look the same as before.
+
+- **Why:** Jim, Nov 12, before the players' session: on his computer the Pitch Chart stretched to fill the screen but
+  the Offense Chart did not. *"Let's make the change so it look right on the laptop and projector screens."*
+- **What:** only on screens wider than 1400px (no iPad reaches that; the biggest is 1366 in landscape) and only on the
+  Chart tab. The page drops its 1340px cap, the lineup column is 210px, the location zone grows with the screen's height
+  (310px up to 500px, so the What happened buttons stay in view), the field is up to 440px, and the pitch type buttons
+  stretch across their row.
+- **Unchanged:** every iPad size, the other tabs, and all data. CSS only.
 
 ### v53 · Nov 11, 2026
 **Headline:** Outs and the inning, the same as the Pitch Chart. The dots fill from the result; the inning rolls at the third out.
