@@ -789,8 +789,8 @@ function hitCard_(d, rec, pid) {
     var m = marks[gr][gc];
     if (s_(r.What) === "HBP") m.m.push('<span style="font-size:11px">HBP</span>');
     /* Nov 12 (player session): split the swings. Contact (a foul or in play) is a dot, a swing and miss is an X. */
-    else if (s_(r.What) === "Swing & miss") m.m.push("&#10006;");
-    else m.m.push(s_(r.Swing) === "Y" ? "&#9679;" : "&#9675;");
+    else if (s_(r.What) === "Swing & miss") m.m.push(mark_("&#10006;", MISS_RED));
+    else m.m.push(s_(r.Swing) === "Y" ? mark_("&#9679;", HIT_GREEN, "19px") : mark_("&#9675;", MUTED, "17px"));
     if (s_(r.Chase) === "Y") m.chase = true;
   });
   for (var gr = 0; gr < 5; gr++) for (var gc = 0; gc < 5; gc++) {
@@ -810,7 +810,7 @@ function hitCard_(d, rec, pid) {
   body += section_("Your swings", tiles_([[o.sw ? o.miss + " of " + o.sw : "0", "Swing and miss"],
                                           [o.oz ? o.ozsw + " of " + o.oz : "0", "Chased"], [o.ip ? o.hard + " of " + o.ip : "0", "Hit hard"]]) +
     tiles_([[o.k, "Strikeouts"], [o.free, "Free bases"]]) +
-    grid_(cells, "Catcher&rsquo;s view &middot; &#9679; contact &middot; &#10006; swing and miss &middot; &#9675; took &middot; orange box = chased off the plate"));
+    grid_(cells, "Catcher&rsquo;s view &middot; " + mark_("&#9679;", HIT_GREEN) + " contact &middot; " + mark_("&#10006;", MISS_RED) + " swing and miss &middot; " + mark_("&#9675;", MUTED) + " took &middot; orange box = chased off the plate"));
   body += processBox_();
   return {key: rid + "|" + pid + "|hit", kind: "hit", rid: rid, pid: pid, who: who, date: date,
           event: (opp ? ha + opp + ", " : "") + shortDate_(date),
@@ -831,6 +831,10 @@ function processBox_() {
 /* =========================================================== HTML (email-safe) */
 var NAVY = "#16305C", ORANGE = "#C85C1C", INK = "#16233A", MUTED = "#5A6781", LINE = "#D2D9E6", BG = "#ECEFF5",
     SOFT = "#F4F6FA";
+/* Hitter zone marks (Nov 12): contact green, swing and miss red, a take grey. Each passes 4.5:1 on the white,
+   grey and orange chase cells. The shapes still differ, so the colors are a help, never the only cue. */
+var HIT_GREEN = "#1B7043", MISS_RED = "#B83227";
+function mark_(glyph, color, size) { return '<span style="color:' + color + (size ? ";font-size:" + size : "") + '">' + glyph + "</span>"; }
 var SANS = "-apple-system,BlinkMacSystemFont,'Helvetica Neue',Helvetica,Arial,sans-serif";
 var COND = "'Avenir Next Condensed','Arial Narrow',Arial,sans-serif";
 
