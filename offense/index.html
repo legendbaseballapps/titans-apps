@@ -212,6 +212,18 @@ table.grid tbody tr:nth-child(even){background:var(--surface-2)}
 @media (max-width:1000px){.cols{grid-template-columns:1fr 1fr}
   .cols.narrow{grid-template-columns:1fr 1fr}}
 @media (max-width:760px){.cols{grid-template-columns:1fr}}
+/* Laptop and projector (Nov 12, 2026): wider than any iPad, so the chart fills the
+   screen the way the Pitch Chart does instead of sitting in a 1340px column with a
+   310px zone. iPads top out at 1366 wide, so nothing here reaches them. */
+@media (min-width:1400px){
+  .wrap:has(#v-chart:not([hidden])){max-width:none;padding-left:18px;padding-right:18px}
+  #chartCols{grid-template-columns:210px minmax(0,1.1fr) minmax(0,1fr);gap:14px}
+  #chartCols.narrow{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr)}
+  /* As big as the screen's height allows, so the What happened buttons stay in view. */
+  #v-chart .zonecol{width:min(100%,clamp(310px,calc(100vh - 400px),500px))}
+  #v-chart .types button{flex:1 1 0;padding:12px 8px;font-size:17px}
+  #v-chart .diamond{max-width:440px}
+}
 .stack{display:flex;flex-direction:column;gap:12px}
 
 /* lineup */
@@ -881,7 +893,7 @@ footer{max-width:1340px;margin:0 auto;padding:14px 16px 30px;color:var(--text-3)
    gateWipe(), wipeEverything(), WIPE_KEYS, the #wipeBox markup and its listener. */
 var ALLOW_WIPE = false;
 
-var BUILD = "v53";
+var BUILD = "v54";
 
 /* ======================= DASHBOARD UPLOAD (v45) =======================
    Same receiver as the Bullpen Chart: an Apps Script web app on the program
