@@ -788,8 +788,9 @@ function hitCard_(d, rec, pid) {
     if (!marks[gr][gc]) marks[gr][gc] = {m: [], chase: false};
     var m = marks[gr][gc];
     if (s_(r.What) === "HBP") m.m.push('<span style="font-size:11px">HBP</span>');
-    /* Nov 12 (player session): split the swings. Contact (a foul or in play) is a dot, a swing and miss is an X. */
-    else if (s_(r.What) === "Swing & miss") m.m.push(mark_("&#10006;", MISS_RED));
+    /* Nov 12 (player session): split the swings. Contact (a foul or in play) is a dot, a swing and miss is an X.
+       The X is U+2715, not the heavy U+2716: iPhones draw U+2716 as an emoji, which ignores the red. */
+    else if (s_(r.What) === "Swing & miss") m.m.push(mark_("&#10005;", MISS_RED, "18px;font-weight:900"));
     else m.m.push(s_(r.Swing) === "Y" ? mark_("&#9679;", HIT_GREEN, "19px") : mark_("&#9675;", MUTED, "17px"));
     if (s_(r.Chase) === "Y") m.chase = true;
   });
@@ -810,7 +811,7 @@ function hitCard_(d, rec, pid) {
   body += section_("Your swings", tiles_([[o.sw ? o.miss + " of " + o.sw : "0", "Swing and miss"],
                                           [o.oz ? o.ozsw + " of " + o.oz : "0", "Chased"], [o.ip ? o.hard + " of " + o.ip : "0", "Hit hard"]]) +
     tiles_([[o.k, "Strikeouts"], [o.free, "Free bases"]]) +
-    grid_(cells, "Catcher&rsquo;s view &middot; " + mark_("&#9679;", HIT_GREEN) + " contact &middot; " + mark_("&#10006;", MISS_RED) + " swing and miss &middot; " + mark_("&#9675;", MUTED) + " took &middot; orange box = chased off the plate"));
+    grid_(cells, "Catcher&rsquo;s view &middot; " + mark_("&#9679;", HIT_GREEN) + " contact &middot; " + mark_("&#10005;", MISS_RED, "13px;font-weight:900") + " swing and miss &middot; " + mark_("&#9675;", MUTED) + " took &middot; orange box = chased off the plate"));
   body += processBox_();
   return {key: rid + "|" + pid + "|hit", kind: "hit", rid: rid, pid: pid, who: who, date: date,
           event: (opp ? ha + opp + ", " : "") + shortDate_(date),
