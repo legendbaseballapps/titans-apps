@@ -33,7 +33,7 @@
      function either ends in _ (private) or refuses to run unless it was started
      from the editor or one of this project's own triggers. */
 
-var VERSION = "cards 4.2 (Nov 2026)";
+var VERSION = "cards 4.3 (Nov 2026)";
 
 var PLAYERS_HEAD = ["PlayerID", "Last", "First", "Class", "Level", "Player email", "Parent email", "Send"];
 var LINKS_HEAD = ["PlayerID", "Token", "Made"];
@@ -781,6 +781,8 @@ function hitCard_(d, rec, pid) {
     if (!marks[gr][gc]) marks[gr][gc] = {m: [], chase: false};
     var m = marks[gr][gc];
     if (s_(r.What) === "HBP") m.m.push('<span style="font-size:11px">HBP</span>');
+    /* Nov 12 (player session): split the swings. Contact (a foul or in play) is a dot, a swing and miss is an X. */
+    else if (s_(r.What) === "Swing & miss") m.m.push("&#10006;");
     else m.m.push(s_(r.Swing) === "Y" ? "&#9679;" : "&#9675;");
     if (s_(r.Chase) === "Y") m.chase = true;
   });
@@ -800,7 +802,7 @@ function hitCard_(d, rec, pid) {
     read_(why.length ? "Counted for: " + why.join(", ") + "." : "No quality at-bats this game. Next game is a new start."));
   body += section_("Your swings", tiles_([[o.oz ? o.ozsw + " of " + o.oz : "0", "Chased"], [o.ip ? o.hard + " of " + o.ip : "0", "Hit hard"],
                                           [o.k, "Strikeouts"], [o.free, "Free bases"]]) +
-    grid_(cells, "Catcher&rsquo;s view &middot; &#9679; swung &middot; &#9675; took &middot; orange = chased off the plate"));
+    grid_(cells, "Catcher&rsquo;s view &middot; &#9679; contact &middot; &#10006; swing and miss &middot; &#9675; took &middot; orange box = chased off the plate"));
   body += processBox_();
   return {key: rid + "|" + pid + "|hit", kind: "hit", rid: rid, pid: pid, who: who, date: date,
           event: (opp ? ha + opp + ", " : "") + shortDate_(date),
