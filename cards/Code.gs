@@ -771,6 +771,13 @@ function hitCard_(d, rec, pid) {
     if (a.result === "BB" || a.result === "IBB" || a.result === "HBP") o.free++;
     if (HITS[a.result]) o.hits++;
   });
+  /* Nov 12: swings and misses out of all his swings (a foul, a ball in play or a swing and miss). */
+  o.sw = 0; o.miss = 0;
+  rows.forEach(function (r) {
+    var w = s_(r.What);
+    if (w === "Foul" || w === "In play" || w === "Swing & miss") o.sw++;
+    if (w === "Swing & miss") o.miss++;
+  });
   var cells = blankGrid_(null), marks = blankGrid_(null);
   rows.forEach(function (r) {
     if (s_(r.What) === "") return;
@@ -800,8 +807,9 @@ function hitCard_(d, rec, pid) {
   body += section_("Quality at-bats", tiles_([[o.qab + " of " + o.qpa, "Quality at-bats"],
                                               [o.qpa ? (Math.round(o.n * 10 / o.qpa) / 10).toFixed(1) : "&ndash;", "Pitches per at-bat"]]) +
     read_(why.length ? "Counted for: " + why.join(", ") + "." : "No quality at-bats this game. Next game is a new start."));
-  body += section_("Your swings", tiles_([[o.oz ? o.ozsw + " of " + o.oz : "0", "Chased"], [o.ip ? o.hard + " of " + o.ip : "0", "Hit hard"],
-                                          [o.k, "Strikeouts"], [o.free, "Free bases"]]) +
+  body += section_("Your swings", tiles_([[o.sw ? o.miss + " of " + o.sw : "0", "Swing and miss"],
+                                          [o.oz ? o.ozsw + " of " + o.oz : "0", "Chased"], [o.ip ? o.hard + " of " + o.ip : "0", "Hit hard"]]) +
+    tiles_([[o.k, "Strikeouts"], [o.free, "Free bases"]]) +
     grid_(cells, "Catcher&rsquo;s view &middot; &#9679; contact &middot; &#10006; swing and miss &middot; &#9675; took &middot; orange box = chased off the plate"));
   body += processBox_();
   return {key: rid + "|" + pid + "|hit", kind: "hit", rid: rid, pid: pid, who: who, date: date,
