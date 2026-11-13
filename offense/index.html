@@ -152,6 +152,7 @@ button{cursor:pointer;border:1px solid var(--line);background:var(--surface);bor
 .gfro b.unset{color:rgba(255,255,255,.45);font-weight:400}
 .gfro:focus-visible{outline:2px solid #fff;outline-offset:2px}
 #fOppPick[hidden],#fOpp[hidden]{display:none}
+#fOppPick:not([hidden]) + #fOpp{margin-top:6px}
 .tabs{display:flex;gap:3px;margin-left:auto;align-self:center;
   background:rgba(255,255,255,.09);padding:3px;border-radius:8px;margin-right:6px}
 .tabs button{border:0;background:transparent;color:#fff;opacity:.72;font-family:var(--cond);
@@ -980,15 +981,16 @@ function drawOpp(){
         .forEach(function(o){ add(o.id, o.name); });
     add("__other", "Other team…");
   }
-  /* One control at a time: the picker, or (Other team) the text box.
-     Emptying the text box brings the picker back. */
+  /* The picker always shows. Other team adds the text box under it (v56: it used to
+     replace the picker, a leftover from when it sat in the header, so a game typed
+     before the list opened with no dropdown at all). Emptying the box closes it. */
   if(document.activeElement !== inp) inp.value = g.opp || "";   /* a new game must not keep the last one's name */
   if(g.oppId && oppById(g.oppId) && document.activeElement !== inp){
     g.opp = oppById(g.oppId).name;            /* "pondo" typed is filed as Ponderosa */
     sel.value = g.oppId; sel.hidden = false; inp.hidden = true; oppOther = false;
   }
   else if(String(g.opp || "").trim() || oppOther){
-    sel.value = "__other"; sel.hidden = true; inp.hidden = false;
+    sel.value = "__other"; sel.hidden = false; inp.hidden = false;
     inp.placeholder = "Type the team";
     if(document.activeElement !== inp) inp.value = g.opp || "";
   } else { sel.value = ""; sel.hidden = false; inp.hidden = true; }
@@ -1019,7 +1021,7 @@ function wireOpp(){
 
 var ALLOW_WIPE = false;
 
-var BUILD = "v55";
+var BUILD = "v56";
 
 /* ======================= DASHBOARD UPLOAD (v45) =======================
    Same receiver as the Bullpen Chart: an Apps Script web app on the program

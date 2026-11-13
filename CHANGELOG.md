@@ -17,9 +17,9 @@ old one — tap the amber stamp to fix it.
 
 | App | Source & folder | Live on GitHub Pages |
 |---|---|---|
-| **Bullpen Chart** | **v46** | **v44** (Jim pushed Oct 26). **v46 (Nov 13) waiting:** push `bullpen/index.html`, `bullpen/sw.js`, `bullpen/guide.html` and `bullpen/templates.js`. v46 moves Mound to Setup; it includes v45 (the middle snowman, locations 0 to 7). Before Jan 8 | Real-iPad upload test **passed Oct 19** (practice pen stayed off the Sheet, real pen landed) |
-| **Pitch Chart** (game) | **v37** | **v34** (Jim pushed Oct 26). **v37 (Nov 13) waiting:** push `game/index.html`, `game/sw.js`, `game/guide.html` and the new `game/opponents.js` (the opponent picker, E-012). It includes v36 (numbered call pad, Glove and ? Not known) and v35 (the called spot is required). Before Mar 1 |
-| **Offense Chart** | **v55** | **v54** (Jim pushed Nov 12: fills a laptop or projector screen; iPads unchanged). **v55 (Nov 13) waiting:** push `offense/index.html`, `offense/sw.js`, `offense/guide.html` and the new `offense/opponents.js` (the opponent picker, E-012). Before Mar 1 |
+| **Bullpen Chart** | **v46** | **v46** (Jim pushed Nov 13: Mound on Setup; with v45, the middle snowman). Before Jan 8: open it online on each iPad | Real-iPad upload test **passed Oct 19** (practice pen stayed off the Sheet, real pen landed) |
+| **Pitch Chart** (game) | **v38** | **v37** (Jim pushed Nov 13: the opponent list, picked on Setup; with v35 and v36). **v38 (Nov 13) waiting:** push `game/index.html`, `game/sw.js` and `game/guide.html` (the dropdown always shows on Setup). `opponents.js` is unchanged |
+| **Offense Chart** | **v56** | **v55** (Jim pushed Nov 13: the opponent list, picked on Setup). **v56 (Nov 13) waiting:** push `offense/index.html`, `offense/sw.js` and `offense/guide.html` (the dropdown always shows on Setup). `opponents.js` is unchanged |
 | **Receiver** | **receiver 4** | Redeploy as a new version of the same deployment (URL and key unchanged). Includes receiver 3 (game notes) |
 | **Player cards** | **cards 4.5**, **reflections 2** (`cards/`) | **cards 4.5 (Nov 13) waiting:** paste `cards/Code.gs` and deploy a New version (pen cards read the new location numbers; game cards keep glove and unknown calls apart). **cards 4.4 deployed Nov 13** as a New version (two-way games: 1 email, 2 reflections; includes 4.3, the hitter zone's contact vs swing and miss). Test files pushed. **cards 4.2 deployed Nov 6** as a New version (Jim: "works and looks great"); reflections 2 live. Test mode. Next: the test-mode run, player and parent emails, then `SEND_MODE` live (school / AD approval done Nov 6) |
 | **Demo page** | `demo/index.html` | **Live Nov 2** (adds Load the 7th inning; checked against the site). **Rebuilt Nov 11, waiting:** push `demo/index.html`, `demo/chart-this-inning.html`, `demo/Chart-This-Inning-Group-Card.pdf` and `demo/Players-Session-Run-of-Show.pdf`. Safe to push now: live offense v52 ignores the new inning fields (checked). Adds a Players' session card linking Chart This Inning, the group card and the run of show. Offense v53 must not go live BEFORE this demo page (the old demo opens v53 at inning 1). Rebuild with `tools/demo-build.js`, then `LIVE=1`, then `tools/demo-page.py` |
@@ -703,6 +703,13 @@ execution grading.
 
 ## Pitch Chart (game)
 
+### v38 · Nov 13, 2026
+**Headline:** The Opponent dropdown always shows on Setup. A game typed before the list opened with only a text box.
+
+- **Why:** Jim, Nov 13: *"v55 doesn't show the opponent as a dropdown."* A game started before the list, with the opponent already typed, opened in Other team mode, and Other team **replaced** the dropdown with the text box. That was a leftover from when the picker sat in the header and only one control fit. Reproduced, then fixed.
+- **What:** the dropdown always shows. Other team adds the text box **under** it with the typed name; picking a list team closes the box; emptying it closes it too. The header read-out is unchanged.
+- **Tests:** `tools/opponents.js` 80 checks (+4: a typed game reopens with the dropdown on Other team and the name under it; picking a list team from there). Every suite passes; `swcache` passes.
+
 ### v37 · Nov 13, 2026
 **Headline:** Pick the opponent from the list instead of typing it. Pull a lineup puts last time's game against that team first, even if it was typed differently.
 
@@ -1237,6 +1244,13 @@ Not logged at the time.
 ---
 
 ## Offense Chart
+
+### v56 · Nov 13, 2026
+**Headline:** The Opponent dropdown always shows on Setup. A game typed before the list opened with only a text box.
+
+- **Why:** Jim, Nov 13: *"v55 doesn't show the opponent as a dropdown."* A game started before the list, with the opponent already typed, opened in Other team mode, and Other team **replaced** the dropdown with the text box. That was a leftover from when the picker sat in the header and only one control fit. Reproduced, then fixed.
+- **What:** the dropdown always shows. Other team adds the text box **under** it with the typed name; picking a list team closes the box; emptying it closes it too. The header read-out is unchanged.
+- **Tests:** `tools/opponents.js` 80 checks (+4: a typed game reopens with the dropdown on Other team and the name under it; picking a list team from there). Every suite passes; `swcache` passes.
 
 ### v55 · Nov 13, 2026
 **Headline:** Pick the opponent from the list instead of typing it. Pull a pitcher lists that team's pitchers first.

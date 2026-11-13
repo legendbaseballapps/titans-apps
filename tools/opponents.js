@@ -55,8 +55,8 @@ for (const a of ["game", "offense"]) {
 
 /* ------------------------------------------------------------------ in the apps */
 const APPS = [
-  {name: "PITCH CHART v37", path: "/game/index.html", key: "dugout-pitch-chart-v2", akey: "dugout-pitch-chart-archive-v1", cur: "G"},
-  {name: "OFFENSE CHART v55", path: "/offense/index.html", key: "titans-offense-v1", akey: "titans-offense-archive-v1", cur: "O"}
+  {name: "PITCH CHART v38", path: "/game/index.html", key: "dugout-pitch-chart-v2", akey: "dugout-pitch-chart-archive-v1", cur: "G"},
+  {name: "OFFENSE CHART v56", path: "/offense/index.html", key: "titans-offense-v1", akey: "titans-offense-archive-v1", cur: "O"}
 ];
 async function open(b, app, opts) {
   opts = opts || {};
@@ -91,16 +91,25 @@ const choose = (pg, v) => pg.selectOption("#fOppPick", v);
     await pg.reload(); await pg.waitForTimeout(300);
     is("  and it survives a refresh", [await view(pg), await state(pg, app)], [{pick: true, box: false, value: "rock-canyon", text: "Rock Canyon"}, {opp: "Rock Canyon", oppId: "rock-canyon"}]);
     await choose(pg, "__other");
-    is("Other team: the text box replaces the picker, ready to type", [await view(pg), await pg.evaluate(() => document.activeElement && document.activeElement.id)], [{pick: false, box: true, value: "__other", text: ""}, "fOpp"]);
+    is("Other team: the text box opens under the picker, ready to type", [await view(pg), await pg.evaluate(() => document.activeElement && document.activeElement.id)], [{pick: true, box: true, value: "__other", text: "Other team\u2026"}, "fOpp"]);
     is("  the old pick is gone", await state(pg, app), {opp: "", oppId: ""});
     await pg.fill("#fOpp", "Bishop Gorman");
     await pg.evaluate(() => document.getElementById("fOpp").blur());
     is("a team not on the list is typed, with no id", await state(pg, app), {opp: "Bishop Gorman", oppId: ""});
     is("  and stays a text box", (await view(pg)).box, true);
     is("  the app knows it is off the list", await pg.evaluate(c => oppOffList(window[c] || eval(c)), app.cur).catch(() => "n/a"), app.cur === "O" ? true : "n/a");
+    /* Jim, Nov 13: "v55 doesn't show the opponent as a dropdown". A game typed before the list
+       came back with the text box only. The picker must always be there. */
+    await pg.reload(); await pg.waitForTimeout(300);
+    is("a game typed before the list opens with the dropdown on Other team, the name under it", [await view(pg), await pg.inputValue("#fOpp")], [{pick: true, box: true, value: "__other", text: "Other team\u2026"}, "Bishop Gorman"]);
+    await choose(pg, "legacy");
+    is("  picking a list team from there closes the box", [await view(pg), await state(pg, app)], [{pick: true, box: false, value: "legacy", text: "Legacy"}, {opp: "Legacy", oppId: "legacy"}]);
+    await choose(pg, "__other");
+    await pg.fill("#fOpp", "Bishop Gorman");
+    await pg.evaluate(() => document.getElementById("fOpp").blur());
     await pg.fill("#fOpp", "");
     await pg.evaluate(() => document.getElementById("fOpp").blur());
-    is("emptying the box brings the picker back", await view(pg), {pick: true, box: false, value: "", text: "— pick —"});
+    is("emptying the box closes it", await view(pg), {pick: true, box: false, value: "", text: "— pick —"});
     await choose(pg, "__other");
     await pg.fill("#fOpp", "pondo");
     await pg.evaluate(() => document.getElementById("fOpp").blur());

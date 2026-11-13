@@ -128,6 +128,7 @@ input,select,textarea{font:inherit;color:inherit}   /* Oct 22: a select never in
 .gfro b.unset{color:rgba(255,255,255,.45);font-weight:400}
 .gfro:focus-visible{outline:2px solid #fff;outline-offset:2px}
 #fOppPick[hidden],#fOpp[hidden]{display:none}
+#fOppPick:not([hidden]) + #fOpp{margin-top:6px}
 
 .pitchers{display:flex;align-items:center;gap:5px;padding:5px 8px;flex-wrap:wrap}
 .pchip{display:flex;align-items:center;gap:9px;padding:7px 11px;border-radius:var(--r);background:rgba(255,255,255,.09);border:1px solid transparent;transition:background .12s}
@@ -4798,15 +4799,16 @@ function drawOpp(){
         .forEach(function(o){ add(o.id, o.name); });
     add("__other", "Other team…");
   }
-  /* One control at a time: the picker, or (Other team) the text box.
-     Emptying the text box brings the picker back. */
+  /* The picker always shows. Other team adds the text box under it (v38: it used to
+     replace the picker, a leftover from when it sat in the header, so a game typed
+     before the list opened with no dropdown at all). Emptying the box closes it. */
   if(document.activeElement !== inp) inp.value = g.opp || "";   /* a new game must not keep the last one's name */
   if(g.oppId && oppById(g.oppId) && document.activeElement !== inp){
     g.opp = oppById(g.oppId).name;            /* "pondo" typed is filed as Ponderosa */
     sel.value = g.oppId; sel.hidden = false; inp.hidden = true; oppOther = false;
   }
   else if(String(g.opp || "").trim() || oppOther){
-    sel.value = "__other"; sel.hidden = true; inp.hidden = false;
+    sel.value = "__other"; sel.hidden = false; inp.hidden = false;
     inp.placeholder = "Type the team";
     if(document.activeElement !== inp) inp.value = g.opp || "";
   } else { sel.value = ""; sel.hidden = false; inp.hidden = true; }
@@ -4837,7 +4839,7 @@ function wireOpp(){
 
 var ALLOW_WIPE = false;
 
-var BUILD = "v37";
+var BUILD = "v38";
 
 /* ======================= DASHBOARD UPLOAD (v25) =======================
    Same receiver as the Bullpen Chart and the Offense Chart. Blank UPLOAD_URL =
