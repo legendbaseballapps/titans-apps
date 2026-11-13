@@ -144,11 +144,14 @@ button{cursor:pointer;border:1px solid var(--line);background:var(--surface);bor
   font-family:var(--cond);font-weight:700;font-size:14px;letter-spacing:.07em;text-transform:uppercase}
 .gostart:disabled{background:var(--surface-2);color:var(--text-3)}
 .gf input:focus{border-bottom-color:#fff;outline:none}
-/* v55: the Opponent picker (E-012), dressed like the text boxes beside it. */
-.gf select{background:transparent;border:none;border-bottom:1px solid rgba(255,255,255,.3);color:#fff;padding:2px 0;width:128px;font-size:16px;font-weight:500;font-family:inherit;-webkit-appearance:none;appearance:none;border-radius:0}
-.gf select:focus{border-bottom-color:#fff;outline:none}
-.gf select option{color:#111}
-.gf [hidden]{display:none}
+/* The Opponent in the header is a read-out of Setup (E-012, Nov 13: "Everything that defines a game -
+   other than the date picker - should be done in Setup"). Tap it to go there. */
+.gfro{background:transparent;border:0;padding:0;margin:0;text-align:left;color:#fff;cursor:pointer;font:inherit}
+.gfro b{display:block;max-width:128px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:16px;font-weight:500;
+  padding:2px 0;border-bottom:1px dashed rgba(255,255,255,.3)}
+.gfro b.unset{color:rgba(255,255,255,.45);font-weight:400}
+.gfro:focus-visible{outline:2px solid #fff;outline-offset:2px}
+#fOppPick[hidden],#fOpp[hidden]{display:none}
 .tabs{display:flex;gap:3px;margin-left:auto;align-self:center;
   background:rgba(255,255,255,.09);padding:3px;border-radius:8px;margin-right:6px}
 .tabs button{border:0;background:transparent;color:#fff;opacity:.72;font-family:var(--cond);
@@ -193,6 +196,10 @@ a.topbtn{display:inline-block;text-decoration:none}
 .field input,.field select{padding:0 9px;height:38px;border:1px solid var(--line);
   border-radius:var(--r);background:var(--surface);width:100%;font-size:15px;
   -webkit-appearance:none;appearance:none}
+/* v55: a dropdown shows its arrow, the way the Pitch Chart's do. The Opponent picker moved to Setup
+   and looked like a text box without it; Home or away always had. */
+.field select{padding-right:30px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%235A6781' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 11px center}
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
 .scroller{overflow-x:auto}
 table.grid{border-collapse:collapse;width:100%;font-size:13.5px;table-layout:fixed}
@@ -574,7 +581,7 @@ footer{max-width:1340px;margin:0 auto;padding:14px 16px 30px;color:var(--text-3)
     <span>Offense Chart &middot; <i class="build" id="buildStamp"></i></span></div></div>
   <div class="gamebar">
     <label class="gf"><span class="lbl">Date</span><input id="fDate" type="date"></label>
-    <label class="gf"><span class="lbl">Opponent</span><select id="fOppPick" hidden aria-label="Opponent"></select><input id="fOpp" placeholder="&mdash;"></label>
+    <button type="button" class="gf gfro" id="hdrOpp" title="Pick the opponent on the Setup tab"><span class="lbl">Opponent</span><b id="hdrOppTx" class="unset">Set on Setup</b></button>
     <button class="topbtn" id="btnOrder" title="Show or hide the lineup column">&#9664; Lineup</button>
   </div>
   <div class="tabs" role="tablist">
@@ -623,6 +630,12 @@ footer{max-width:1340px;margin:0 auto;padding:14px 16px 30px;color:var(--text-3)
     <div class="panel" style="margin-bottom:12px">
       <div class="phead"><span class="lbl">This game</span></div>
       <div class="pbody stack">
+        <!-- v55: everything that defines a game is set here; only the date stays in the header (Jim, Nov 13). -->
+        <div class="row">
+          <label class="field" style="flex:1"><span class="lbl">Opponent</span>
+            <select id="fOppPick" hidden></select><input id="fOpp" placeholder="Type the team">
+          </label>
+        </div>
         <div class="row">
           <label class="field" style="flex:1"><span class="lbl">Who's charting</span>
             <input id="fWho" placeholder="Coach name">
@@ -900,14 +913,15 @@ footer{max-width:1340px;margin:0 auto;padding:14px 16px 30px;color:var(--text-3)
    gateWipe(), wipeEverything(), WIPE_KEYS, the #wipeBox markup and its listener. */
 /* ======================= OPPONENT LIST (E-012, v55) =======================
    opponents.js, released by Jim the way roster.js is: network first, no version
-   bump. The Opponent box in the header is a picker; "Other team" opens a text
-   box as the last resort (Jim, Oct 28: "pick, or type as a last resort").
+   bump. The Opponent box is a picker on Setup (the header only shows it, and
+   tapping it opens Setup); "Other team" opens a text box as the last resort
+   (Jim, Oct 28: "pick, or type as a last resort").
    A game keeps both: opp (the name everything already shows and exports) and
    oppId (the permanent id the Pull buttons and the dashboard match on). A typed
    team has no oppId, which is how an off-list team shows up in the Sheet: Jim
    adds it to the list and the next game picks it. A typed name that IS on the
    list (its name, short name or a schedule spelling like PONDO) is picked for
-   him. With no opponents.js at all the header is the old text box, and nothing
+   him. With no opponents.js at all Setup has the old text box, and nothing
    else changes. */
 var OPPS = [], OPPSTAMP = "", oppOther = false;
 function loadOpps(){
@@ -946,19 +960,28 @@ function sameOpp(a, b){ var k = oppKey(a); return !!k && k === oppKey(b); }
    (typed before the list, or never left the box). Blank = not on the list. */
 function oppIdOf(g){ if(!g) return ""; if(g.oppId) return g.oppId; var o = oppFind(g.opp); return o ? o.id : ""; }
 function oppOffList(g){ return !!(OPPS.length && g && String(g.opp || "").trim() && !oppIdOf(g)); }
+/* The header's read-out: the short name of a picked team, or what was typed. */
+function oppHeader(g){
+  var hb = document.getElementById("hdrOppTx"), hbtn = document.getElementById("hdrOpp");
+  if(!hb) return;
+  var ho = g.oppId ? oppById(g.oppId) : null, ht = ho ? (ho.short || ho.name) : String(g.opp || "").trim();
+  hb.textContent = ht || "Set on Setup"; hb.className = ht ? "" : "unset";
+  if(hbtn) hbtn.title = ht ? "Opponent: " + (ho ? ho.name : ht) + ". Change it on the Setup tab" : "Pick the opponent on the Setup tab";
+}
 function drawOpp(){
   var g = O, sel = document.getElementById("fOppPick"), inp = document.getElementById("fOpp");
+  oppHeader(g);
   if(!sel || !inp) return;
   if(!OPPS.length){ sel.hidden = true; inp.hidden = false; if(document.activeElement !== inp) inp.value = g.opp || ""; return; }
   if(!sel.options.length){
     var add = function(v, t, title){ var o = document.createElement("option"); o.value = v; o.textContent = t; if(title) o.title = title; sel.appendChild(o); };
     add("", "— pick —");
     OPPS.slice().sort(function(a, b){ return a.name.localeCompare(b.name); })
-        .forEach(function(o){ add(o.id, o.short || o.name, o.name); });
+        .forEach(function(o){ add(o.id, o.name); });
     add("__other", "Other team…");
   }
-  /* One control at a time, so the header stays one row: the picker, or (Other team)
-     the text box. Emptying the text box brings the picker back. */
+  /* One control at a time: the picker, or (Other team) the text box.
+     Emptying the text box brings the picker back. */
   if(document.activeElement !== inp) inp.value = g.opp || "";   /* a new game must not keep the last one's name */
   if(g.oppId && oppById(g.oppId) && document.activeElement !== inp){
     g.opp = oppById(g.oppId).name;            /* "pondo" typed is filed as Ponderosa */
@@ -972,7 +995,8 @@ function drawOpp(){
   sel.title = g.oppId && oppById(g.oppId) ? oppById(g.oppId).name : "";
 }
 function wireOpp(){
-  var sel = document.getElementById("fOppPick"), inp = document.getElementById("fOpp");
+  var sel = document.getElementById("fOppPick"), inp = document.getElementById("fOpp"), hb = document.getElementById("hdrOpp");
+  if(hb) hb.addEventListener("click", function(){ var t = document.getElementById("tab-setup"); if(t) t.click(); });
   sel.addEventListener("change", function(){
     var g = O, v = this.value;
     if(v === "__other"){ g.oppId = ""; g.opp = ""; oppOther = true; }
@@ -983,7 +1007,7 @@ function wireOpp(){
   });
   /* Typing a list team's name (or PONDO, Regis...) files it under that team at once;
      the box stays put until he leaves it. */
-  inp.addEventListener("input", function(){ var g = O, o = oppFind(this.value); g.opp = this.value; g.oppId = o ? o.id : ""; save(); });
+  inp.addEventListener("input", function(){ var g = O, o = oppFind(this.value); g.opp = this.value; g.oppId = o ? o.id : ""; oppHeader(g); save(); });
   /* When he leaves the box: a name on the list becomes that team. */
   inp.addEventListener("change", function(){
     var g = O, o = oppFind(this.value);
@@ -1214,7 +1238,7 @@ function drawReady(){
   } else {
     var t = st.miss.slice(0, -1).join(", ");
     m.textContent = "Not yet. Still needed: " + (t ? t + " and " : "") + st.miss[st.miss.length-1] +
-      ". Date and opponent are at the top of the screen.";
+      ". The date is at the top of the screen; everything else is here.";
     panel.className = "panel notready" + (readyNag ? " nag" : "");
     go.disabled = true; go.textContent = "Start charting \u2192";
   }

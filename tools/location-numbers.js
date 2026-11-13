@@ -48,7 +48,7 @@ const WANT = { 0: [2, 2], 1: [1, 2], 2: [1, 1], 3: [3, 1], 4: [3, 2], 5: [3, 3],
     const ready = { v: 1, spotV: 2, sid: "z1", pad: "Mound 1", date: "2027-01-08", coach: "Coach Z", practice: false, tpl: "", tplId: "", locked: false,
       script: [{ id: "r0", type: "FB", ws: "W", spot: 1, sit: "" }], pitchers: [{ id: "p1", name: "Test Arm", pitches: [] }], cur: "p1" };
     const pg = await open("/bullpen/index.html", { "titans-bullpen-v1": JSON.stringify(ready) });
-    is("footer says v45", await ev(pg, "/Bullpen Chart v45/.test(document.getElementById('foot').textContent)"), true);
+    is("footer says v46 (the mound moved to Setup next)", await ev(pg, "/Bullpen Chart v46/.test(document.getElementById('foot').textContent)"), true);
     await pg.click("#tab-chart"); await pg.waitForTimeout(200);
     const zone = await ev(pg, "[...document.querySelectorAll('#zone button')].filter(function(b){ return b.querySelector('.sn'); }).map(function(b){ return b.querySelector('.sn').textContent+'@'+b.dataset.r+','+b.dataset.c; }).sort().join(' ')");
     is("the zone shows 8 numbers in the snowman boxes", zone, Object.keys(WANT).map(k => k + "@" + WANT[k].join()).sort().join(" "));

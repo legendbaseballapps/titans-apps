@@ -103,7 +103,7 @@ const shown = id => `(function(){ var b=document.getElementById(${JSON.stringify
     /* v29: charting stays locked until all of Setup is done */
     const msg = () => ev(pg, 'document.getElementById("readyMsg").textContent');
     const onSetup = () => ev(pg, '!document.getElementById("v-setup").hidden');
-    is("v29 Ready box lists what is missing", await msg(), "Not yet. Still needed: the opponent, the starting pitcher, 9 hitters' names and 9 jersey numbers. Date and opponent are at the top of the screen.");
+    is("v29 Ready box lists what is missing", await msg(), "Not yet. Still needed: the opponent, the starting pitcher, 9 hitters' names and 9 jersey numbers. The date is at the top of the screen; everything else is here.");
     is("  Start charting waits", await ev(pg, 'document.getElementById("suDone").disabled'), true);
     await pg.click("#tab-chart");
     is("  the Chart tab opens to the not-ready screen", await ev(pg, '!document.getElementById("v-gate").hidden && document.getElementById("v-chart").style.display === "none"'), true);
@@ -119,7 +119,7 @@ const shown = id => `(function(){ var b=document.getElementById(${JSON.stringify
     is("  v30: as a read-out, not a picker", await ev(pg, '!document.querySelector("#pitchers .pchip select")'), true);
     await ev(pg, '(function(){ var e=document.getElementById("fDate"); e.value="2027-04-18"; e.dispatchEvent(new Event("change",{bubbles:true})); e=document.getElementById("fOpp"); e.value="Ponderosa"; e.dispatchEvent(new Event("input",{bubbles:true})); })()');
     await ev(pg, '(function(){ var x=document.querySelector(\'#suRows tr [data-su="name"]\'); x.dispatchEvent(new Event("focus")); x.value="Lopez"; x.dispatchEvent(new Event("input",{bubbles:true})); x.dispatchEvent(new Event("change",{bubbles:true})); })()');
-    is("  counts down as the lineup fills", await msg(), "Not yet. Still needed: 8 hitters' names and 9 jersey numbers. Date and opponent are at the top of the screen.");
+    is("  counts down as the lineup fills", await msg(), "Not yet. Still needed: 8 hitters' names and 9 jersey numbers. The date is at the top of the screen; everything else is here.");
     await ev(pg, FILL_SETUP);
     is("all of it in: ready, and says what is set", await msg(), "✓ Ready. JV · vs Ponderosa · 2027-04-18 · " + await ev(pg, 'window.TITANS_ROSTER[0].name') + " starting · 9 hitters");
     is("  Start charting is live", await ev(pg, 'document.getElementById("suDone").disabled'), false);
@@ -147,7 +147,7 @@ const shown = id => `(function(){ var b=document.getElementById(${JSON.stringify
     is("  and files the game", await ev(pg, 'JSON.parse(localStorage.getItem("dugout-pitch-chart-archive-v1")||"[]").length'), 1);
     is("  says so at the top of Setup, like the other 2", await ev(pg, '!document.getElementById("setupNote").hidden && document.getElementById("setupNote").textContent'), "Filed. 1 game in History.");
     is("after filing the header button goes away", await ev(pg, shown("hdrFinish")), false);
-    is("the next game is locked again (the starter carries over)", await msg(), "Not yet. Still needed: the level, the opponent, 9 hitters' names and 9 jersey numbers. Date and opponent are at the top of the screen.");
+    is("the next game is locked again (the starter carries over)", await msg(), "Not yet. Still needed: the level, the opponent, 9 hitters' names and 9 jersey numbers. The date is at the top of the screen; everything else is here.");
     is("  and the box is not amber until someone tries", await ev(pg, 'document.getElementById("readyPanel").classList.contains("nag")'), false);
     is("no page errors", pg.errs.join("|"), "");
     await pg.ctx.close();
@@ -166,7 +166,7 @@ const shown = id => `(function(){ var b=document.getElementById(${JSON.stringify
     is("the Lineup button hides off the Chart tab", await ev(pg, 'document.getElementById("btnOrder").style.visibility'), "hidden");
     is("nothing charted: no header button", await ev(pg, shown("hdrFinish")), false);
     await pg.click('[data-lvl="JV"]');
-    is("v48 Ready box lists what is missing", await msg(), "Not yet. Still needed: the opponent, their starting pitcher and 9 spots in our lineup. Date and opponent are at the top of the screen.");
+    is("v48 Ready box lists what is missing", await msg(), "Not yet. Still needed: the opponent, their starting pitcher and 9 spots in our lineup. The date is at the top of the screen; everything else is here.");
     is("  Start charting waits", await ev(pg, 'document.getElementById("btnStart").disabled'), true);
     await pg.click("#tab-chart");
     is("  the Chart tab opens to the not-ready screen", await ev(pg, '!document.getElementById("v-gate").hidden && document.getElementById("v-chart").hidden'), true);

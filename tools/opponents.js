@@ -6,9 +6,10 @@
    The file: the same in both folders, ids unique and permanent-looking, in the
    service worker's file list and on its network-first path. The header: a picker
    in place of the text box, Other team for a typed name, a schedule spelling
-   (PONDO) picked for the coach, one control at a time so the header stays one
-   row, the pick surviving a refresh, and the old text box when opponents.js is
-   missing. Matching: the Pull buttons put games against today's team first, on
+   (PONDO) picked for the coach, one control at a time, the pick surviving a
+   refresh, and the old text box when opponents.js is missing. Nov 13: the picker
+   lives on Setup ("Everything that defines a game - other than the date picker -
+   should be done in Setup"); the header shows the team and opens Setup. Matching: the Pull buttons put games against today's team first, on
    the id, so "Rock Canyon HS" typed last spring is Rock Canyon. The export and
    upload carry OpponentID (the upload suite checks the Sheet end to end). */
 "use strict";
@@ -107,12 +108,26 @@ const choose = (pg, v) => pg.selectOption("#fOppPick", v);
     is("no page errors", pg.errs, []);
     await pg.ctx.close();
 
-    /* the header still fits at the narrow iPad with the longest short name */
+    /* Nov 13: everything that defines a game is on Setup; the header only shows the opponent */
     pg = await open(b, app, {w: 1080});
-    await choose(pg, "douglas-county");
+    const hdr = () => pg.evaluate(() => { const h = document.getElementById("hdrOpp"), t = document.getElementById("hdrOppTx");
+      return {inHeader: !!h.closest(".top"), text: t.textContent, unset: t.classList.contains("unset"), control: !document.querySelector(".top select, .top #fOpp")}; });
+    is("the header shows Set on Setup, and has no opponent control", await hdr(), {inHeader: true, text: "Set on Setup", unset: true, control: true});
+    is("the picker is on the Setup tab, in This game", await pg.evaluate(() => !!document.getElementById("fOppPick").closest("#v-setup") && /This game/.test(document.getElementById("fOppPick").closest(".panel").textContent)), true);
+    is("  with full names", await pg.evaluate(() => [...document.getElementById("fOppPick").options].some(o => o.textContent === "Highlands Ranch")), true);
+    await choose(pg, "highlands-ranch");
+    is("picked: the header shows the short name", (await hdr()).text, "Highlands Rch");
+    is("  and says the full one on hover", await pg.evaluate(() => document.getElementById("hdrOpp").title), "Opponent: Highlands Ranch. Change it on the Setup tab");
+    await pg.click("#tab-chart").catch(() => {});
+    await pg.click("#hdrOpp");
+    is("tapping it opens Setup", await pg.evaluate(() => !document.getElementById("v-setup").hidden && document.getElementById("v-setup").style.display !== "none"), true);
     is("1080 wide: the header is one row and nothing scrolls sideways", await pg.evaluate(() => {
-      const s = document.getElementById("fOppPick").getBoundingClientRect(), t = document.querySelector(".top .tabs").getBoundingClientRect();
+      const s = document.getElementById("hdrOpp").getBoundingClientRect(), t = document.querySelector(".top .tabs").getBoundingClientRect();
       return Math.abs(s.top - t.top) < 30 && document.documentElement.scrollWidth <= innerWidth; }), true);
+    await choose(pg, "__other");
+    await pg.fill("#fOpp", "Bishop Gorman");
+    is("a typed team shows in the header as typed", (await hdr()).text, "Bishop Gorman");
+    is("no page errors", pg.errs, []);
     await pg.ctx.close();
 
     /* no opponents.js: the old text box, nothing else changes */
@@ -165,6 +180,23 @@ const choose = (pg, v) => pg.selectOption("#fOppPick", v);
     const old = await pg.evaluate(() => { const g = arch().find(x => x.rid === "a2"); const t = tableOf(g), n = notesTableOf ? 1 : 0;
       return [t.rows[0][t.head.length - 1], upPayload(g).tables.notes.columns.slice(-1)[0]]; });
     is("a game typed \"Rock Canyon High School\" before the list exports rock-canyon", old, ["rock-canyon", "OpponentID"]);
+    is("no page errors", pg.errs, []);
+    await pg.ctx.close();
+  }
+  console.log("\nBULLPEN CHART v46 · the mound is named on Setup too");
+  {
+    const pg = await open(b, {path: "/bullpen/index.html"});
+    const hdr = () => pg.evaluate(() => ({text: document.getElementById("hdrPadTx").textContent, input: !!document.querySelector(".top input:not([type=date])")}));
+    is("the header has only the date to type in", (await hdr()).input, false);
+    is("  and shows the mound (a new iPad starts on Mound 1)", (await hdr()).text, "Mound 1");
+    is("Mound is in This session, beside Who's charting", await pg.evaluate(() => /This session/.test(document.getElementById("s-pad").closest(".panel").textContent) && !!document.getElementById("s-coach").closest(".sessrow").contains(document.getElementById("s-pad"))), true);
+    await pg.fill("#s-pad", "Mound 3");
+    is("typing it updates the header as you go", (await hdr()).text, "Mound 3");
+    await pg.reload(); await pg.waitForTimeout(300);
+    is("  and it is still there after a refresh", [(await hdr()).text, await pg.inputValue("#s-pad")], ["Mound 3", "Mound 3"]);
+    await pg.click("#tab-hist");
+    await pg.click("#hdrPad");
+    is("tapping it opens Setup", await pg.evaluate(() => !document.getElementById("v-setup").hidden), true);
     is("no page errors", pg.errs, []);
     await pg.ctx.close();
   }
