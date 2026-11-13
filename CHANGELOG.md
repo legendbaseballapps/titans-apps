@@ -17,13 +17,13 @@ old one — tap the amber stamp to fix it.
 
 | App | Source & folder | Live on GitHub Pages |
 |---|---|---|
-| **Bullpen Chart** | **v44** | **v44** (Jim pushed Oct 26) | Real-iPad upload test **passed Oct 19** (practice pen stayed off the Sheet, real pen landed) |
-| **Pitch Chart** (game) | **v35** | **v34** (Jim pushed Oct 26). **v35 (Nov 6) waiting:** push `game/index.html`, `game/sw.js` and `game/guide.html` (the called spot is required) |
+| **Bullpen Chart** | **v45** | **v44** (Jim pushed Oct 26). **v45 (Nov 13) waiting:** push `bullpen/index.html`, `bullpen/sw.js`, `bullpen/guide.html` and `bullpen/templates.js` (the middle snowman, locations 0 to 7). Before Jan 8 | Real-iPad upload test **passed Oct 19** (practice pen stayed off the Sheet, real pen landed) |
+| **Pitch Chart** (game) | **v36** | **v34** (Jim pushed Oct 26). **v36 (Nov 13) waiting:** push `game/index.html`, `game/sw.js` and `game/guide.html` (numbered call pad, Glove and ? Not known). It includes v35 (the called spot is required) |
 | **Offense Chart** | **v54** | **v54** (Jim pushed Nov 12: fills a laptop or projector screen; iPads unchanged) |
 | **Receiver** | **receiver 4** | Redeploy as a new version of the same deployment (URL and key unchanged). Includes receiver 3 (game notes) |
-| **Player cards** | **cards 4.4**, **reflections 2** (`cards/`) | **cards 4.4 (Nov 13) waiting:** paste `cards/Code.gs` into the Titans Player Cards project and deploy a New version (two-way games: 1 email, 2 reflections). It includes 4.3. **cards 4.3 (Nov 12):** paste `cards/Code.gs` into the Titans Player Cards project and deploy a New version (hitter card zone: contact vs swing and miss). **cards 4.2 deployed Nov 6** as a New version (Jim: "works and looks great"); reflections 2 live. Test mode. Next: the test-mode run, player and parent emails, then `SEND_MODE` live (school / AD approval done Nov 6) |
+| **Player cards** | **cards 4.5**, **reflections 2** (`cards/`) | **cards 4.5 (Nov 13) waiting:** paste `cards/Code.gs` and deploy a New version (pen cards read the new location numbers; game cards keep glove and unknown calls apart). **cards 4.4 deployed Nov 13** as a New version (two-way games: 1 email, 2 reflections; includes 4.3, the hitter zone's contact vs swing and miss). Test files pushed. **cards 4.2 deployed Nov 6** as a New version (Jim: "works and looks great"); reflections 2 live. Test mode. Next: the test-mode run, player and parent emails, then `SEND_MODE` live (school / AD approval done Nov 6) |
 | **Demo page** | `demo/index.html` | **Live Nov 2** (adds Load the 7th inning; checked against the site). **Rebuilt Nov 11, waiting:** push `demo/index.html`, `demo/chart-this-inning.html`, `demo/Chart-This-Inning-Group-Card.pdf` and `demo/Players-Session-Run-of-Show.pdf`. Safe to push now: live offense v52 ignores the new inning fields (checked). Adds a Players' session card linking Chart This Inning, the group card and the run of show. Offense v53 must not go live BEFORE this demo page (the old demo opens v53 at inning 1). Rebuild with `tools/demo-build.js`, then `LIVE=1`, then `tools/demo-page.py` |
-| **Sample card page** | **sample 6** (`cards/sample.html`, `cards/sample-sw.js`) | **sample 6 (Nov 12) waiting:** push both files (hitter zone: colored marks, red X fixed for iPhone). **sample 3 live Nov 6. sample 4 (Nov 6) waiting:** push both files (bold markers). For the player meeting Nov 12 (QR code). Rebuild with `tools/cards/sample-page.js` |
+| **Sample card page** | **sample 7** (`cards/sample.html`, `cards/sample-sw.js`) | **sample 7 (Nov 13) waiting:** push both files (the pen card's spot numbers, the middle snowman). **sample 6 (Nov 12):** push both files (hitter zone: colored marks, red X fixed for iPhone). **sample 3 live Nov 6. sample 4 (Nov 6) waiting:** push both files (bold markers). For the player meeting Nov 12 (QR code). Rebuild with `tools/cards/sample-page.js` |
 | **Coaches dashboard** | **dashboard 1.3** (`dashboard/Code.gs`): Program overview, GameChanger import | **dashboard 1.3 live Nov 13** (Jim deployed it and imported the 2026 workbook from `?p=import`; sign in from a private window if the login loops with 2 Google accounts open). dashboard 1 live Nov 6. The Coaches tab header must read exactly `Google account` |
 | **Dashboard sample page** | **dashboard sample 1** (`dashboard/sample.html`) | **Waiting:** push it; the head coach opens legendbaseballapps.github.io/titans-apps/dashboard/sample.html. Rebuild with `tools/dashboard/sample-page.js` |
 
@@ -96,6 +96,14 @@ is only for app code.
 - Tests: `tools/dashboard/dashboard.js` (120 checks, every number worked out separately from the rows, the cards and the dashboard agree on the counter, laptop and phone widths with no sideways scroll); `tools/dashboard/mutate.js` (15 of 15 bugs caught).
 
 ## Player cards
+
+### cards 4.5 and sample 7 · Nov 13, 2026
+
+**Headline:** pen cards use the new location numbers, and a pitcher's game card keeps the catcher's calls apart.
+
+- **Pen cards:** the called spots on the grid carry the bullpen v45 numbers (the middle snowman). A pen filed by bullpen v44 or earlier is read through the old numbers, so its spots still land in the same boxes with the new labels.
+- **Game cards (Pitch Chart v36):** *Hitting your spot* grades the dugout's calls only. A call read off the catcher's glove is shown on its own line (*On the catcher's glove: 5 of 7 on or next to the spot*), pitches with the call not known are counted and never graded, and the card says *Graded on 48 of 72 pitches*. A game the catcher called reads as not graded, not as a bad outing.
+- **Tests:** `tools/cards/cards.js` 285 checks; `mutate.js` 52 of 52. Sample rebuilt as **sample 7**.
 
 ### cards 4.4 · Nov 13, 2026
 
@@ -183,6 +191,17 @@ is only for app code.
 - Tests: `tools/cards/fixture.js` builds a stand-in Sheet through the real apps and receiver; `tools/cards/cards.js` (173 checks), `tools/cards/mutate.js` (27 of 27 bugs caught), `tools/cards/page-check.js` (24 checks in a browser at phone width). `tools/receiver/mock-gas.js` gained MailApp, HtmlService, ScriptApp, Session and UrlFetchApp stand-ins; `upload.js` still 215 of 215.
 
 ## Bullpen Chart
+
+### v45 · Nov 13, 2026
+**Headline:** The locations are the middle snowman now: 0 to 7, with 7, 1, 0, 4 and 6 straight down the middle.
+
+- **Why:** Jim, Nov 13: *"We need to revisit our pitch location numbers relative to the middle snowman approach."*
+- **The 8 (catcher's view, In on the left):** 0 Middle-middle · 1 Middle-up · 2 Up & in · 3 Down & in · 4 Middle-down · 5 Down & away · 6 Below the zone (the dirt) · 7 Up, above the zone.
+- **Was:** 0 Middle, 1 Up above the zone, 2 Up & in, 3 Down & in, 4 Down & away, 5 Below & away. 1 and 4 are new boxes; old 1 is now 7, old 4 is 5, and old 5 (below & away) goes to 6, below the zone, the chase pitch it was.
+- **Saved sessions move on their own:** anything on the iPad from v44 (the live session, filed sessions, the freeform and live pickers) converts once, the first time v45 opens. An untouched template stays that template.
+- **The 4 routines** carry the new numbers, the same calls ("leave them for now", Jim; the pitching coaches finalize the scripts before Jan 8). New script IDs: Fastball Command **3G1CMX**, Breaking Ball & Stretch **7B354P**, Holding Runners **J68J7Z**, Hitter's Counts **8P0C46**.
+- **Export:** CalledSpot is the new number and SpotName the new name. The Build column tells v44 rows (old numbers) from v45 rows.
+- **Tests:** `tools/location-numbers.js` (39 checks, both apps), plus every app suite.
 
 ### v44 · Oct 22, 2026
 **Headline:** Readability in light and dark mode, all 3 apps (Bullpen v44, Pitch Chart v34, Offense v51).
@@ -665,6 +684,16 @@ execution grading.
 ---
 
 ## Pitch Chart (game)
+
+### v36 · Nov 13, 2026
+**Headline:** The call pad has the bullpen's numbers, and a Glove and a ? Not known button for when the catcher calls it.
+
+- **Why:** Jim, Nov 13: *"I envision telling whomever is doing the charts what I called in the form of - fastball 1 location."* And: *"how we handle those if the catcher is calling pitches and we don't know exactly which location he calls."*
+- **Numbers:** the 8 boxes the coaches call carry 0 to 7, the same boxes as bullpen v45. "Fastball 1" is one tap on FB and one on the 1. Every other box can still be called by tapping it.
+- **Glove:** the catcher is calling and you can see where he set up. Turn Glove on and tap that box every pitch; it stays on until you turn it off, and between at-bats. Graded, but reported apart from the dugout's calls.
+- **? Not known:** nobody saw the call. One tap answers one pitch. Counts for the pitch count, strikes and the result; never graded on execution. The called-spot rule from v35 still holds: a pitch needs a number, a glove spot or ?.
+- **Report and export:** the card reads *1 of 1 landed on the spot or next to it. On the catcher's glove: 1 of 2 on or next to it. 1 pitch with the call not known, not graded.* The pitch log gets a **CallSource** column (Coach, Glove, Unknown); the receiver adds it to the Sheet by name.
+- **Tests:** `tools/location-numbers.js`; every Pitch Chart suite passes.
 
 ### v35 · Nov 6, 2026
 **Headline:** Every pitch needs a called spot now. Tap the call, then where it crossed.

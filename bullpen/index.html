@@ -610,8 +610,9 @@ footer{max-width:1340px;margin:0 auto;padding:14px 16px 30px;color:var(--ink-3);
           <div class="legend">
             <span><b>1</b> FB</span><span><b>2</b> CT</span><span><b>3</b> SL</span><span><b>4</b> CB</span><span><b>5</b> CH</span><span><b>6</b> SP</span>
             <span style="color:var(--ink-3)">|</span>
-            <span><b>0</b> Middle</span><span><b>1</b> Up, above zone</span><span><b>2</b> Up &amp; in</span>
-            <span><b>3</b> Down &amp; in</span><span><b>4</b> Down &amp; away</span><span><b>5</b> Below &amp; away</span>
+            <span><b>0</b> Middle</span><span><b>1</b> Middle-up</span><span><b>2</b> Up &amp; in</span>
+            <span><b>3</b> Down &amp; in</span><span><b>4</b> Middle-down</span><span><b>5</b> Down &amp; away</span>
+            <span><b>6</b> Below the zone</span><span><b>7</b> Above the zone</span>
           </div>
         </div>
       </div>
@@ -928,15 +929,43 @@ function resLabel(k){
   return k || "";
 }
 
+/* v45 (E-024, Nov 13): the middle snowman. 7-1-0-4-6 run straight down the middle
+   column, above the zone to the dirt, plus up & in, down & in and down & away.
+   Catcher's view, In on the left. The Pitch Chart's call pad carries the same
+   numbers, so "fastball 1" means the same box in the bullpen and in a game.
+   Until v44 the six were 0 Middle, 1 Up above the zone, 2 Up & in, 3 Down & in,
+   4 Down & away, 5 Below & away; migrateSpots() converts anything saved before. */
 var SPOTS = {
   0:{r:2,c:2,l:"Middle"},
-  1:{r:0,c:2,l:"Up, above the zone"},
+  1:{r:1,c:2,l:"Middle-up"},
   2:{r:1,c:1,l:"Up & in"},
   3:{r:3,c:1,l:"Down & in"},
-  4:{r:3,c:3,l:"Down & away"},
-  5:{r:4,c:4,l:"Below & away"}
+  4:{r:3,c:2,l:"Middle-down"},
+  5:{r:3,c:3,l:"Down & away"},
+  6:{r:4,c:2,l:"Below the zone"},
+  7:{r:0,c:2,l:"Above the zone"}
 };
-var SPOTKEYS = [0,1,2,3,4,5];
+var SPOTKEYS = [0,1,2,3,4,5,6,7];
+var SPOT_V = 2;                       /* the numbering above; 1 = the six used through v44 */
+var OLD_SPOT = {0:0, 1:7, 2:2, 3:3, 4:5, 5:6};
+/* Every "spot" saved under the old numbers, wherever it sits (the script, each
+   pitch, the freeform and live pickers), moves to the new number for the same
+   box. Below & away had no box of its own any more, so it goes to 6, below the
+   zone, the chase pitch it was. Marked once, so it can never run twice. */
+function migrateSpots(st){
+  if(!st || typeof st !== "object" || st.spotV === SPOT_V) return st;
+  (function walk(o){
+    if(!o || typeof o !== "object") return;
+    if(Array.isArray(o)){ o.forEach(walk); return; }
+    Object.keys(o).forEach(function(k){
+      var v = o[k];
+      if(k === "spot" && typeof v === "number" && OLD_SPOT.hasOwnProperty(v)) o[k] = OLD_SPOT[v];
+      else if(v && typeof v === "object") walk(v);
+    });
+  })(st);
+  st.spotV = SPOT_V;
+  return st;
+}
 var KEY  = "titans-bullpen-v1";
 /* Filed sessions. Until this existed there was no way to start a SECOND real
    session at all - the only reset lived inside the sample banner, and that
@@ -1084,7 +1113,14 @@ function playerByName(nm){
   return null;
 }
 function loadArch(){
-  try{ var a = JSON.parse(localStorage.getItem(AKEY)); return (a && a.length) ? a : []; }
+  try{
+    var a = JSON.parse(localStorage.getItem(AKEY));
+    if(!(a && a.length)) return [];
+    var moved = false;
+    a.forEach(function(st){ if(st && st.spotV !== SPOT_V){ migrateSpots(st); moved = true; } });
+    if(moved) try{ localStorage.setItem(AKEY, JSON.stringify(a)); }catch(e){}
+    return a;
+  }
   catch(e){ return []; }
 }
 function saveArch(a){ try{ localStorage.setItem(AKEY, JSON.stringify(a)); }catch(e){} }
@@ -1227,7 +1263,7 @@ function blank(){
   /* A session needs an id of its own. Mound + Date is NOT unique - two sessions on
      the same mound on the same day (morning and afternoon groups) would merge into
      one in a roll-up, and nothing downstream could tell them apart. */
-  return {v:1,sid:uid(),pad:"Mound 1",date:today(),coach:"",
+  return {v:1,spotV:SPOT_V,sid:uid(),pad:"Mound 1",date:today(),coach:"",
           /* Practice is per session and starts OFF every time: filing resets it,
              so a practice pen can never quietly turn the next real one into a
              pen the dashboard never sees. */
@@ -1248,6 +1284,14 @@ try{
    sample banner that no longer exists - the same trap the archive was built to
    close. So drop it on sight. It was never real data. */
 if(!S || !S.script || !S.pitchers || S.sample === true){ S = blank(); }
+/* v45: a session saved under the old location numbers. A loaded template that was
+   untouched stays untouched (its ID is recomputed on the new numbers); one that had
+   been edited stays marked as modified. */
+if(S.spotV !== SPOT_V){
+  var wasTpl = !!S.tpl && typeof scriptId === "function" && scriptId(S.script) === S.tplId;
+  migrateSpots(S);
+  if(wasTpl) S.tplId = scriptId(S.script);
+}
 if(!S.cur || !byId(S.cur)) S.cur = S.pitchers.length ? S.pitchers[0].id : null;
 if(typeof S.locked !== "boolean") S.locked = false;
 if(typeof S.tpl !== "string") S.tpl = "";
@@ -1340,7 +1384,7 @@ function cur(){ return byId(S.cur); }
    gateWipe(), wipeEverything(), WIPE_KEYS, the #wipeBox markup and its listener. */
 var ALLOW_WIPE = false;
 
-var BUILD = "v44";
+var BUILD = "v45";
 
 /* ======================= DASHBOARD UPLOAD =======================
    Where a filed session goes: the Titans Upload Receiver, an Apps Script web app
@@ -1434,7 +1478,7 @@ function unrle(groups){
   groups.forEach(function(g){
     var n=Math.max(1, Math.min(200, g[0]|0));
     for(var i=0;i<n;i++) out.push({id:uid(), type:String(g[1]), ws:(wsOK(String(g[2])) ? String(g[2]) : "S"),
-                                   spot:Math.max(0,Math.min(5,+g[3]||0)), sit:String(g[4]||"")});
+                                   spot:Math.max(0,Math.min(7,+g[3]||0)), sit:String(g[4]||"")});
   });
   return out;
 }

@@ -35,7 +35,7 @@
      function either ends in _ (private) or refuses to run unless it was started
      from the editor or one of this project's own triggers. */
 
-var VERSION = "cards 4.4 (Nov 2026)";
+var VERSION = "cards 4.5 (Nov 2026)";
 
 var PLAYERS_HEAD = ["PlayerID", "Last", "First", "Class", "Level", "Player email", "Parent email", "Send"];
 var LINKS_HEAD = ["PlayerID", "Token", "Made"];
@@ -83,7 +83,17 @@ var BASE_RATES = [
 /* Same names and orders the 3 apps use. */
 var TYPE_LONG = {FB: "Fastball", CT: "Cutter", SL: "Slider", CB: "Curveball", CH: "Change-up", SP: "Splitter"};
 var TYPE_ORDER = ["FB", "CT", "SL", "CB", "CH", "SP"];
-var SPOTS = {0: [2, 2], 1: [0, 2], 2: [1, 1], 3: [3, 1], 4: [3, 3], 5: [4, 4]};   /* row, col, 0-based */
+/* The middle snowman (bullpen v45, Nov 13, E-024): 7-1-0-4-6 straight down the middle column, plus 2 up & in,
+   3 down & in, 5 down & away. A pen filed by bullpen v44 or earlier used the old six (0 Middle, 1 Up above
+   the zone, 2 Up & in, 3 Down & in, 4 Down & away, 5 Below & away), so spotOf_ reads those through OLD_SPOT. */
+var SPOTS = {0: [2, 2], 1: [1, 2], 2: [1, 1], 3: [3, 1], 4: [3, 2], 5: [3, 3], 6: [4, 2], 7: [0, 2]};   /* row, col, 0-based */
+var OLD_SPOT = {0: 0, 1: 7, 2: 2, 3: 3, 4: 5, 5: 6};
+function spotOf_(r) {
+  var v = s_(r.CalledSpot);
+  if (v === "") return "";
+  var b = Number(String(s_(r.Build)).replace(/^v/i, ""));
+  return isFinite(b) && b > 0 && b < 45 ? (OLD_SPOT[v] != null ? String(OLD_SPOT[v]) : v) : v;
+}
 var RES_WORDS = {K: "Strikeout swinging", Kc: "Strikeout looking", BB: "Walk", IBB: "Intentional walk",
   HBP: "Hit by pitch", "1B": "Single", "2B": "Double", "3B": "Triple", HR: "Home run", GO: "Ground out",
   FO: "Fly out", LO: "Line out", PO: "Pop out", FC: "Fielder's choice", E: "Reached on error",
@@ -400,7 +410,8 @@ function penStats_(rows) {
     if (r.Velo !== "" && isFinite(v) && v > 0) { b.vn++; b.vsum += v; if (v > b.vtop) b.vtop = v; }
     var gr = Number(r.ActualRow) - 1, gc = Number(r.ActualCol) - 1;
     if (gr >= 0 && gr < 5 && gc >= 0 && gc < 5) o.grid[gr][gc]++;
-    if (s_(r.CalledSpot) !== "" && SPOTS[s_(r.CalledSpot)]) o.spots[s_(r.CalledSpot)] = 1;
+    var sp = spotOf_(r);
+    if (sp !== "" && SPOTS[sp]) o.spots[sp] = 1;
     var ab = Number(r.AB);
     if (r.AB !== "" && ab > 0) {
       if (!o.abs[ab - 1]) o.abs[ab - 1] = {rows: [], result: "", ao3: ""};
@@ -723,13 +734,18 @@ function pitchCard_(d, rec, pid) {
                                           : "None today. Pitch relentless."));
   }
   /* Execution against the call */
-  var ex = {called: 0, spot: 0, close: 0, miss: 0, up: 0, down: 0, inn: 0, out: 0, by: {}};
+  /* Pitch Chart v36 (E-024): CallSource says who made the call. Coach (or blank, before v36) is graded here;
+     Glove, read off where the catcher set up, is graded but kept apart; Unknown is charted and never graded. */
+  var ex = {called: 0, spot: 0, close: 0, miss: 0, up: 0, down: 0, inn: 0, out: 0, by: {}, all: 0, glove: 0, gHit: 0, unk: 0};
   rows.forEach(function (r) {
-    var t2 = s_(r.Type) || "FB", g = s_(r.Execution).toUpperCase(), call = s_(r.Call);
+    var t2 = s_(r.Type) || "FB", g = s_(r.Execution).toUpperCase(), call = s_(r.Call), src = s_(r.CallSource);
     if (!ex.by[t2]) ex.by[t2] = {n: 0, strike: 0, called: 0, good: 0};
     var b = ex.by[t2]; b.n++;
     if (call && call !== "ball" && call !== "hbp") b.strike++;
+    if (s_(r.Pitch) !== "") ex.all++;
+    if (src === "Unknown") { ex.unk++; return; }
     if (!g) return;
+    if (src === "Glove") { ex.glove++; if (g !== "MISS") ex.gHit++; return; }
     ex.called++; b.called++;
     if (g === "SPOT") { ex.spot++; b.good++; }
     else if (g === "CLOSE") { ex.close++; b.good++; }
@@ -739,10 +755,15 @@ function pitchCard_(d, rec, pid) {
       if (s_(r.MissH).toUpperCase() === "IN") ex.inn++; else if (s_(r.MissH).toUpperCase() === "OUT") ex.out++;
     }
   });
+  var also = (ex.glove ? " On the catcher&rsquo;s glove: " + ex.gHit + " of " + ex.glove + " on or next to the spot." : "") +
+             (ex.unk ? " " + ex.unk + (ex.unk === 1 ? " pitch" : " pitches") + " with the call not known, not graded." : "");
+  var cover = also ? "Graded on " + ex.called + " of " + ex.all + " pitches." + also : "";
   if (ex.called) {
     body += section_("Hitting your spot", tiles_([[ex.spot, "Right on the spot"],
         [(ex.spot + ex.close) + " of " + ex.called, "Spot or next to it &middot; " + pct_(ex.spot + ex.close, ex.called) + "%"]]) +
-      read_(missRead_(ex)));
+      read_(missRead_(ex)) + (cover ? read_(cover) : ""));
+  } else if (cover) {
+    body += section_("Hitting your spot", read_(cover));
   }
   var types = TYPE_ORDER.filter(function (k) { return ex.by[k]; });
   if (types.length) body += section_("By pitch", table_html_(["Pitch", "Thrown", "Strikes", "Spot or next"], types.map(function (k) {

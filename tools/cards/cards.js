@@ -741,6 +741,38 @@ function twoWay(opts) {
   ok(!tab(rt, "Cards").some(c => c.Bundle), "late upload: nothing bundled after the fact");
 }
 
+/* ========================================================== 10. location numbers and who made the call (Nov 13, E-024) */
+{
+  const rt = world(); ready(rt, "test");
+  const spotsOn = h => [...new Set((h.match(/spot (\d)</g) || []).map(x => x.replace(/\D/g, "")))].sort().join(",");
+  /* the fixture pens were filed by bullpen v44 with the old six: 0-5 */
+  eq(spotsOn(cardOf(rt, PEN2, SMITH)), "0,2,3,5,6,7", "v44 pen: old 1/4/5 shown as the new 7/5/6, the same boxes");
+  const BP = rt.b.getSheetByName("Bullpen_Pitches"), bh = BP.header();
+  BP.data.forEach((r, i) => { if (i && r[bh.indexOf("RecordID")] === PEN2) r[bh.indexOf("Build")] = "v45"; });
+  eq(spotsOn(cardOf(rt, PEN2, SMITH)), "0,1,2,3,4,5", "v45 pen: the numbers are read as they are");
+
+  /* the pitcher game card: Coach graded, Glove apart, Unknown counted */
+  const GP = rt.b.getSheetByName("Game_Pitches"), gh = GP.header();
+  if (gh.indexOf("CallSource") < 0) { gh.push("CallSource"); GP.data[0].push("CallSource"); GP.data.forEach((r, i) => { if (i) r.push(""); }); }
+  const col = k => GP.data[0].indexOf(k);
+  const mine = GP.data.filter((r, i) => i && r[col("RecordID")] === GAME && r[col("PitcherID")] === SMITH);
+  const graded = mine.filter(r => r[col("Execution")] !== "");
+  graded.slice(0, 4).forEach(r => { r[col("CallSource")] = "Glove"; });
+  graded.slice(4, 7).forEach(r => { r[col("CallSource")] = "Unknown"; r[col("Execution")] = ""; r[col("CalledRow")] = ""; r[col("CalledCol")] = ""; });
+  graded.slice(7).forEach(r => { r[col("CallSource")] = "Coach"; });
+  const coach = graded.slice(7), glove = graded.slice(0, 4);
+  const good = rs => rs.filter(r => r[col("Execution")] !== "MISS").length;
+  const gt = text(cardOf(rt, GAME, SMITH));
+  ok(gt.includes(good(coach) + " of " + coach.length + " Spot or next to it"), "game card: the tile grades the coach's calls only (" + good(coach) + " of " + coach.length + ")");
+  ok(gt.includes("Graded on " + coach.length + " of " + mine.length + " pitches."), "game card: says how many were graded (" + coach.length + " of " + mine.length + ")");
+  ok(gt.includes("On the catcher's glove: " + good(glove) + " of 4 on or next to the spot."), "game card: the glove calls, apart");
+  ok(gt.includes("3 pitches with the call not known, not graded."), "game card: the unknown calls, counted");
+  /* nothing graded by the coach: the card still says what happened */
+  graded.forEach(r => { r[col("CallSource")] = "Unknown"; r[col("Execution")] = ""; });
+  const gt2 = text(cardOf(rt, GAME, SMITH));
+  ok(gt2.includes("Graded on 0 of " + mine.length + " pitches.") && !/Spot or next to it/.test(gt2), "game card: a game the catcher called reads as not graded, not as a bad outing");
+}
+
 console.log(pass + " card checks" + (fail ? ", " + fail + " FAILED" : ""));
 if (fail) process.exit(1);
 console.log("ALL CARD CHECKS PASS");

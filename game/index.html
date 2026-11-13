@@ -412,6 +412,15 @@ a.topbtn{display:inline-block;text-decoration:none;border:0}
 .callpad button:active{transform:scale(.95)}
 @media (hover:hover){.callpad button:hover{border-color:var(--navy-soft)}}
 .callpad.locked{opacity:.4}
+/* v36: the bullpen's location numbers on the 8 boxes the coaches call by number. */
+.callpad button{position:relative}
+.callpad button .snum{position:absolute;top:1px;left:3px;font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--text-2);pointer-events:none;line-height:1}
+.callpad.glove button.inzone,.callpad.glove button{border-style:dashed}
+.callpad.unk{opacity:.55}
+.callopts{display:flex;gap:6px;margin-top:6px}
+.copt{flex:1;min-height:36px;border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:var(--r);font-weight:700;font-size:13px}
+.copt[aria-pressed="true"]{background:var(--navy-soft);border-color:var(--navy-soft);color:#fff}
+.cmk.glv{border-style:dashed}
 .callpad.need{outline:3px solid var(--strike);outline-offset:2px;border-radius:4px}
 /* Hollow: a call is a plan, not a record. Same numbers as the location grid. */
 .cmk{font-family:var(--mono);font-weight:600;pointer-events:none;height:22px;
@@ -1035,6 +1044,12 @@ footer#foot{max-width:1340px;margin:0 auto;padding:14px 16px 30px;color:var(--te
         <div class="gridcell">
           <span class="lbl step" id="callLbl">2 &middot; Called spot</span>
           <div class="callpad" id="callPad"></div>
+          <!-- v36 (E-024): when the catcher calls it. Glove stays on until it is
+               turned off; "?" answers one pitch and is never graded. -->
+          <div class="callopts">
+            <button id="callGlove" class="copt" aria-pressed="false" title="The catcher is calling: tap where he set up">Glove</button>
+            <button id="callUnk" class="copt" aria-pressed="false" title="Nobody saw the call: charted, never graded on execution">? Not known</button>
+          </div>
           <div class="zonehint" id="callHint">Tap what you called</div>
         </div>
         <div class="gridcell">
@@ -1234,6 +1249,10 @@ var TRAJ = [
 var TRAJ_FROM_RESULT = {GO:"GB", FC:"GB", DP:"GB", SAC:"GB", LO:"LD", FO:"FB", SF:"FB", HR:"FB", PO:"PU"};
 function trajOf(a){ return a.traj || TRAJ_FROM_RESULT[a.result] || null; }
 var CALLNAME = {B:"ball", S:"strike", F:"foul", W:"swing&miss", X:"in play"};
+/* v36 (E-024): the bullpen's location numbers, the middle snowman. 7-1-0-4-6 run
+   down the middle column, plus 2 up & in, 3 down & in, 5 down & away. Catcher's
+   view, In on the left. "Fastball 1" is the same box in the bullpen and here. */
+var SPOTNUM = {"2-2":0, "1-2":1, "1-1":2, "3-1":3, "3-2":4, "3-3":5, "4-2":6, "0-2":7};
 function newGamePitcher(){
   return {rid:"", name:"", last:"", first:"", cls:"", hand:"R"};
 }
@@ -2096,7 +2115,11 @@ function logPitch(t, r, c){
   var np = {r:(r==null?-1:r), c:(c==null?-1:c), t:t, k:G.nextType||"FB", p:G.curP, q:1,
             inn:(G.inning||1)};
   /* The call was set before the pitch; it belongs to this pitch and nothing after it. */
-  if(G.call){ np.cr = G.call.r; np.cc = G.call.c; G.call = null; }
+  if(G.call){
+    if(G.call.unk) np.cu = 1;                                  /* nobody saw the call: charted, never graded */
+    else { np.cr = G.call.r; np.cc = G.call.c; if(G.call.g) np.cs = "G"; }   /* G: where the catcher set up */
+    G.call = null;
+  }
   a.pitches.push(np);
   render(); save(); return true;
 }
@@ -2112,10 +2135,15 @@ function gradeCall(p){
 }
 /* pi omitted = the whole staff; eachPitch takes no filter of its own. */
 function callStats(pi){
-  var o = {called:0, spot:0, close:0, miss:0, up:0, down:0, inn:0, out:0};
+  var o = {called:0, spot:0, close:0, miss:0, up:0, down:0, inn:0, out:0, all:0, unk:0, glove:0, gHit:0};
   eachPitch(function(p){
     if(pi != null && p.p !== pi) return;
+    o.all++;
+    if(p.cu){ o.unk++; return; }
     var g = gradeCall(p); if(!g) return;
+    /* v36: a call read off the catcher's glove is graded, but kept apart until we
+       know how well glove setups match what was meant. */
+    if(p.cs === "G"){ o.glove++; if(g !== "miss") o.gHit++; return; }
     o.called++; o[g]++;
     if(g !== "spot"){
       if(p.r < p.cr) o.up++; else if(p.r > p.cr) o.down++;
@@ -2126,16 +2154,18 @@ function callStats(pi){
 }
 /* Wording matches the bullpen's miss read for the same reason. */
 function callRead(o){
-  if(!o.called) return "No pitches charted against a call yet.";
+  var extra = (o.glove ? " On the catcher's glove: " + o.gHit + " of " + o.glove + " on or next to it." : "") +
+              (o.unk ? " " + o.unk + (o.unk === 1 ? " pitch" : " pitches") + " with the call not known, not graded." : "");
+  if(!o.called) return (o.glove || o.unk ? "No coach-called pitches graded yet." : "No pitches charted against a call yet.") + extra;
   var hit = o.spot + o.close;
   var line = hit + " of " + o.called + " landed on the spot or next to it.";
-  if(!o.miss) return line;
+  if(!o.miss) return line + extra;
   var bits = [];
   if(o.up > o.down) bits.push(o.up + " up");
   else if(o.down > o.up) bits.push(o.down + " down");
   if(o.inn > o.out) bits.push(o.inn + " to the arm side (in)");
   else if(o.out > o.inn) bits.push(o.out + " to the glove side (away)");
-  return line + (bits.length ? " Missing " + bits.join(" and ") + "." : "");
+  return line + (bits.length ? " Missing " + bits.join(" and ") + "." : "") + extra;
 }
 
 function addPitch(r,c){
@@ -3316,12 +3346,14 @@ function renderCallPad(){
   a.pitches.forEach(function(p,i){
     if(p.cr == null) return;
     var k = p.cr + "-" + p.cc;
-    (marks[k] = marks[k] || []).push({n:i+1, k:p.k||"FB", pend:false});
+    (marks[k] = marks[k] || []).push({n:i+1, k:p.k||"FB", pend:false, g:p.cs === "G"});
   });
+  pad.classList.toggle("glove", !!G.glove);
+  pad.classList.toggle("unk", !!(G.call && G.call.unk));
   /* The call that is set but has no pitch against it yet gets the next number, and
      the pitch type currently selected - which is what you are about to throw. */
-  if(G.call) (marks[G.call.r+"-"+G.call.c] = marks[G.call.r+"-"+G.call.c] || [])
-    .push({n:a.pitches.length+1, k:G.nextType||"FB", pend:true});
+  if(G.call && !G.call.unk) (marks[G.call.r+"-"+G.call.c] = marks[G.call.r+"-"+G.call.c] || [])
+    .push({n:a.pitches.length+1, k:G.nextType||"FB", pend:true, g:!!G.call.g});
   /* The full 5x5, same coordinates as the location grid - a called waste pitch
      or a ball buried off the plate is a real call and could not be entered on a
      3x3. The grading rule is untouched: both sides were always measured in this
@@ -3330,16 +3362,17 @@ function renderCallPad(){
     for(var c=0;c<5;c++){
       (function(r,c){
         var b = el("button", inZone(r,c) ? "inzone" : null);
+        if(SPOTNUM[r+"-"+c] != null) b.appendChild(el("span","snum",String(SPOTNUM[r+"-"+c])));
         var here = marks[r+"-"+c] || [];
         if(here.length) b.setAttribute("data-n", Math.min(here.length,4));
         var more = 0;
         if(here.length > 3){ more = here.length - 3; here = here.slice(0,3); }
         here.forEach(function(m){
-          var mk = el("span","cmk"+(m.pend?" pend":""));
+          var mk = el("span","cmk"+(m.pend?" pend":"")+(m.g?" glv":""));
           mk.appendChild(el("b",null,String(m.n)));
           mk.appendChild(el("i",null,m.k));
-          mk.title = m.pend ? "Called "+m.k+", pitch not thrown yet"
-                            : "Pitch "+m.n+" \u00b7 "+m.k+" was called here";
+          mk.title = (m.pend ? "Called "+m.k+", pitch not thrown yet"
+                             : "Pitch "+m.n+" \u00b7 "+m.k+" was called here") + (m.g ? " (the catcher's glove)" : "");
           b.appendChild(mk);
         });
         if(more){
@@ -3347,7 +3380,7 @@ function renderCallPad(){
           ov.title = more + " more call" + (more===1?"":"s") + " in this box";
           b.appendChild(ov);
         }
-        b.setAttribute("aria-label","Call row "+(r+1)+" column "+(c+1)+
+        b.setAttribute("aria-label",(SPOTNUM[r+"-"+c] != null ? "Location "+SPOTNUM[r+"-"+c]+", " : "")+"call row "+(r+1)+" column "+(c+1)+
                        (inZone(r,c)?", in zone":", off the plate"));
         b.addEventListener("click", function(){ setCall(r,c); });
         pad.appendChild(b);
@@ -3356,12 +3389,31 @@ function renderCallPad(){
   }
   var h = document.getElementById("callHint");
   h.textContent = rev ? "Reviewing \u00b7 read-only"
-    : G.call ? "Called \u00b7 now tap where it crossed"
+    : G.call && G.call.unk ? "Call not known \u00b7 now tap where it crossed"
+    : G.call ? (G.call.g ? "Glove set \u00b7 now tap where it crossed" : "Called \u00b7 now tap where it crossed")
+    : G.glove ? "Glove \u00b7 tap where the catcher set up"
     : "Tap what was called, every pitch";
+  var gb = document.getElementById("callGlove"), ub = document.getElementById("callUnk");
+  if(gb){ gb.setAttribute("aria-pressed", G.glove ? "true" : "false"); gb.disabled = rev; }   /* a mode, not a call: it can change between at-bats */
+  if(ub){ ub.setAttribute("aria-pressed", G.call && G.call.unk ? "true" : "false"); ub.disabled = locked; }
 }
 function setCall(r,c){
   if(reviewing()){ nudge("Reviewing — tap Back to the plate first"); return; }
-  G.call = (G.call && G.call.r===r && G.call.c===c) ? null : {r:r, c:c};
+  G.call = (G.call && !G.call.unk && G.call.r===r && G.call.c===c) ? null : (G.glove ? {r:r, c:c, g:1} : {r:r, c:c});
+  render(); save();
+}
+/* v36: the catcher is calling. Glove stays on pitch to pitch until it is turned
+   off; "?" answers one pitch. Either one satisfies the called-spot rule (v35). */
+function toggleGlove(){
+  if(reviewing()){ nudge("Reviewing — tap Back to the plate first"); return; }
+  G.glove = !G.glove;
+  if(G.call && !G.call.unk) G.call = G.glove ? {r:G.call.r, c:G.call.c, g:1} : {r:G.call.r, c:G.call.c};
+  render(); save();
+}
+function setUnknownCall(){
+  if(reviewing()){ nudge("Reviewing — tap Back to the plate first"); return; }
+  if(curAB().result){ nudge("At-bat already closed — undo the result to add a pitch"); return; }
+  G.call = (G.call && G.call.unk) ? null : {unk:1};
   render(); save();
 }
 
@@ -4115,7 +4167,7 @@ function pitchLogTable(){
   var head = ["Inning","Spot","Batter","Hand","Pos","PosName","AB","Pitch","Type","Call","ZoneRow","ZoneCol","InZone",
           "CalledRow","CalledCol","Execution","MissV","MissH",
           "Pitcher","PitcherID","PitcherLast","PitcherFirst","Class","ClassName","Throws",
-          "ABResult","Traj","HardContact","SprayX","SprayY"];
+          "ABResult","Traj","HardContact","SprayX","SprayY","CallSource"];
   /* pitcherOf() walks the roster on every call and this loop runs per pitch, so
      memoise it per export rather than per row. */
   var rows = [];
@@ -4134,7 +4186,7 @@ function pitchLogTable(){
                 "", "", "", "", "", "", "", "", "", "",
                 pitcherName(a.ibbP), pw(a.ibbP).rid, pw(a.ibbP).last, pw(a.ibbP).first,
                 pw(a.ibbP).cls, classLabel(pw(a.ibbP).cls), pw(a.ibbP).throws,
-                "IBB", "", "", "", ""]);
+                "IBB", "", "", "", "", ""]);
         return;
       }
       var tj=trajOf(a)||"", pt=a.spray||null;
@@ -4154,7 +4206,10 @@ function pitchLogTable(){
                 pitcherName(p.p), pw(p.p).rid, pw(p.p).last, pw(p.p).first,
                 pw(p.p).cls, classLabel(pw(p.p).cls), pw(p.p).throws,
                 (a.result||""), tj, (a.hard?"Y":""),
-                pt?Math.round(pt.x):"", pt?Math.round(pt.y):""]);
+                pt?Math.round(pt.x):"", pt?Math.round(pt.y):"",
+                /* v36: who made the call. Coach = the dugout called it; Glove = read off
+                   where the catcher set up; Unknown = charted, never graded. */
+                p.cu ? "Unknown" : (p.cr == null ? "" : (p.cs === "G" ? "Glove" : "Coach"))]);
       });
     });
    });
@@ -4224,7 +4279,7 @@ function exportText(){
              "Close "+String(cs.close).padEnd(5)+"Miss "+String(cs.miss).padEnd(5)+
              "on "+cs.called+" called pitch"+(cs.called===1?"":"es")+" of "+st.tot);
       L.push("                       "+callRead(cs));
-    }
+    } else if(cs.glove || cs.unk) L.push("    Execution          "+callRead(cs));
     L.push("    Quick at-bats      <3 pitches "+st.lt3+" ("+(st.bf?Math.round(st.lt3/st.bf*100)+"%":"—")+")"+
            "    <=3 pitches "+st.le3+" ("+(st.bf?Math.round(st.le3/st.bf*100)+"%":"—")+")");
     if(a3.tot){
@@ -4604,6 +4659,8 @@ function build(){
   document.getElementById("fHome").addEventListener("change",function(){ G.home=this.value; save(); });
   document.getElementById("fNotes").addEventListener("input",function(){ scouted().notes=this.value; save(); });
 
+  document.getElementById("callGlove").addEventListener("click", toggleGlove);
+  document.getElementById("callUnk").addEventListener("click", setUnknownCall);
   document.getElementById("spotPlus").addEventListener("click",function(){
     G.spots = Math.min(MAXSPOTS, spots()+1); render(); save();
   });
@@ -4662,7 +4719,7 @@ function build(){
    gateWipe(), wipeEverything(), WIPE_KEYS, the #wipeBox markup and its listener. */
 var ALLOW_WIPE = false;
 
-var BUILD = "v35";
+var BUILD = "v36";
 
 /* ======================= DASHBOARD UPLOAD (v25) =======================
    Same receiver as the Bullpen Chart and the Offense Chart. Blank UPLOAD_URL =

@@ -23,6 +23,10 @@ const M = [
   ["2 forms share their buttons", "f.querySelectorAll('.scale')", "document.querySelectorAll('.scale')"],
   ["last START crosses sides", '|| side(k) !== side(key)) return;', ') return;'],
   ["process box twice", 'c.body.replace(box, "")', 'c.body'],
+  /* location numbers and who made the call (Nov 13) */
+  ["old pens read with the new numbers", "return isFinite(b) && b > 0 && b < 45 ?", "return false ?"],
+  ["glove calls graded with the coach's", 'if (src === "Glove") { ex.glove++; if (g !== "MISS") ex.gHit++; return; }', ""],
+  ["coverage line dropped", '(cover ? read_(cover) : "")', '""'],
   ["quota ignored", 'if (budget < cost) { finished = false; out.waiting++; continue; }', ''],
   ["flag ignores level", 'var lvOk = !level ||', 'var lvOk = true ||'],
   ["flag ignores role", 'var roleOk = n.indexOf("both") >= 0', 'var roleOk = true || n.indexOf("both") >= 0'],

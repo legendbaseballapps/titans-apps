@@ -195,7 +195,7 @@ footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--rule);
       <div class="eyebrow">Legend Titans Baseball</div>
       <h1>Bullpen Chart Coach's Guide</h1>
       <p>How to run a winter bullpen on the iPad. The script goes in before anybody warms up; after that it's one tap a pitch.</p>
-      <div class="meta">App v44 &nbsp;·&nbsp; October 2026 &nbsp;·&nbsp; Winter workouts</div>
+      <div class="meta">App v45 &nbsp;·&nbsp; November 2026 &nbsp;·&nbsp; Winter workouts</div>
     </div>
   </div>
 
@@ -230,7 +230,7 @@ footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--rule);
     </ul>
     <div class="note">
       <span class="lab">Which version am I on?</span>
-      <p>The build is printed in the header, right after &ldquo;Bullpen Chart.&rdquo; This guide describes <b>v44</b>. If it shows two numbers in amber, like <code>v9 &ne; v8</code>, that iPad downloaded an update but is still showing the old one &mdash; see below.</p>
+      <p>The build is printed in the header, right after &ldquo;Bullpen Chart.&rdquo; This guide describes <b>v45</b>. If it shows two numbers in amber, like <code>v9 &ne; v8</code>, that iPad downloaded an update but is still showing the old one &mdash; see below.</p>
     </div>
 
     <h3 class="upd">Getting a new version</h3>
@@ -289,22 +289,25 @@ footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--rule);
 
   <section>
     <h2>The locations</h2>
-    <p class="sub">The <b>Location</b> column on the script row. Same six the pitching coaches call off the paper chart, sitting on the same 5&times;5 grid the in-game app uses. The middle 9 boxes are the strike zone; the ring around them is off the plate. It's the catcher's view, so <b>In is on the left, Out on the right</b>.</p>
+    <p class="sub">The <b>Location</b> column on the script row. The eight the pitching coaches call (the middle snowman, v45), sitting on the same 5&times;5 grid the in-game app uses. The middle 9 boxes are the strike zone; the ring around them is off the plate. It's the catcher's view, so <b>In is on the left, Out on the right</b>.</p>
     <div class="tw">
       <table>
         <thead><tr><th>Location</th><th>Where</th><th>In the zone?</th></tr></thead>
         <tbody>
-          <tr><td><span class="disc">0</span></td><td>Middle</td><td>Yes</td></tr>
-          <tr><td><span class="disc">1</span></td><td>Up, above the zone</td><td>No &mdash; climbing the ladder</td></tr>
+          <tr><td><span class="disc">0</span></td><td>Middle-middle</td><td>Yes</td></tr>
+          <tr><td><span class="disc">1</span></td><td>Middle-up</td><td>Yes</td></tr>
           <tr><td><span class="disc">2</span></td><td>Up &amp; in</td><td>Yes</td></tr>
           <tr><td><span class="disc">3</span></td><td>Down &amp; in</td><td>Yes</td></tr>
-          <tr><td><span class="disc">4</span></td><td>Down &amp; away</td><td>Yes</td></tr>
-          <tr><td><span class="disc">5</span></td><td>Below &amp; away</td><td>No &mdash; the chase pitch</td></tr>
+          <tr><td><span class="disc">4</span></td><td>Middle-down</td><td>Yes</td></tr>
+          <tr><td><span class="disc">5</span></td><td>Down &amp; away</td><td>Yes</td></tr>
+          <tr><td><span class="disc">6</span></td><td>Below the zone, the dirt</td><td>No &mdash; the chase pitch</td></tr>
+          <tr><td><span class="disc">7</span></td><td>Up, above the zone</td><td>No &mdash; climbing the ladder</td></tr>
         </tbody>
       </table>
     </div>
     <ul style="margin-top:14px">
-      <li>All six carry a <b>navy number</b> and a dashed outline, so you can see the whole target set at once.</li>
+      <li>All eight carry a <b>navy number</b> and a dashed outline, so you can see the whole target set at once. 7, 1, 0, 4 and 6 run straight down the middle column: the snowman.</li>
+      <li><b>Changed in v45.</b> Through v44 there were six: 1 was above the zone, 4 down &amp; away and 5 below &amp; away. Anything saved on the iPad before the update moves to the new number for the same box on its own (old 5 goes to 6, below the zone). The four routines carry the new numbers, so their script IDs changed too. The Pitch Chart&rsquo;s call grid uses the same numbers.</li>
       <li>The location the script is calling <b>right now</b> turns orange with a ring around it.</li>
       <li>Pitch types follow the order all 3 apps use (v40): <b>1</b> FB, <b>2</b> CT, <b>3</b> SL, <b>4</b> CB, <b>5</b> CH, <b>6</b> SP. Scripts and exports store the letters, so nothing already saved changes.</li>
     </ul>
@@ -536,7 +539,7 @@ footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--rule);
     </ul>
   </section>
 
-  <footer>Legend Titans Bullpen Chart · app v44 · Guide prepared for winter workouts</footer>
+  <footer>Legend Titans Bullpen Chart · app v45 · Guide prepared for winter workouts</footer>
 
 </div>
 </body>
