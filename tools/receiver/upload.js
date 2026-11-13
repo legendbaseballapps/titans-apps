@@ -584,6 +584,7 @@ async function part3() {
     check("  and the pitches untouched", op.rows().length, 6);
     const orow = op.records()[0];
     check("rows carry Level and Opponent", orow.Level + " / " + orow.Opponent, "Varsity / Northview");
+    check("v55: OpponentID is last, blank for a team not on the list", op.header().slice(-1)[0] + " [" + orow.OpponentID + "]", "OpponentID []");
     check("RecordID is column A", op.header()[0], "RecordID");
     check("the game filed by v44 was never sent", (await offArch()).find(g => g.opp === "Old Test").up || 0, 0);
     check("nothing was turned away", book.getSheetByName("Log").rows().length, 0);
@@ -697,6 +698,7 @@ async function part4() {
     const gp = book.getSheetByName("Game_Pitches");
     check("pitch log: 3 pitches plus the no-pitch IBB row", gp.rows().length, 4);
     check("columns: RecordID, then Level, Date, Opponent", gp.header().slice(0, 4).join(","), "RecordID,Level,Date,Opponent");
+    check("v37: OpponentID last, Rock Canyon typed is filed as the list's team", gp.header().slice(-1)[0] + " " + gp.records()[0].OpponentID, "OpponentID rock-canyon");
     const g0 = gp.records()[0];
     check("rows carry the level and opponent", g0.Level + " / " + g0.Opponent, "Varsity / Rock Canyon");
     const gi = book.getSheetByName("Game_Innings");

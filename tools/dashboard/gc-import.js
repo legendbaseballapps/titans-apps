@@ -7,7 +7,8 @@
    baseball notation, "-", "N/A" and "0-0" for no value, a Totals row, a Glossary, a player
    with no name, and a Freshmen sheet laid out differently (its own column order, "SB-ATT").
    No real player's stats are in this file. Checks the reading, the matching, the picks,
-   the GameChanger and GC_Links tabs, re-imports, and who can save. */
+   the GameChanger and GC_Links tabs, re-imports, and who can save; and (1.4) adding a
+   player's second GameChanger row on one level to his first, and per-level answers. */
 "use strict";
 const fs = require("fs");
 const path = require("path");
@@ -207,6 +208,102 @@ const tab = (rt, n) => (rt.b.getSheetByName(n) ? rt.b.getSheetByName(n).records(
   rt.b.insertSheet("Records").data = [["RecordID", "App", "Build", "Schema", "Device", "Charter", "Date", "Opponent", "HomeAway", "Team", "ReceivedAt", "FiledAt", "Rows"]];
   const page = rt.sandbox.doGet({parameter: {}}).getContent();
   ok(/\?p=import">Import GameChanger stats</.test(page), "the overview footer links to the import page");
+}
+
+/* ---------------------------------------------------------------- 1.4: one player listed twice on a level */
+/* The real case: GameChanger had "Lythgoe, Landon" #12 and "Lythgoe" #13 (no first name) on
+   Sophomore, and "Lythgoe" with no first name on JV. Made-up numbers. */
+function lyWorld() {
+  const rt = world();
+  rt.b.getSheetByName("Players").data.push(["p-lyth", "Lythgoe", "Landon", "Jr", "", "", "", "Yes"]);
+  return rt;
+}
+function lyBook() {
+  return {season: "2026", sheets: [
+    {name: "JV", grid: sheet([{n: 13, last: "Lythgoe", first: null, pit: {IP: "4.0", BF: 18, "#P": 70, ER: 2, ERA: 3.5}}])},
+    {name: "Sophomore", grid: sheet([
+      {n: 12, last: "Lythgoe", first: "Landon", bat: {AB: 20, H: 5, BB: 3, HBP: 1, SF: 0, "1B": 4, "2B": 1},
+        pit: {IP: "8.1", BF: 40, "#P": 150, ER: 4, ERA: 3.36, "S%": 60, "FPS%": 55, H: 9, BB: 4},
+        fld: {TC: 6, PO: 2, A: 3, E: 1, FPCT: 0.833, P: "8.1", Total: "8.1", SBATT: 0, CS: 0}},
+      {n: 13, last: "Lythgoe", first: null, bat: {AB: 4, H: 2, "1B": 1, "2B": 1},
+        pit: {IP: "3.2", BF: 16, "#P": 60, ER: 1, ERA: 1.909, "S%": 65, "FPS%": 62.5, H: 3, BB: 1},
+        fld: {TC: 2, PO: 1, A: 1, E: 0, FPCT: 1, P: "3.2", Total: "3.2"}}
+    ])}
+  ]};
+}
+const soph = rt => tab(rt, "GameChanger").filter(r => r.Level === "Sophomore" && r.PlayerID === "p-lyth");
+{
+  const rt = lyWorld(), S = rt.sandbox, data = lyBook(), pv = S.importPreview(data);
+  const row = (lv, num) => pv.rows.find(r => r.level === lv && String(r.number) === String(num));
+  eq([row("Sophomore", 12).status, row("Sophomore", 13).status, row("JV", 13).status], ["match", "pick", "pick"], "Landon matches on Sophomore; the no-first-name rows wait for a coach");
+  eq(row("Sophomore", 13).suggest, ["p-lyth"], "and Landon is suggested for #13");
+
+  /* picking Landon himself for #13 is 2 rows for one player: refused, and told how to add them */
+  throws(() => S.importCommit(data, {[row("JV", 13).key]: "p-lyth", [row("Sophomore", 13).key]: "p-lyth"}), /Add to Landon Lythgoe/, "Landon picked for a second Sophomore row: refused, pointing at Add to");
+  throws(() => S.importCommit(data, {[row("JV", 13).key]: "ADD:p-lyth", [row("Sophomore", 13).key]: "ADD:p-lyth"}), /no other row for that player on JV/, "Add to on a level where he has no other row is refused");
+  ok(!rt.b.getSheetByName("GameChanger"), "nothing written by the refused saves");
+
+  const res = S.importCommit(data, {[row("JV", 13).key]: "p-lyth", [row("Sophomore", 13).key]: "ADD:p-lyth"});
+  eq([res.players, res.added, res.skipped], [2, 1, 0], "commit: 2 player rows, 1 added in, none skipped");
+  const g = soph(rt);
+  eq(g.length, 1, "Landon has one Sophomore row");
+  const v = g[0];
+  eq([v.Number, v["Bat AB"], v["Bat H"], v["Bat 2B"], v["Pit Outs"], v["Pit BF"], v["Pit Pitches"], v["Pit ER"], v["Fld TC"], v["Fld PO"], v["Fld A"], v["Outs P"], v["Outs Total"]],
+     ["12, 13", 24, 7, 2, 36, 56, 210, 5, 8, 3, 4, 36, 36], "counts are summed, both numbers kept");
+  eq([v["Bat AVG"], v["Bat OBP"], v["Bat SLG"], v["Bat OPS"]], [0.292, 0.393, 0.375, 0.768], "batting rates worked out again: 7/24, 11/28, 9/24");
+  eq([v["Pit ERA"], v["Pit WHIP"], v["Pit Strike%"], v["Pit FPS%"]], [2.917, 1.417, 61.429, 57.143], "pitching rates: ERA by innings, WHIP 17/12, strike % by pitches, first-pitch % by batters");
+  eq([v["Fld FPCT"], v["Catch CS%"]], [0.875, ""], "fielding % 7/8; no steal attempts, no CS%");
+  eq(tab(rt, "GameChanger").filter(r => r.Level === "JV" && r.PlayerID === "p-lyth").length, 1, "his JV row is there too");
+
+  const L = tab(rt, "GC_Links");
+  eq(L.map(r => [r.Last, r.First, r.PlayerID, String(r.Season || ""), r.Level || ""]).sort(), [["Lythgoe", "", "p-lyth", "", ""], ["Lythgoe", "", "p-lyth", "2026", "Sophomore"]],
+     "JV's answer is remembered for the name; the add is remembered for 2026 Sophomore only");
+
+  /* the same file again: it remembers, adds again, nothing doubles */
+  const pv2 = S.importPreview(data), r2 = (lv, num) => pv2.rows.find(r => r.level === lv && String(r.number) === String(num));
+  eq([r2("Sophomore", 13).status, r2("Sophomore", 13).reason, r2("JV", 13).status], ["add", "Added to row 3", "linked"], "second time: #13 is added on its own, JV linked");
+  eq(pv2.rows.filter(r => r.status === "pick").length, 0, "nothing to pick");
+  S.importCommit(data, {});
+  eq([soph(rt).length, soph(rt)[0]["Bat AB"]], [1, 24], "re-import: still one Sophomore row, not added twice");
+
+  /* 2027: a different Lythgoe on Sophomore isn't added to Landon by last year's choice */
+  const y = lyBook(); y.season = "2027"; y.sheets = [y.sheets[1]];
+  const pv3 = S.importPreview(y);
+  eq(pv3.rows.find(r => String(r.number) === "13").status, "pick", "2027 Sophomore: the 2026 add doesn't carry over; the name link to Landon makes it a duplicate to pick");
+}
+
+/* the state dashboard 1.3 left behind: one name, 2 answers on 2 levels, the last one won.
+   Here "Lythgoe" with no first name was saved as SKIP for every level. */
+{
+  const rt = lyWorld(), S = rt.sandbox, data = lyBook();
+  rt.b.insertSheet("GC_Links").data = [["Last", "First", "PlayerID", "Linked by", "Linked at"], ["Lythgoe", "", "SKIP", "jim@example.com", "2026-11-13T00:00:00Z"]];
+  const pv = S.importPreview(data), row = (lv, num) => pv.rows.find(r => r.level === lv && String(r.number) === String(num));
+  eq([row("JV", 13).status, row("JV", 13).remembered, row("Sophomore", 13).status, row("Sophomore", 13).remembered], ["skip", true, "skip", true], "both no-first-name rows show Skipped before, and can be changed");
+  const res = S.importCommit(data, {[row("JV", 13).key]: "p-lyth", [row("Sophomore", 13).key]: "ADD:p-lyth"});
+  eq([res.players, res.added], [2, 1], "changed: JV is Landon, Sophomore #13 added to him");
+  eq([soph(rt).length, soph(rt)[0]["Bat AB"]], [1, 24], "one Sophomore row with both rows' stats");
+  const L = tab(rt, "GC_Links");
+  eq(rt.b.getSheetByName("GC_Links").data[0], ["Last", "First", "PlayerID", "Linked by", "Linked at", "Season", "Level"], "the 1.3 tab gains Season and Level");
+  eq(L.map(r => [r.PlayerID, String(r.Season || ""), r.Level || ""]).sort(), [["SKIP", "", ""], ["p-lyth", "2026", "JV"], ["p-lyth", "2026", "Sophomore"]],
+     "changes are remembered for that season and level; the old name answer is left alone");
+  const pv2 = S.importPreview(data), r2 = (lv, num) => pv2.rows.find(r => r.level === lv && String(r.number) === String(num));
+  eq([r2("JV", 13).status, r2("Sophomore", 13).status], ["linked", "add"], "and they win over it next time");
+  const page = S.doGet({parameter: {p: "import"}}).getContent();
+  ok(/Same player, listed twice in GameChanger/.test(page) && /select class="chg"/.test(page) && /dashboard 1\.4/.test(page), "the page offers Add to and Change, and says 1.4");
+}
+
+/* one name, different players on 2 levels, in one import: each level remembers its own */
+{
+  const rt = world(), S = rt.sandbox;
+  const data = {season: "2026", sheets: [
+    {name: "JV", grid: sheet([{n: 13, last: "Kerr", first: null}])},
+    {name: "Freshman", grid: sheet([{n: 7, last: "Kerr", first: null}])}
+  ]};
+  const pv = S.importPreview(data), k = lv => pv.rows.find(r => r.level === lv && r.last === "Kerr").key;
+  S.importCommit(data, {[k("JV")]: "p-kerB", [k("Freshman")]: "p-kerA"});
+  eq(tab(rt, "GC_Links").map(r => [r.PlayerID, r.Level]).sort(), [["p-kerA", "Freshman"], ["p-kerB", "JV"]], "2 answers for one name: saved per level, neither overwrites the other");
+  const pv2 = S.importPreview(data);
+  eq(pv2.rows.filter(r => r.last === "Kerr").map(r => r.level + ">" + r.playerId), ["JV>p-kerB", "Freshman>p-kerA"], "and both come back right");
 }
 
 console.log(pass + fail + " import checks" + (fail ? ", " + fail + " FAILED" : ""));

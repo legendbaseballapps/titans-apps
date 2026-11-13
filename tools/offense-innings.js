@@ -144,8 +144,8 @@ function check(name, got, want) {
   console.log("\nTHE EXPORT");
   const t = await pg.evaluate(() => { const x = tableOf(O); return { head: x.head, rows: x.rows }; });
   const ci = t.head.indexOf("Inning"), co = t.head.indexOf("Outs");
-  check("Inning and Outs are the last 2 columns", t.head.slice(-2).join(","), "Inning,Outs");
-  check("the columns before them didn't move", t.head.indexOf("Practice"), t.head.length - 3);
+  check("Inning and Outs come last, then v55's OpponentID", t.head.slice(-3).join(","), "Inning,Outs,OpponentID");
+  check("the columns before them didn't move", t.head.indexOf("Practice"), t.head.length - 4);
   const byPA = {}; t.rows.forEach(r => { byPA[r[t.head.indexOf("PA")]] = r[ci] + "/" + r[co]; });
   check("PA 1: inning 1, 0 outs", byPA[1], "1/0");
   check("PA 2: inning 1, 1 out", byPA[2], "1/1");
@@ -154,7 +154,7 @@ function check(name, got, want) {
   /* a game charted before v53 never knew: blank, never a made-up value */
   const old = await pg.evaluate(() => { const g = JSON.parse(JSON.stringify(O)); g.pas.forEach(a => { delete a.inn; delete a.outs; }); const x = tableOf(g); return x.rows[0].slice(-2).join("|"); });
   check("a pre-v53 game exports blank, not 0", old, "|");
-  check("the upload carries the same columns", await pg.evaluate(() => upPayload(Object.assign({}, O, { rid: "x" })).tables.pitches.columns.slice(-2).join(",")), "Inning,Outs");
+  check("the upload carries the same columns", await pg.evaluate(() => upPayload(Object.assign({}, O, { rid: "x" })).tables.pitches.columns.slice(-3).join(",")), "Inning,Outs,OpponentID");
 
   console.log("\nA NEW GAME STARTS OVER");
   const fresh = await pg.evaluate(() => { const g = freshGame(); return g.inning + "/" + g.outs + "/" + g.pas[0].inn + "/" + g.pas[0].outs; });

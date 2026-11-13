@@ -18,13 +18,13 @@ old one — tap the amber stamp to fix it.
 | App | Source & folder | Live on GitHub Pages |
 |---|---|---|
 | **Bullpen Chart** | **v45** | **v44** (Jim pushed Oct 26). **v45 (Nov 13) waiting:** push `bullpen/index.html`, `bullpen/sw.js`, `bullpen/guide.html` and `bullpen/templates.js` (the middle snowman, locations 0 to 7). Before Jan 8 | Real-iPad upload test **passed Oct 19** (practice pen stayed off the Sheet, real pen landed) |
-| **Pitch Chart** (game) | **v36** | **v34** (Jim pushed Oct 26). **v36 (Nov 13) waiting:** push `game/index.html`, `game/sw.js` and `game/guide.html` (numbered call pad, Glove and ? Not known). It includes v35 (the called spot is required) |
-| **Offense Chart** | **v54** | **v54** (Jim pushed Nov 12: fills a laptop or projector screen; iPads unchanged) |
+| **Pitch Chart** (game) | **v37** | **v34** (Jim pushed Oct 26). **v37 (Nov 13) waiting:** push `game/index.html`, `game/sw.js`, `game/guide.html` and the new `game/opponents.js` (the opponent picker, E-012). It includes v36 (numbered call pad, Glove and ? Not known) and v35 (the called spot is required). Before Mar 1 |
+| **Offense Chart** | **v55** | **v54** (Jim pushed Nov 12: fills a laptop or projector screen; iPads unchanged). **v55 (Nov 13) waiting:** push `offense/index.html`, `offense/sw.js`, `offense/guide.html` and the new `offense/opponents.js` (the opponent picker, E-012). Before Mar 1 |
 | **Receiver** | **receiver 4** | Redeploy as a new version of the same deployment (URL and key unchanged). Includes receiver 3 (game notes) |
 | **Player cards** | **cards 4.5**, **reflections 2** (`cards/`) | **cards 4.5 (Nov 13) waiting:** paste `cards/Code.gs` and deploy a New version (pen cards read the new location numbers; game cards keep glove and unknown calls apart). **cards 4.4 deployed Nov 13** as a New version (two-way games: 1 email, 2 reflections; includes 4.3, the hitter zone's contact vs swing and miss). Test files pushed. **cards 4.2 deployed Nov 6** as a New version (Jim: "works and looks great"); reflections 2 live. Test mode. Next: the test-mode run, player and parent emails, then `SEND_MODE` live (school / AD approval done Nov 6) |
 | **Demo page** | `demo/index.html` | **Live Nov 2** (adds Load the 7th inning; checked against the site). **Rebuilt Nov 11, waiting:** push `demo/index.html`, `demo/chart-this-inning.html`, `demo/Chart-This-Inning-Group-Card.pdf` and `demo/Players-Session-Run-of-Show.pdf`. Safe to push now: live offense v52 ignores the new inning fields (checked). Adds a Players' session card linking Chart This Inning, the group card and the run of show. Offense v53 must not go live BEFORE this demo page (the old demo opens v53 at inning 1). Rebuild with `tools/demo-build.js`, then `LIVE=1`, then `tools/demo-page.py` |
 | **Sample card page** | **sample 7** (`cards/sample.html`, `cards/sample-sw.js`) | **sample 7 (Nov 13) waiting:** push both files (the pen card's spot numbers, the middle snowman). **sample 6 (Nov 12):** push both files (hitter zone: colored marks, red X fixed for iPhone). **sample 3 live Nov 6. sample 4 (Nov 6) waiting:** push both files (bold markers). For the player meeting Nov 12 (QR code). Rebuild with `tools/cards/sample-page.js` |
-| **Coaches dashboard** | **dashboard 1.3** (`dashboard/Code.gs`): Program overview, GameChanger import | **dashboard 1.3 live Nov 13** (Jim deployed it and imported the 2026 workbook from `?p=import`; sign in from a private window if the login loops with 2 Google accounts open). dashboard 1 live Nov 6. The Coaches tab header must read exactly `Google account` |
+| **Coaches dashboard** | **dashboard 1.4** (`dashboard/Code.gs`): Program overview, GameChanger import | **dashboard 1.4 live Nov 13** (Jim deployed it and re-imported 2026: Landon Lythgoe's 2 Sophomore rows are one). dashboard 1.3 live Nov 13 (Jim deployed it and imported the 2026 workbook from `?p=import`; sign in from a private window if the login loops with 2 Google accounts open). dashboard 1 live Nov 6. The Coaches tab header must read exactly `Google account` |
 | **Dashboard sample page** | **dashboard sample 1** (`dashboard/sample.html`) | **Waiting:** push it; the head coach opens legendbaseballapps.github.io/titans-apps/dashboard/sample.html. Rebuild with `tools/dashboard/sample-page.js` |
 
 **The site moved Oct 14, 2026** to the program-owned account: **legendbaseballapps.github.io/titans-apps** (repo transferred from vaughnzj, so the live files, including the real `roster.js`, moved as they were). Every iPad installs from the new link; History saved under the old address does not carry over. The Coach's Guides in the pending builds (bullpen v31, game v23, offense v42) carry the new address, so pushing those builds is what puts it on the iPads.
@@ -60,6 +60,17 @@ is only for app code.
 - Tests: `tools/demo-live-check.js` loads it, charts a 4-pitch strikeout in the Pitch Chart and a pitch in the Offense Chart; `tools/demo-check.js` still all ok.
 
 ## Coaches dashboard (Titans Coaches Dashboard)
+
+### dashboard 1.4 · Nov 13, 2026
+
+**Headline:** the import can put a player's 2 GameChanger rows on one level together. GameChanger listed Landon Lythgoe twice on 2026 Sophomore ("Lythgoe, Landon" #12 and "Lythgoe" #13, no first name), so 1.3 skipped #13 and his Sophomore baseline was missing those games.
+
+- **Why:** Jim, Nov 13: #13 is Landon; "go ahead and combine."
+- **Add to:** a row that waits for a pick now offers "Same player, listed twice in GameChanger: Add to Landon Lythgoe (#12)", listing the players already on that sheet. Saving writes **one** row: counts summed, both numbers kept ("12, 13"), and the rates worked out again (AVG, OBP, SLG, OPS, WHIP, fielding %, CS% from the counts; ERA weighted by innings, strike % by pitches and first-pitch strike % by batters faced, so GameChanger's own conventions hold). Picking the player himself for a second row is still refused, and the message now says to use Add to.
+- **Change:** a remembered row (Linked, Not on roster, Skipped before) has a small Change list under it, so an answer saved earlier can be fixed. Only rows a coach changes are sent.
+- **Per-level answers (a 1.3 bug):** GC_Links remembered one answer per name for every level, so "Lythgoe" (no first name) picked as Landon on JV and Skip on Sophomore in the same import kept whichever came last, and the next re-import would have skipped the other level. GC_Links now has **Season** and **Level** columns: an Add to, the answer for a duplicate row, a changed answer, and a name that got different answers on 2 levels are remembered for that season and level only, and win over the name answer. Everything else is remembered for the name, as before, so next season's names still match on their own. A 1.3 GC_Links tab gains the 2 columns on the next save; its rows are kept.
+- **To fix Landon (Jim):** deploy 1.4, open `?p=import`, pick 2026 and the same workbook (or the Sophomore CSV). The second Lythgoe row on Sophomore (#13) will say Skipped before or Pick: choose **Add to Landon Lythgoe (#12)**. If the JV "Lythgoe" row also shows Skipped before, Change it to Landon Lythgoe. Import. Sophomore 2026 shows one row for Landon with numbers "12, 13".
+- **Tests:** `tools/dashboard/gc-import.js` 81 checks (26 new: the Lythgoe case with made-up numbers, the rates, the 1.3 GC_Links state, per-level answers, 2027 not inheriting a 2026 add); new `tools/dashboard/import-page.js`, 24 checks in a browser at 1194 and 390 wide (picks with the mouse, what is sent, what is saved). 6 deliberate breaks of the new code all caught; dashboard 121, sample and mutation (15 of 15) suites unchanged and green.
 
 ### dashboard 1.3 · Nov 12, 2026
 
@@ -685,6 +696,18 @@ execution grading.
 
 ## Pitch Chart (game)
 
+### v37 · Nov 13, 2026
+**Headline:** Pick the opponent from the list instead of typing it. Pull a lineup puts last time's game against that team first, even if it was typed differently.
+
+- **Why:** E-012. Jim, Oct 28: *"I can pre-load the teams that we play so there won't be any issues with that."* Nov 13: the head coach says the 2027 schedules are final; *"Any reason we can't just build all of that?"*
+- **The list:** `opponents.js`, the same file in `game/` and `offense/`: 19 teams from the 2027 schedules, each with a permanent **id**, a **name**, a **short** name for the header and **aka** spellings from our schedules (PONDO, T-RIDGE, CV, CHAP, CREEK, Regis, Valor, HRHS, DCHS). **Data, not code:** the worker asks the network first with the 2.5 second limit, exactly like `roster.js`, so editing the list needs no version bump. Add a team by copying a row with a new id; never change or reuse an id.
+- **The header:** the Opponent box is a picker (A to Z, short names). **Other team** at the bottom swaps it for the text box, for a tournament team; emptying the box brings the picker back. One control at a time, so the header stays one row at 1080 and 1180 with Finish & file showing (the picker is 128px; 132 wrapped it). A typed name that is on the list (its name, short name or an aka, ignoring case, spaces and "HS") is filed as that team. The Ready box says *(not on the opponent list)* after a typed team, so Jim knows to add it.
+- **Matching:** a game keeps **opp** (the name, as before) and **oppId**. A game typed before the list ("Rock Canyon HS") still matches Rock Canyon, through the spellings.
+- **Export and upload:** **OpponentID** is the last column, blank for a team not on the list. The receiver adds it by name; no receiver change.
+- **No opponents.js:** the header is the old text box and nothing else changes.
+- **Tests:** new `tools/opponents.js` (53 checks: the file, the picker, Other team, aka spellings, refresh, 1080 wide, no list, the Pull order, the export); upload suite +2 (OpponentID reaches the Sheet). 7 deliberate breaks of the new code, all caught after adding 1 check. Expected test updates: OpponentID after Inning/Outs (`offense-innings.js`), on the notes table (`hitter-notes.js`), the off-list note in the Ready box (`header-finish.js`), the v37 footer (`location-numbers.js`). Every suite passes; the sweep's 4 standing failures are unchanged. `swcache` passes for both apps.
+- **Pull a lineup:** games against the picked team come first, matched on the id.
+
 ### v36 · Nov 13, 2026
 **Headline:** The call pad has the bullpen's numbers, and a Glove and a ? Not known button for when the catcher calls it.
 
@@ -1206,6 +1229,18 @@ Not logged at the time.
 ---
 
 ## Offense Chart
+
+### v55 · Nov 13, 2026
+**Headline:** Pick the opponent from the list instead of typing it. Pull a pitcher lists that team's pitchers first.
+
+- **Why:** E-012. Jim, Oct 28: *"I can pre-load the teams that we play so there won't be any issues with that."* Nov 13: the head coach says the 2027 schedules are final; *"Any reason we can't just build all of that?"*
+- **The list:** `opponents.js`, the same file in `game/` and `offense/`: 19 teams from the 2027 schedules, each with a permanent **id**, a **name**, a **short** name for the header and **aka** spellings from our schedules (PONDO, T-RIDGE, CV, CHAP, CREEK, Regis, Valor, HRHS, DCHS). **Data, not code:** the worker asks the network first with the 2.5 second limit, exactly like `roster.js`, so editing the list needs no version bump. Add a team by copying a row with a new id; never change or reuse an id.
+- **The header:** the Opponent box is a picker (A to Z, short names). **Other team** at the bottom swaps it for the text box, for a tournament team; emptying the box brings the picker back. One control at a time, so the header stays one row at 1080 and 1180 with Finish & file showing (the picker is 128px; 132 wrapped it). A typed name that is on the list (its name, short name or an aka, ignoring case, spaces and "HS") is filed as that team. The Ready box says *(not on the opponent list)* after a typed team, so Jim knows to add it.
+- **Matching:** a game keeps **opp** (the name, as before) and **oppId**. A game typed before the list ("Rock Canyon HS") still matches Rock Canyon, through the spellings.
+- **Export and upload:** **OpponentID** is the last column, blank for a team not on the list. The receiver adds it by name; no receiver change.
+- **No opponents.js:** the header is the old text box and nothing else changes.
+- **Tests:** new `tools/opponents.js` (53 checks: the file, the picker, Other team, aka spellings, refresh, 1080 wide, no list, the Pull order, the export); upload suite +2 (OpponentID reaches the Sheet). 7 deliberate breaks of the new code, all caught after adding 1 check. Expected test updates: OpponentID after Inning/Outs (`offense-innings.js`), on the notes table (`hitter-notes.js`), the off-list note in the Ready box (`header-finish.js`), the v37 footer (`location-numbers.js`). Every suite passes; the sweep's 4 standing failures are unchanged. `swcache` passes for both apps.
+- **Pull a pitcher:** pitchers we charted against the picked team come first, then the rest by pitches seen. (The History tab's scouting list is unchanged: it still pools a pitcher by name.)
 
 ### v54 · Nov 12, 2026
 **Headline:** On a laptop or projector the Chart screen now fills the screen like the Pitch Chart. iPads look the same as before.

@@ -22,7 +22,7 @@
    the program goals. Every number here comes from the Sheet; Config can change any goal,
    any 2026 rate, any team's share of 150 and each level's games on the schedule. */
 
-var VERSION = "dashboard 1.3 (Nov 2026)";
+var VERSION = "dashboard 1.4 (Nov 2026)";
 
 var LEVELS = ["Varsity", "JV", "Sophomore", "Freshman"];
 
@@ -333,10 +333,16 @@ function page_(inner) {
    a row it can't match waits for a coach to pick; a row with no last name is skipped;
    Totals becomes the TEAM row; Glossary and blank rows are ignored. Writing needs edit
    access to the season Sheet, so a coach who can only view it can preview but not save.
-   Annual reset: keep the GameChanger and GC_Links tabs in the new season's Sheet. */
+   Annual reset: keep the GameChanger and GC_Links tabs in the new season's Sheet.
+   1.4 (Nov 13): a second GameChanger row for the same player on one level (GameChanger
+   listed him twice, e.g. "Lythgoe, Landon" #12 and "Lythgoe" #13) can be ADDED to his row:
+   counts are summed and the rates worked out again, one row is written. Such a choice, a
+   skip of a duplicate row, a changed answer, or a name that got different answers on two
+   levels is remembered for that season and level only (GC_Links Season + Level); every
+   other pick is remembered for the name, as before. Remembered rows can be changed. */
 
 var GC_TAB = "GameChanger", GC_LINKS = "GC_Links";
-var GC_NOT = "NOT ON ROSTER", GC_SKIP = "SKIP";
+var GC_NOT = "NOT ON ROSTER", GC_SKIP = "SKIP", GC_ADD = "ADD:";
 /* [stored column, group, GameChanger header (any spelling), kind]; kind "outs" = innings in
    baseball notation (39.2 = 39 and 2/3) stored as outs. QAB is left out on purpose:
    GameChanger's definition is not ours. */
@@ -364,7 +370,9 @@ var GC_COLS = [
 ];
 var GC_HEAD = ["Season", "Level", "PlayerID", "Last", "First", "Number", "Status", "ImportedAt", "ImportedBy"]
   .concat(GC_COLS.map(function (c) { return c[0]; }));
-var GC_LINK_HEAD = ["Last", "First", "PlayerID", "Linked by", "Linked at"];
+var GC_LINK_HEAD = ["Last", "First", "PlayerID", "Linked by", "Linked at", "Season", "Level"];
+/* Rates are worked out again when 2 rows are added together; everything else is summed. */
+var GC_RATE = {"Bat AVG": 1, "Bat OBP": 1, "Bat SLG": 1, "Bat OPS": 1, "Pit ERA": 1, "Pit WHIP": 1, "Pit Strike%": 1, "Pit FPS%": 1, "Fld FPCT": 1, "Catch CS%": 1};
 
 /* "Freshmen", "Legend JV Stats.csv", "Junior Varsity", "Soph" -> the level; "" when it can't tell. */
 function gcLevel_(name) {
@@ -449,10 +457,39 @@ function gcPlayers_(ss) {
     return {id: s_(p.PlayerID), last: s_(p.Last), first: s_(p.First), cls: s_(p.Class)};
   });
 }
+/* name: "last|first" -> answer, for any season and level; at: "season|level|last|first" -> answer
+   for that season and level only, which wins. */
 function gcLinks_(ss) {
-  var m = {};
-  rows_(ss, GC_LINKS).forEach(function (r) { if (s_(r.PlayerID)) m[gcKey_(r.Last, r.First)] = s_(r.PlayerID); });
+  var m = {name: {}, at: {}};
+  rows_(ss, GC_LINKS).forEach(function (r) {
+    if (!s_(r.PlayerID)) return;
+    var k = gcKey_(r.Last, r.First), se = s_(r.Season).trim(), lv = s_(r.Level).trim();
+    if (se && lv) m.at[se + "|" + lv + "|" + k] = s_(r.PlayerID); else m.name[k] = s_(r.PlayerID);
+  });
   return m;
+}
+/* Two GameChanger rows for one player on one level -> one row: counts summed, rates again. */
+function gcAdd_(a, b) {
+  var o = {}, n = function (x) { return x === "" || x == null ? 0 : Number(x); }, has = function (k) { return a[k] !== "" && a[k] != null || b[k] !== "" && b[k] != null; };
+  GC_COLS.forEach(function (c) { var k = c[0]; if (!GC_RATE[k]) o[k] = has(k) ? n(a[k]) + n(b[k]) : ""; });
+  var div = function (x, y, d) { return y > 0 ? Math.round(x / y * Math.pow(10, d)) / Math.pow(10, d) : ""; };
+  var wavg = function (k, w) {          /* GameChanger's own rate, weighted, keeps its conventions */
+    var t = 0, ww = 0;
+    [a, b].forEach(function (r) { if (r[k] !== "" && r[k] != null && n(r[w]) > 0) { t += n(r[k]) * n(r[w]); ww += n(r[w]); } });
+    return ww ? Math.round(t / ww * 1000) / 1000 : "";
+  };
+  var H = n(o["Bat H"]), AB = n(o["Bat AB"]), obpD = AB + n(o["Bat BB"]) + n(o["Bat HBP"]) + n(o["Bat SF"]);
+  o["Bat AVG"] = div(H, AB, 3);
+  o["Bat OBP"] = div(H + n(o["Bat BB"]) + n(o["Bat HBP"]), obpD, 3);
+  o["Bat SLG"] = div(n(o["Bat 1B"]) + 2 * n(o["Bat 2B"]) + 3 * n(o["Bat 3B"]) + 4 * n(o["Bat HR"]), AB, 3);
+  o["Bat OPS"] = o["Bat OBP"] === "" || o["Bat SLG"] === "" ? "" : Math.round((o["Bat OBP"] + o["Bat SLG"]) * 1000) / 1000;
+  o["Pit ERA"] = wavg("Pit ERA", "Pit Outs");
+  o["Pit WHIP"] = div(n(o["Pit BB"]) + n(o["Pit H"]), n(o["Pit Outs"]) / 3, 3);
+  o["Pit Strike%"] = wavg("Pit Strike%", "Pit Pitches");
+  o["Pit FPS%"] = wavg("Pit FPS%", "Pit BF");
+  o["Fld FPCT"] = div(n(o["Fld PO"]) + n(o["Fld A"]), n(o["Fld TC"]), 3);
+  o["Catch CS%"] = n(o["Catch SB Att"]) > 0 ? Math.round(n(o["Catch CS"]) / n(o["Catch SB Att"]) * 10000) / 100 : "";
+  return o;
 }
 /* A spelling a coach might mean: same last name, or same first name with a close last name. */
 function gcSuggest_(players, last, first) {
@@ -489,29 +526,40 @@ function importPreview_(ss, payload) {
     try { var p = gcParse_(sh.grid || []); } catch (x) { info.error = "Not a GameChanger stats export: " + x.message + "."; return; }
     info.missing = p.missing;
     if (!level) { info.error = "Which level is this sheet? Pick one."; return; }
-    var seen = {};
+    var seen = {}, rs = [];
     p.rows.forEach(function (r) {
       var row = {key: si + ":" + r.line, sheet: si, level: level, line: r.line, number: r.number, last: r.last, first: r.first, team: r.team};
       if (r.team) { row.status = "team"; row.playerId = "TEAM"; }
       else if (!r.last) { row.status = "skip"; row.reason = "No name in GameChanger" + (r.number ? " (#" + r.number + ")" : ""); }
       else {
-        var k = gcKey_(r.last, r.first), hit = byName[k] || [];
-        if (links[k]) {
-          row.playerId = links[k];
-          row.status = links[k] === GC_NOT ? "not" : links[k] === GC_SKIP ? "skip" : byId[links[k]] ? "linked" : "pick";
+        var k = gcKey_(r.last, r.first), hit = byName[k] || [], ak = season + "|" + level + "|" + k, ln = links.at[ak] || links.name[k];
+        if (ln) {
+          row.playerId = ln; row.remembered = true; if (links.at[ak]) row.here = true;
+          row.status = ln === GC_NOT ? "not" : ln === GC_SKIP ? "skip" : byId[ln] ? "linked" : "pick";
           if (row.status === "skip") row.reason = "Skipped before";
+          if (row.status === "pick") row.remembered = false;
         } else if (hit.length === 1) { row.status = "match"; row.playerId = hit[0].id; }
         else { row.status = "pick"; row.suggest = gcSuggest_(players, r.last, r.first).map(function (q) { return q.id; }); }
         if (row.status === "pick") row.playerId = "";
-        if (hit.length > 1 && !links[k]) row.reason = "2 players on the roster have this name";
-      }
-      if (row.playerId && row.playerId !== GC_NOT && row.playerId !== GC_SKIP && row.playerId !== "TEAM") {
-        if (seen[row.playerId]) { row.status = "pick"; row.reason = "Already matched to row " + seen[row.playerId] + " on this sheet"; row.playerId = ""; }
-        else seen[row.playerId] = r.line;
+        if (hit.length > 1 && !ln) row.reason = "2 players on the roster have this name";
       }
       row.vals = r.vals;
-      out.rows.push(row);
+      rs.push(row);
     });
+    /* one row per player per level; a row remembered for this season and level that points at
+       a player already on the sheet is his second GameChanger row, added to the first */
+    var ply = function (x) { return x.playerId && x.playerId !== GC_NOT && x.playerId !== GC_SKIP && x.playerId !== "TEAM"; };
+    rs.forEach(function (x) {
+      if (!ply(x) || x.here) return;
+      if (seen[x.playerId]) { x.status = "pick"; x.reason = "Already matched to row " + seen[x.playerId] + " on this sheet"; x.playerId = ""; x.remembered = false; x.dup = true; }
+      else seen[x.playerId] = x.line;
+    });
+    rs.forEach(function (x) {
+      if (!ply(x) || !x.here) return;
+      if (seen[x.playerId]) { x.status = "add"; x.addTo = seen[x.playerId]; x.reason = "Added to row " + seen[x.playerId]; }
+      else seen[x.playerId] = x.line;
+    });
+    rs.forEach(function (x) { out.rows.push(x); });
   });
   return out;
 }
@@ -530,7 +578,8 @@ function gcBook_() {
   return ss;
 }
 
-/* picks = {rowKey: PlayerID | "NOT ON ROSTER" | "SKIP"} for every row the preview left to a coach. */
+/* picks = {rowKey: PlayerID | "NOT ON ROSTER" | "SKIP" | "ADD:" + PlayerID} for every row the
+   preview left to a coach, plus any remembered row a coach changed. */
 function importCommit(payload, picks) { return importCommit_(gcBook_(), payload, picks || {}); }
 function importCommit_(ss, payload, picks) {
   var pv = importPreview_(ss, payload), me = "";
@@ -539,27 +588,46 @@ function importCommit_(ss, payload, picks) {
   if (bad.length) throw new Error(bad.map(function (s) { return s.name + ": " + s.error; }).join(" "));
   var ids = {};
   pv.players.forEach(function (p) { ids[p.id] = 1; });
-  var waiting = [], newLinks = [], used = {};
+  var waiting = [], newLinks = [], used = {}, adds = [];
+  var nm = function (r) { return r.last + (r.first ? ", " + r.first : "") + " (" + r.level + ")"; };
   pv.rows.forEach(function (r) {
-    if (r.status === "pick") {
-      var pick = String(picks[r.key] || "");
-      if (!(ids[pick] || pick === GC_NOT || pick === GC_SKIP)) { waiting.push(r.last + (r.first ? ", " + r.first : "") + " (" + r.level + ")"); return; }
-      r.playerId = pick; r.status = pick === GC_NOT ? "not" : pick === GC_SKIP ? "skip" : "linked";
-      newLinks.push([r.last, r.first, pick]);
-    }
-    if (ids[r.playerId]) {
-      var u = r.level + "|" + r.playerId;
-      if (used[u]) waiting.push(r.last + ", " + r.first + " (" + r.level + "): same player as " + used[u]);
-      used[u] = r.last + ", " + r.first;
+    var pick = String(picks[r.key] || "");
+    var change = pick && r.remembered && (r.status === "linked" || r.status === "not" || r.status === "skip" || r.status === "add");
+    if (r.status === "pick" || change) {
+      var add = pick.indexOf(GC_ADD) === 0 ? pick.slice(GC_ADD.length) : "";
+      if (!(ids[pick] || pick === GC_NOT || pick === GC_SKIP || ids[add])) { waiting.push(nm(r)); return; }
+      r.playerId = add || pick; r.status = add ? "add" : pick === GC_NOT ? "not" : pick === GC_SKIP ? "skip" : "linked";
+      /* for this season and level only: an added row, a duplicate's answer, a changed answer */
+      newLinks.push({last: r.last, first: r.first, id: add || pick, here: !!(add || r.dup || change), season: pv.season, level: r.level});
     }
   });
+  pv.rows.forEach(function (r) {   /* one row per player per level; an added row needs one to go into */
+    if (!ids[r.playerId] || r.status === "add") return;
+    var u = r.level + "|" + r.playerId;
+    if (used[u]) waiting.push(r.last + ", " + r.first + " (" + r.level + "): same player as " + used[u].last + ", " + used[u].first + ". To put both rows together, pick Add to " + used[u].first + " " + used[u].last);
+    else used[u] = r;
+  });
+  pv.rows.forEach(function (r) {
+    if (r.status !== "add") return;
+    var t = used[r.level + "|" + r.playerId];
+    if (!t) waiting.push(nm(r) + ": no other row for that player on " + r.level + " to add it to");
+    else adds.push([r, t]);
+  });
   if (waiting.length) throw new Error("Still to pick: " + waiting.join("; ") + ".");
+  /* a name that got different answers on 2 levels is remembered per level, not for the name */
+  var ans = {};
+  newLinks.forEach(function (l) { if (!l.here) { var k = gcKey_(l.last, l.first); (ans[k] = ans[k] || {})[l.id] = 1; } });
+  newLinks.forEach(function (l) { if (!l.here && Object.keys(ans[gcKey_(l.last, l.first)]).length > 1) l.here = true; });
+  adds.forEach(function (x) {
+    x[1].vals = gcAdd_(x[1].vals, x[0].vals);
+    x[1].number = [x[1].number, x[0].number].filter(function (v) { return v !== "" && v != null; }).join(", ");
+  });
   var lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
     var now = new Date().toISOString(), levels = {};
     pv.sheets.forEach(function (s) { levels[s.level] = 1; });
-    var add = pv.rows.filter(function (r) { return r.status !== "skip"; }).map(function (r) {
+    var add = pv.rows.filter(function (r) { return r.status !== "skip" && r.status !== "add"; }).map(function (r) {
       var st = {match: "Matched", linked: "Linked", not: "Not on roster", team: "Team totals"}[r.status];
       return [pv.season, r.level, r.playerId === GC_NOT ? "" : r.playerId, r.last, r.first, r.number, st, now, me]
         .concat(GC_COLS.map(function (c) { return r.vals[c[0]]; }));
@@ -574,11 +642,13 @@ function importCommit_(ss, payload, picks) {
     if (all.length) sh.getRange(2, 1, all.length, GC_HEAD.length).setValues(all);
     if (old > all.length) sh.deleteRows(2 + all.length, old - all.length);
     if (newLinks.length) {
-      var lk = gcTab_(ss, GC_LINKS, GC_LINK_HEAD), cur = lk.getLastRow() > 1 ? lk.getRange(1, 1, lk.getLastRow(), GC_LINK_HEAD.length).getValues().slice(1) : [];
-      var at = {};
-      cur.forEach(function (r, i) { at[gcKey_(r[0], r[1])] = i; });
+      var lk = gcTab_(ss, GC_LINKS, GC_LINK_HEAD);
+      lk.getRange(1, 1, 1, GC_LINK_HEAD.length).setValues([GC_LINK_HEAD]);   /* a 1.3 tab gains Season and Level */
+      var cur = lk.getLastRow() > 1 ? lk.getRange(1, 1, lk.getLastRow(), GC_LINK_HEAD.length).getValues().slice(1) : [];
+      var at = {}, akey = function (last, first, se, lv) { return (se && lv ? s_(se) + "|" + lv : "") + "#" + gcKey_(last, first); };
+      cur.forEach(function (r, i) { at[akey(r[0], r[1], String(r[5] || "").trim(), String(r[6] || "").trim())] = i; });
       newLinks.forEach(function (l) {
-        var row = [l[0], l[1], l[2], me, now], k = gcKey_(l[0], l[1]);
+        var row = [l.last, l.first, l.here ? l.id : l.id, me, now, l.here ? l.season : "", l.here ? l.level : ""], k = akey(l.last, l.first, row[5], row[6]);
         if (k in at) cur[at[k]] = row; else { at[k] = cur.length; cur.push(row); }
       });
       lk.getRange(2, 1, cur.length, GC_LINK_HEAD.length).setValues(cur);
@@ -589,7 +659,7 @@ function importCommit_(ss, payload, picks) {
   } finally { lock.releaseLock(); }
   var count = function (st) { return add.filter(function (r) { return r[6] === st; }).length; };
   return {season: pv.season, levels: Object.keys(levels), players: count("Matched") + count("Linked"),
-          notOnRoster: count("Not on roster"), team: count("Team totals"), skipped: pv.rows.length - add.length, links: newLinks.length};
+          notOnRoster: count("Not on roster"), team: count("Team totals"), skipped: pv.rows.length - add.length - adds.length, added: adds.length, links: newLinks.length};
 }
 function gcTab_(ss, name, head) {
   var sh = ss.getSheetByName(name);
@@ -628,7 +698,7 @@ function importPage_(ss) {
     '<div class="card"><h2>Already imported</h2>' + have + "</div>" +
     '<p class="foot">' + e_(VERSION) + "</p>";
   var css = "<style>.st{display:inline-block;padding:2px 8px;border-radius:10px;font-size:12px;font-weight:700}" +
-    ".st.match,.st.linked{background:#E2F2E9;color:#1B7043}.st.pick{background:#FBE3D2;color:#B83227}.st.not,.st.skip,.st.team{background:#ECEFF5;color:#5A6781}" +
+    ".st.match,.st.linked,.st.add{background:#E2F2E9;color:#1B7043}select.chg{display:block;font-size:12px;padding:2px;margin-top:4px;max-width:100%}.st.pick{background:#FBE3D2;color:#B83227}.st.not,.st.skip,.st.team{background:#ECEFF5;color:#5A6781}" +
     "select{font-size:14px;padding:4px}button{font-size:15px;font-weight:700;padding:10px 18px;border-radius:8px;border:0;background:#16305C;color:#fff;cursor:pointer}" +
     "button.alt{background:#fff;color:#16305C;border:1px solid #16305C}button[disabled]{opacity:.4;cursor:default}.err{color:#B83227;font-weight:700}</style>";
   var js = '<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script><script>' + IMPORT_JS + "</script>";
@@ -637,7 +707,7 @@ function importPage_(ss) {
 
 /* The page's script: read the file, preview, let the coach pick, then save. */
 var IMPORT_JS = [
-  "var LEVELS=" + JSON.stringify(["Varsity", "JV", "Sophomore", "Freshman"]) + ",NOT=" + JSON.stringify("NOT ON ROSTER") + ",SKIP=" + JSON.stringify("SKIP") + ";",
+  "var LEVELS=" + JSON.stringify(["Varsity", "JV", "Sophomore", "Freshman"]) + ",NOT=" + JSON.stringify("NOT ON ROSTER") + ",SKIP=" + JSON.stringify("SKIP") + ",ADD=" + JSON.stringify("ADD:") + ";",
   "var payload=null,pv=null;",
   "function h(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\"/g,'&quot;');}",
   "function msg(t,err){var m=document.getElementById('msg');m.innerHTML=t;m.className=err?'note err':'note';}",
@@ -651,6 +721,15 @@ var IMPORT_JS = [
   "document.getElementById('season').addEventListener('change',function(){if(payload){payload.season=this.value;preview();}});",
   "function preview(){msg('Matching names to the roster&hellip;');google.script.run.withSuccessHandler(show).withFailureHandler(function(e){msg(h(e.message||e),1);}).importPreview(payload);}",
   "function pname(id){for(var i=0;i<pv.players.length;i++)if(pv.players[i].id===id)return pv.players[i].name;return id;}",
+  "/* the choices for a row: add to another row of the same player (GameChanger listed him twice), close spellings, not on roster, skip, everyone */",
+  "function opts(x,rs){var sg=(x.suggest||[]),o='';",
+  " var tg=rs.filter(function(y){return y!==x&&(y.status==='match'||y.status==='linked')&&y.playerId;});",
+  " var ad=tg.length?'<optgroup label=\"Same player, listed twice in GameChanger\">'+tg.map(function(y){return '<option value=\"'+ADD+h(y.playerId)+'\">Add to '+h(pname(y.playerId))+(y.number!==''?' (#'+h(y.number)+')':'')+'</option>';}).join('')+'</optgroup>':'';",
+  " if(x.dup)o+=ad;",
+  " if(sg.length)o+='<optgroup label=\"Close spellings\">'+sg.map(function(id){return '<option value=\"'+h(id)+'\">'+h(pname(id))+'</option>';}).join('')+'</optgroup>';",
+  " o+='<option value=\"'+NOT+'\">Not on the roster (graduated or left)</option><option value=\"'+SKIP+'\">Skip this row</option>';",
+  " if(!x.dup)o+=ad;",
+  " return o+'<optgroup label=\"Everyone\">'+pv.players.map(function(p){return '<option value=\"'+h(p.id)+'\">'+h(p.name)+(p.cls?' ('+h(p.cls)+')':'')+'</option>';}).join('')+'</optgroup>';}",
   "function show(r){pv=r;msg('');var o='<div class=\"card\"><h2>2 &middot; Check the names</h2>';",
   " r.sheets.forEach(function(s){var rs=r.rows.filter(function(x){return x.sheet===s.i;});",
   "  o+='<h2 style=\"margin-top:16px\">'+h(s.name)+(s.level?' &middot; '+h(s.level):'')+'</h2>';",
@@ -658,15 +737,14 @@ var IMPORT_JS = [
   "  if(s.error){o+='<p class=\"err\">'+h(s.error)+'</p>';return;}",
   "  if(s.missing&&s.missing.length)o+='<p class=\"note\">Not in this file (left blank): '+h(s.missing.join(', '))+'</p>';",
   "  var c={};rs.forEach(function(x){c[x.status]=(c[x.status]||0)+1;});",
-  "  o+='<p>'+(c.match||0)+' matched &middot; '+(c.linked||0)+' linked before &middot; '+(c.not||0)+' not on roster &middot; '+(c.skip||0)+' skipped'+(c.pick?' &middot; <b class=\"err\">'+c.pick+' to pick</b>':'')+'</p>';",
+  "  o+='<p>'+(c.match||0)+' matched &middot; '+(c.linked||0)+' linked before &middot; '+(c.add?c.add+' added to another row &middot; ':'')+(c.not||0)+' not on roster &middot; '+(c.skip||0)+' skipped'+(c.pick?' &middot; <b class=\"err\">'+c.pick+' to pick</b>':'')+'</p>';",
   "  o+='<div class=\"scroll\"><table><tr><th>#</th><th>GameChanger name</th><th>Status</th><th>Roster player</th></tr>';",
   "  rs.forEach(function(x){if(x.status==='team')return;var nm=h(x.last)+(x.first?', '+h(x.first):'');",
-  "   var lab={match:'Matched',linked:'Linked',not:'Not on roster',skip:'Skipped',pick:'Pick'}[x.status];var cell='';",
-  "   if(x.status==='pick'){var sg=(x.suggest||[]);cell='<select class=\"pick\" data-key=\"'+h(x.key)+'\"><option value=\"\">Choose&hellip;</option>'+",
-  "     (sg.length?'<optgroup label=\"Close spellings\">'+sg.map(function(id){return '<option value=\"'+h(id)+'\">'+h(pname(id))+'</option>';}).join('')+'</optgroup>':'')+",
-  "     '<option value=\"'+NOT+'\">Not on the roster (graduated or left)</option><option value=\"'+SKIP+'\">Skip this row</option><optgroup label=\"Everyone\">'+",
-  "     pv.players.map(function(p){return '<option value=\"'+h(p.id)+'\">'+h(p.name)+(p.cls?' ('+h(p.cls)+')':'')+'</option>';}).join('')+'</optgroup></select>'+(x.reason?' <span class=\"note\">'+h(x.reason)+'</span>':'');}",
-  "   else if(x.playerId&&x.status!=='not')cell=h(pname(x.playerId));else cell='<span class=\"dim\">'+h(x.reason||'')+'</span>';",
+  "   var lab={match:'Matched',linked:'Linked',not:'Not on roster',skip:'Skipped',pick:'Pick',add:'Added'}[x.status];var cell='';",
+  "   if(x.status==='pick'){cell='<select class=\"pick\" data-key=\"'+h(x.key)+'\"><option value=\"\">Choose&hellip;</option>'+opts(x,rs)+'</select>'+(x.reason?' <span class=\"note\">'+h(x.reason)+'</span>':'');}",
+  "   else if(x.status==='add')cell=h(pname(x.playerId))+' <span class=\"note\">'+h(x.reason||'')+'</span>';",
+  "   else if(x.playerId&&x.status!=='not'&&x.status!=='skip')cell=h(pname(x.playerId));else cell='<span class=\"dim\">'+h(x.reason||'')+'</span>';",
+  "   if(x.remembered)cell+='<select class=\"chg\" data-key=\"'+h(x.key)+'\" title=\"Change what was picked before\"><option value=\"\">Keep</option>'+opts(x,rs)+'</select>';",
   "   o+='<tr><td>'+h(x.number)+'</td><td>'+nm+'</td><td><span class=\"st '+x.status+'\">'+lab+'</span></td><td>'+cell+'</td></tr>';});",
   "  o+='</table></div>';});",
   " var any=r.rows.some(function(x){return x.status==='pick';}),bad=r.sheets.some(function(s){return s.error;});",
@@ -678,8 +756,8 @@ var IMPORT_JS = [
   " document.getElementById('save').addEventListener('click',save);document.getElementById('save').disabled=bad;ready();}",
   "function ready(){var b=document.getElementById('save');if(!b)return;var left=Array.prototype.filter.call(document.querySelectorAll('select.pick'),function(s){return !s.value;}).length;",
   " b.disabled=left>0||pv.sheets.some(function(s){return s.error;});document.getElementById('done').innerHTML=left?left+' still to pick.':'';}",
-  "function save(){var picks={};Array.prototype.forEach.call(document.querySelectorAll('select.pick'),function(s){picks[s.getAttribute('data-key')]=s.value;});",
+  "function save(){var picks={};Array.prototype.forEach.call(document.querySelectorAll('select.pick,select.chg'),function(s){if(s.value)picks[s.getAttribute('data-key')]=s.value;});",
   " var b=document.getElementById('save');b.disabled=true;document.getElementById('done').innerHTML='Saving&hellip;';",
-  " google.script.run.withSuccessHandler(function(x){document.getElementById('done').innerHTML='<b>Imported '+h(x.season)+'</b> ('+h(x.levels.join(', '))+'): '+x.players+' players, '+x.notOnRoster+' not on the roster, '+x.skipped+' skipped. Reload to see it under Already imported.';})",
+  " google.script.run.withSuccessHandler(function(x){document.getElementById('done').innerHTML='<b>Imported '+h(x.season)+'</b> ('+h(x.levels.join(', '))+'): '+x.players+' players, '+(x.added?x.added+' added to another row, ':'')+x.notOnRoster+' not on the roster, '+x.skipped+' skipped. Reload to see it under Already imported.';})",
   "  .withFailureHandler(function(e){b.disabled=false;document.getElementById('done').innerHTML='<span class=\"err\">'+h(e.message||e)+'</span>';}).importCommit(payload,picks);}"
 ].join("\n");

@@ -42,7 +42,7 @@ const check = (name, got, want) => { checks++; const ok = String(got) === String
     /* the upload row for it (practice game, so it is built but never sent) */
     const nt = await pg.evaluate(() => { const g = JSON.parse(JSON.stringify(O)); g.practice = false; g.level = "Varsity"; return upPayload(g); });
     check("the upload carries a notes table", Object.keys(nt.tables).join(","), "pitches,notes");
-    check("  with the columns in order", nt.tables.notes.columns.join(","), "Level,Date,Opponent,HitterID,Hitter,HitterLast,HitterFirst,Spot,PA,Pitches,ToHitter,CoachOnly,Practice");
+    check("  with the columns in order", nt.tables.notes.columns.join(","), "Level,Date,Opponent,HitterID,Hitter,HitterLast,HitterFirst,Spot,PA,Pitches,ToHitter,CoachOnly,Practice,OpponentID");
     check("  one row per hitter", nt.tables.notes.rows.length, 9);
     const r0 = nt.tables.notes.rows[0];
     check("  the leadoff row", [r0[3], r0[5] + ", " + r0[6], r0[7], r0[8], r0[9], r0[10]].join(" | "), "zvn2wpb | Bobo, Ethan | 1 | " + bobo.length + " | " + bobo.reduce((n, a) => n + a.pitches.length, 0) + " | Great takes in the first. Stay on the fastball.");

@@ -116,7 +116,7 @@ const WANT = { 0: [2, 2], 1: [1, 2], 2: [1, 1], 3: [3, 1], 4: [3, 2], 5: [3, 3],
     await ev(pg, '(function(){ var s=document.getElementById("suPitcher"); s.value=window.TITANS_ROSTER[0].id; s.dispatchEvent(new Event("change",{bubbles:true})); var set=function(id,v){ var e=document.getElementById(id); e.value=v; e.dispatchEvent(new Event("input",{bubbles:true})); }; set("fOpp","Ponderosa"); var d=document.getElementById("fDate"); d.value="2027-04-18"; d.dispatchEvent(new Event("change",{bubbles:true})); })()');
     await ev(pg, FILL_SETUP);
     await pg.click("#tab-chart");
-    is("footer says v36", await ev(pg, "/Pitch Chart v36/.test(document.getElementById('foot').textContent)"), true);
+    is("footer says v37 (E-012 came next)", await ev(pg, "/Pitch Chart v37/.test(document.getElementById('foot').textContent)"), true);
     const nums = await ev(pg, "[...document.querySelectorAll('#callPad > button')].map(function(b,i){ var s=b.querySelector('.snum'); return s ? s.textContent+'@'+Math.floor(i/5)+','+(i%5) : null; }).filter(Boolean).sort().join(' ')");
     is("8 numbered boxes, the same boxes as the bullpen", nums, Object.keys(WANT).map(k => k + "@" + WANT[k].join()).sort().join(" "));
     is("the other 17 boxes have no number", await ev(pg, "document.querySelectorAll('#callPad > button').length - document.querySelectorAll('#callPad .snum').length"), 17);

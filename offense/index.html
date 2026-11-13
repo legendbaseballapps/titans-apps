@@ -144,6 +144,11 @@ button{cursor:pointer;border:1px solid var(--line);background:var(--surface);bor
   font-family:var(--cond);font-weight:700;font-size:14px;letter-spacing:.07em;text-transform:uppercase}
 .gostart:disabled{background:var(--surface-2);color:var(--text-3)}
 .gf input:focus{border-bottom-color:#fff;outline:none}
+/* v55: the Opponent picker (E-012), dressed like the text boxes beside it. */
+.gf select{background:transparent;border:none;border-bottom:1px solid rgba(255,255,255,.3);color:#fff;padding:2px 0;width:128px;font-size:16px;font-weight:500;font-family:inherit;-webkit-appearance:none;appearance:none;border-radius:0}
+.gf select:focus{border-bottom-color:#fff;outline:none}
+.gf select option{color:#111}
+.gf [hidden]{display:none}
 .tabs{display:flex;gap:3px;margin-left:auto;align-self:center;
   background:rgba(255,255,255,.09);padding:3px;border-radius:8px;margin-right:6px}
 .tabs button{border:0;background:transparent;color:#fff;opacity:.72;font-family:var(--cond);
@@ -569,7 +574,7 @@ footer{max-width:1340px;margin:0 auto;padding:14px 16px 30px;color:var(--text-3)
     <span>Offense Chart &middot; <i class="build" id="buildStamp"></i></span></div></div>
   <div class="gamebar">
     <label class="gf"><span class="lbl">Date</span><input id="fDate" type="date"></label>
-    <label class="gf"><span class="lbl">Opponent</span><input id="fOpp" placeholder="&mdash;"></label>
+    <label class="gf"><span class="lbl">Opponent</span><select id="fOppPick" hidden aria-label="Opponent"></select><input id="fOpp" placeholder="&mdash;"></label>
     <button class="topbtn" id="btnOrder" title="Show or hide the lineup column">&#9664; Lineup</button>
   </div>
   <div class="tabs" role="tablist">
@@ -870,6 +875,8 @@ footer{max-width:1340px;margin:0 auto;padding:14px 16px 30px;color:var(--text-3)
      design: with no file in the folder this 404s, TITANS_ROSTER stays undefined,
      and the app falls back to whatever was typed in locally before. -->
 <script src="roster.js"></script>
+<!-- v55: the opponent list (E-012). Optional like roster.js: missing, the header is a text box. -->
+<script src="opponents.js"></script>
 <script>
 /* ===================================================================
    Titans Offense Chart — how the other team is pitching us.
@@ -891,9 +898,104 @@ footer{max-width:1340px;margin:0 auto;padding:14px 16px 30px;color:var(--text-3)
    control with nothing to put back.
    To delete the feature outright rather than switch it off, remove this flag,
    gateWipe(), wipeEverything(), WIPE_KEYS, the #wipeBox markup and its listener. */
+/* ======================= OPPONENT LIST (E-012, v55) =======================
+   opponents.js, released by Jim the way roster.js is: network first, no version
+   bump. The Opponent box in the header is a picker; "Other team" opens a text
+   box as the last resort (Jim, Oct 28: "pick, or type as a last resort").
+   A game keeps both: opp (the name everything already shows and exports) and
+   oppId (the permanent id the Pull buttons and the dashboard match on). A typed
+   team has no oppId, which is how an off-list team shows up in the Sheet: Jim
+   adds it to the list and the next game picks it. A typed name that IS on the
+   list (its name, short name or a schedule spelling like PONDO) is picked for
+   him. With no opponents.js at all the header is the old text box, and nothing
+   else changes. */
+var OPPS = [], OPPSTAMP = "", oppOther = false;
+function loadOpps(){
+  var l = null;
+  try{ l = window.TITANS_OPPONENTS; }catch(e){}
+  OPPS = (l && l.length) ? l.filter(function(o){ return o && o.id && o.name; }) : [];
+  try{ OPPSTAMP = String(window.TITANS_OPPONENTS_STAMP || ""); }catch(e){ OPPSTAMP = ""; }
+}
+function oppNorm(s){
+  return String(s || "").toLowerCase().replace(/\b(high school|hs)\b/g, "").replace(/[^a-z0-9]/g, "");
+}
+function oppById(id){
+  for(var i = 0; i < OPPS.length; i++) if(OPPS[i].id === id) return OPPS[i];
+  return null;
+}
+/* The list team a typed name means, or null. Exact after tidying only: never guesses. */
+function oppFind(text){
+  var k = oppNorm(text);
+  if(!k) return null;
+  for(var i = 0; i < OPPS.length; i++){
+    var o = OPPS[i], all = [o.name, o.short].concat(o.aka || []);
+    for(var j = 0; j < all.length; j++) if(all[j] && oppNorm(all[j]) === k) return OPPS[i];
+  }
+  return null;
+}
+/* Same team? The id when both games have one, else the tidied name, so a game
+   typed before the list existed ("Rock Canyon HS") still finds Rock Canyon. */
+function oppKey(g){
+  if(!g) return "";
+  if(g.oppId) return "id:" + g.oppId;
+  var o = oppFind(g.opp);
+  return o ? "id:" + o.id : (oppNorm(g.opp) ? "t:" + oppNorm(g.opp) : "");
+}
+function sameOpp(a, b){ var k = oppKey(a); return !!k && k === oppKey(b); }
+/* The id a game is filed under: the one picked, or the list team its typed name is
+   (typed before the list, or never left the box). Blank = not on the list. */
+function oppIdOf(g){ if(!g) return ""; if(g.oppId) return g.oppId; var o = oppFind(g.opp); return o ? o.id : ""; }
+function oppOffList(g){ return !!(OPPS.length && g && String(g.opp || "").trim() && !oppIdOf(g)); }
+function drawOpp(){
+  var g = O, sel = document.getElementById("fOppPick"), inp = document.getElementById("fOpp");
+  if(!sel || !inp) return;
+  if(!OPPS.length){ sel.hidden = true; inp.hidden = false; if(document.activeElement !== inp) inp.value = g.opp || ""; return; }
+  if(!sel.options.length){
+    var add = function(v, t, title){ var o = document.createElement("option"); o.value = v; o.textContent = t; if(title) o.title = title; sel.appendChild(o); };
+    add("", "— pick —");
+    OPPS.slice().sort(function(a, b){ return a.name.localeCompare(b.name); })
+        .forEach(function(o){ add(o.id, o.short || o.name, o.name); });
+    add("__other", "Other team…");
+  }
+  /* One control at a time, so the header stays one row: the picker, or (Other team)
+     the text box. Emptying the text box brings the picker back. */
+  if(document.activeElement !== inp) inp.value = g.opp || "";   /* a new game must not keep the last one's name */
+  if(g.oppId && oppById(g.oppId) && document.activeElement !== inp){
+    g.opp = oppById(g.oppId).name;            /* "pondo" typed is filed as Ponderosa */
+    sel.value = g.oppId; sel.hidden = false; inp.hidden = true; oppOther = false;
+  }
+  else if(String(g.opp || "").trim() || oppOther){
+    sel.value = "__other"; sel.hidden = true; inp.hidden = false;
+    inp.placeholder = "Type the team";
+    if(document.activeElement !== inp) inp.value = g.opp || "";
+  } else { sel.value = ""; sel.hidden = false; inp.hidden = true; }
+  sel.title = g.oppId && oppById(g.oppId) ? oppById(g.oppId).name : "";
+}
+function wireOpp(){
+  var sel = document.getElementById("fOppPick"), inp = document.getElementById("fOpp");
+  sel.addEventListener("change", function(){
+    var g = O, v = this.value;
+    if(v === "__other"){ g.oppId = ""; g.opp = ""; oppOther = true; }
+    else if(v){ var o = oppById(v); g.oppId = v; g.opp = o ? o.name : ""; oppOther = false; }
+    else { g.oppId = ""; g.opp = ""; oppOther = false; }
+    save(); render();
+    if(v === "__other"){ try{ inp.focus(); }catch(e){} }
+  });
+  /* Typing a list team's name (or PONDO, Regis...) files it under that team at once;
+     the box stays put until he leaves it. */
+  inp.addEventListener("input", function(){ var g = O, o = oppFind(this.value); g.opp = this.value; g.oppId = o ? o.id : ""; save(); });
+  /* When he leaves the box: a name on the list becomes that team. */
+  inp.addEventListener("change", function(){
+    var g = O, o = oppFind(this.value);
+    if(o){ g.oppId = o.id; g.opp = o.name; oppOther = false; }
+    else if(!String(this.value).trim()){ g.opp = ""; g.oppId = ""; oppOther = false; }
+    save(); render();
+  });
+}
+
 var ALLOW_WIPE = false;
 
-var BUILD = "v54";
+var BUILD = "v55";
 
 /* ======================= DASHBOARD UPLOAD (v45) =======================
    Same receiver as the Bullpen Chart: an Apps Script web app on the program
@@ -1106,7 +1208,7 @@ function drawReady(){
     m.textContent = "Game under way. Back to the chart any time.";
     panel.className = "panel ready"; go.disabled = false; go.textContent = "Back to charting \u2192";
   } else if(st.ok){
-    m.textContent = "\u2713 Ready. " + O.level + " \u00b7 vs " + O.opp + " \u00b7 " + O.date +
+    m.textContent = "\u2713 Ready. " + O.level + " \u00b7 vs " + O.opp + (oppOffList(O) ? " (not on the opponent list)" : "") + " \u00b7 " + O.date +
       " \u00b7 " + O.pitchers[0].name + " starting for them \u00b7 " + O.lineup.length + " hitters";
     panel.className = "panel ready"; go.disabled = false; go.textContent = "Start charting \u2192";
   } else {
@@ -1122,7 +1224,7 @@ function emptyGame(){
   /* level starts EMPTY on purpose (Jim): nothing carries over from the last game.
      rid is the game's permanent id on the dashboard; the receiver ignores a second
      copy of the same rid, so a retry can never double a game. */
-  return { v:1, sample:false, date:isoToday(), opp:"", who:"", home:"H",
+  return { v:1, sample:false, date:isoToday(), opp:"", oppId:"", who:"", home:"H",
            lineup:[], pitchers:[], cp:0, pas:[], cur:0, created:Date.now(),
            level:"", practice:false, rid:newRid(),
            /* v53: the inning on screen and the outs in it. */
@@ -1208,6 +1310,7 @@ function loadRoster(){
 }
 function loadAll(){
   loadRoster();
+  loadOpps();
   try{ A = JSON.parse(localStorage.getItem(AKEY)) || []; }catch(e){ A = []; }
   var g = null;
   try{ g = JSON.parse(localStorage.getItem(KEY)); }catch(e){}
@@ -1641,6 +1744,8 @@ function drawPitchersSetup(){
 function pickPitcher(i){
   var seen = seenPitchers();
   if(!seen.length){ hint("No filed games yet \u2014 nothing to pull from", false); return; }
+  /* v55: pitchers we saw against today's opponent first (E-012). */
+  seen.sort(function(a, b){ return (b.here ? 1 : 0) - (a.here ? 1 : 0) || b.n - a.n; });
   var w = document.createElement("div");
   w.className = "askwrap";
   w.innerHTML = '<div class="askbox"><p>Pull a pitcher we have charted before.'+
@@ -2774,7 +2879,9 @@ var COLS = ["Date","Opponent","HomeAway","Charting","Build","Pitcher","PitcherHa
   "Level","Practice",
   /* v53: the inning and the outs when the at-bat began. Blank on games charted
      before v53, which never knew them. */
-  "Inning","Outs"];
+  "Inning","Outs",
+  /* v55: the opponent list's permanent id (E-012). Blank = typed, not on the list. */
+  "OpponentID"];
 /* v45: the rows are built once, as a table, and used twice - the CSV a coach
    exports and the rows the dashboard receives. One source, so they can't drift. */
 function csvOf(game){
@@ -2800,7 +2907,7 @@ function tableOf(game){
         PitcherCarried:p0.carried||"", PA:ai+1, Spot:a.spot+1, Hitter:h.name, HitterLast:h.last||"",
         HitterFirst:h.first||"", HitterID:h.rid||"", Bats:h.hand||"", CountB:0, CountS:0,
         Situation:"First pitch", PAResult:"IBB", Level:game.level||"", Practice:game.practice?"Y":"",
-        Inning:a.inn != null ? a.inn : "", Outs:a.inn != null ? (a.outs || 0) : ""});
+        Inning:a.inn != null ? a.inn : "", Outs:a.inn != null ? (a.outs || 0) : "", OpponentID:oppIdOf(game)});
       rows.push(COLS.map(function(c){ return row[c]; }));
       return;
     }
@@ -2826,7 +2933,8 @@ function tableOf(game){
         (i===a.pitches.length-1 && a.result && isInPlay(a) ? (a.run ? "Y" : "N") : ""),
         (i===a.pitches.length-1 && a.result && isInPlay(a) ? (a.adv ? "Y" : "N") : ""),
         game.level || "", game.practice ? "Y" : "",
-        a.inn != null ? a.inn : "", a.inn != null ? (a.outs || 0) : ""
+        a.inn != null ? a.inn : "", a.inn != null ? (a.outs || 0) : "",
+        oppIdOf(game)
       ]);
     });
   });
@@ -2878,7 +2986,9 @@ function seenPitchers(){
       if(!s.n) return;
       var o = by[key] = by[key] || {name:p.name, hand:p.hand, games:0, n:0, str:0,
                                     sw:0, wh:0, mix:{}, last:"", jersey:"",
-                                    notes:"", tags:{}, ptags:[], from:"", _rk:-1};
+                                    notes:"", tags:{}, ptags:[], from:"", _rk:-1, here:false};
+      /* v55: seen against today's opponent (the opponent list's id, E-012). */
+      if(sameOpp(O, g)) o.here = true;
       o.games++; o.n += s.n; o.str += s.str; o.sw += s.sw; o.wh += s.wh;
       for(var k in s.mix) o.mix[k] = (o.mix[k]||0) + s.mix[k];
       if(!o.last || (g.date||"") > o.last) o.last = g.date || "";
@@ -3397,7 +3507,7 @@ function showTab(t){
 }
 function render(){
   try{
-    el("fDate").value = O.date; el("fOpp").value = O.opp;
+    el("fDate").value = O.date; drawOpp();
     el("fWho").value = O.who;  el("fHome").value = O.home;
     drawLevel(); drawPractice(); drawReady();
     /* v48: the Lineup button only does anything on the Chart tab. */
@@ -3473,9 +3583,10 @@ function wire(){
   el("rosToggle").onclick = function(){ rosOpen = !rosOpen; applyRosOpen(); };
 
   el("fDate").addEventListener("change", function(){ O.date = this.value; save(); render(); });
-  ["fDate","fOpp","fWho"].forEach(function(id){
+  wireOpp();
+  ["fDate","fWho"].forEach(function(id){
     el(id).oninput = function(){
-      O[id==="fDate"?"date":id==="fOpp"?"opp":"who"] = this.value;
+      O[id==="fDate"?"date":"who"] = this.value;
       save();
     };
   });
@@ -3750,8 +3861,8 @@ function upPayload(g){
      Notes changed after the game reached the dashboard go alone, and the
      receiver replaces that game's note rows. */
   var nt = notesTableOf(g);
-  var notes = { columns: ["Level","Date","Opponent"].concat(nt.head),
-                rows: nt.rows.map(function(r){ return [g.level || "", g.date || "", g.opp || ""].concat(r); }) };
+  var notes = { columns: ["Level","Date","Opponent"].concat(nt.head, ["OpponentID"]),
+                rows: nt.rows.map(function(r){ return [g.level || "", g.date || "", g.opp || ""].concat(r, [oppIdOf(g)]); }) };
   if(g.up && g.notesDirty){ out.tables = { notes: notes }; out.update = "notes"; }
   else out.tables.notes = notes;
   return out;

@@ -175,7 +175,7 @@ const shown = id => `(function(){ var b=document.getElementById(${JSON.stringify
     is("  a pitch is refused at the source", await ev(pg, '(function(){ logPitch(2,2); return countPitches(); })()'), 0);
     is("  so is a no-pitch IBB", await ev(pg, '(function(){ setResult("IBB"); return curPA().result || ""; })()'), "");
     await ev(pg, FILL_OFFENSE);
-    is("all of it in: ready, and says what is set", /^✓ Ready\. JV · vs Test Opponent · \d{4}-\d\d-\d\d · Test Starter starting for them · 9 hitters$/.test(await msg()), true);
+    is("all of it in: ready, and says what is set", /^✓ Ready\. JV · vs Test Opponent \(not on the opponent list\) · \d{4}-\d\d-\d\d · Test Starter starting for them · 9 hitters$/.test(await msg()), true);
     await pg.click("#btnStart");
     is("  Start charting opens the Chart tab", await tabNow(), "chart");
     is("  and the Lineup button shows there", await ev(pg, 'document.getElementById("btnOrder").style.visibility'), "");

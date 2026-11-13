@@ -1,13 +1,14 @@
 /* Titans Offense Chart - offline cache
    Bump CACHE when you change the APP - index.html, the guide, templates.js - or
-   iPads keep the old one. A new roster.js needs no bump: see rosterFirst below. */
-var CACHE = "titans-offense-v54";
+   iPads keep the old one. A new roster.js or opponents.js needs no bump: see rosterFirst below. */
+var CACHE = "titans-offense-v55";
 var FILES = [
   "./",
   "./index.html",
   "./guide.html",
   "./manifest.webmanifest",
   "./roster.js",
+  "./opponents.js",
   "./icon-180.png",
   "./icon-192.png",
   "./icon-512.png"
@@ -33,8 +34,9 @@ var FILES = [
    then serve what we already have. */
 var ROSTER_WAIT = 2500;
 
+/* opponents.js (E-012) is data too, released by Jim the same way: same rule. */
 function isRoster(url){
-  return /\/roster\.js(\?|$)/.test(url);
+  return /\/(roster|opponents)\.js(\?|$)/.test(url);
 }
 function rosterFirst(req){
   return caches.open(CACHE).then(function(c){
