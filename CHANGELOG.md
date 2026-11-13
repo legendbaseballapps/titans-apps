@@ -19,12 +19,12 @@ old one — tap the amber stamp to fix it.
 |---|---|---|
 | **Bullpen Chart** | **v44** | **v44** (Jim pushed Oct 26) | Real-iPad upload test **passed Oct 19** (practice pen stayed off the Sheet, real pen landed) |
 | **Pitch Chart** (game) | **v35** | **v34** (Jim pushed Oct 26). **v35 (Nov 6) waiting:** push `game/index.html`, `game/sw.js` and `game/guide.html` (the called spot is required) |
-| **Offense Chart** | **v54** | **v53** (Jim pushed Nov 12, with the rebuilt demo page). **v54 (Nov 12) waiting:** push `offense/index.html`, `offense/sw.js`, `offense/guide.html` (fills a laptop or projector screen; iPads unchanged) |
+| **Offense Chart** | **v54** | **v54** (Jim pushed Nov 12: fills a laptop or projector screen; iPads unchanged) |
 | **Receiver** | **receiver 4** | Redeploy as a new version of the same deployment (URL and key unchanged). Includes receiver 3 (game notes) |
-| **Player cards** | **cards 4.2**, **reflections 2** (`cards/`) | **cards 4.2 deployed Nov 6** as a New version (Jim: "works and looks great"); reflections 2 live. Test mode. Next: the test-mode run, player and parent emails, then `SEND_MODE` live (school / AD approval done Nov 6) |
+| **Player cards** | **cards 4.4**, **reflections 2** (`cards/`) | **cards 4.4 (Nov 13) waiting:** paste `cards/Code.gs` into the Titans Player Cards project and deploy a New version (two-way games: 1 email, 2 reflections). It includes 4.3. **cards 4.3 (Nov 12):** paste `cards/Code.gs` into the Titans Player Cards project and deploy a New version (hitter card zone: contact vs swing and miss). **cards 4.2 deployed Nov 6** as a New version (Jim: "works and looks great"); reflections 2 live. Test mode. Next: the test-mode run, player and parent emails, then `SEND_MODE` live (school / AD approval done Nov 6) |
 | **Demo page** | `demo/index.html` | **Live Nov 2** (adds Load the 7th inning; checked against the site). **Rebuilt Nov 11, waiting:** push `demo/index.html`, `demo/chart-this-inning.html`, `demo/Chart-This-Inning-Group-Card.pdf` and `demo/Players-Session-Run-of-Show.pdf`. Safe to push now: live offense v52 ignores the new inning fields (checked). Adds a Players' session card linking Chart This Inning, the group card and the run of show. Offense v53 must not go live BEFORE this demo page (the old demo opens v53 at inning 1). Rebuild with `tools/demo-build.js`, then `LIVE=1`, then `tools/demo-page.py` |
-| **Sample card page** | **sample 4** (`cards/sample.html`, `cards/sample-sw.js`) | **sample 3 live Nov 6. sample 4 (Nov 6) waiting:** push both files (bold markers). For the player meeting Nov 12 (QR code). Rebuild with `tools/cards/sample-page.js` |
-| **Coaches dashboard** | **dashboard 1.2** (`dashboard/Code.gs`): Program overview | **dashboard 1 live Nov 6** as Titans Coaches Dashboard (checked by Jim: "0 of 80 games charted"). **dashboard 1.2 waiting:** paste, then Manage deployments > pencil > New version (covers 1.1). The Coaches tab header must read exactly `Google account` |
+| **Sample card page** | **sample 6** (`cards/sample.html`, `cards/sample-sw.js`) | **sample 6 (Nov 12) waiting:** push both files (hitter zone: colored marks, red X fixed for iPhone). **sample 3 live Nov 6. sample 4 (Nov 6) waiting:** push both files (bold markers). For the player meeting Nov 12 (QR code). Rebuild with `tools/cards/sample-page.js` |
+| **Coaches dashboard** | **dashboard 1.3** (`dashboard/Code.gs`): Program overview, GameChanger import | **dashboard 1.3 live Nov 13** (Jim deployed it and imported the 2026 workbook from `?p=import`; sign in from a private window if the login loops with 2 Google accounts open). dashboard 1 live Nov 6. The Coaches tab header must read exactly `Google account` |
 | **Dashboard sample page** | **dashboard sample 1** (`dashboard/sample.html`) | **Waiting:** push it; the head coach opens legendbaseballapps.github.io/titans-apps/dashboard/sample.html. Rebuild with `tools/dashboard/sample-page.js` |
 
 **The site moved Oct 14, 2026** to the program-owned account: **legendbaseballapps.github.io/titans-apps** (repo transferred from vaughnzj, so the live files, including the real `roster.js`, moved as they were). Every iPad installs from the new link; History saved under the old address does not carry over. The Coach's Guides in the pending builds (bullpen v31, game v23, offense v42) carry the new address, so pushing those builds is what puts it on the iPads.
@@ -61,6 +61,20 @@ is only for app code.
 
 ## Coaches dashboard (Titans Coaches Dashboard)
 
+### dashboard 1.3 · Nov 12, 2026
+
+**Headline:** a GameChanger import page: upload a season's stats (one CSV per level, or a workbook with a sheet per level) and every player gets his season line, defense included, on a GameChanger tab in the season Sheet. First use: 2026 as the baseline for the 2027 exit reports.
+
+- **Why:** Jim, Nov 12: defensive metrics for the exit reports come from GameChanger at every level (season totals are fine), and *"let's go ahead and import the 2026 season for a baseline."*
+- **The page:** the overview footer links to it (`?p=import`). Pick the season and the file; the browser reads it (SheetJS 0.18.5 from cdnjs) and the dashboard shows every name: Matched, Linked before, Not on roster, Skipped, or **Pick**. Nothing saves until every Pick has an answer (a roster player, "Not on the roster", or "Skip this row"). "Mark the rest not on the roster" fills the remaining picks for graduated players.
+- **Matching:** last + first name only (jersey numbers change between levels). Never guesses: a close spelling, an initial or a missing first name is *suggested*, never matched. Every pick is remembered on **GC_Links**, so next season the same names match on their own. A row with no name is skipped. Two rows on one level can't be the same player.
+- **What's stored** (tab **GameChanger**, one row per player per level, plus a TEAM row per level from Totals): standard batting, standard pitching, fielding (TC, PO, A, E, FPCT, DP, TP), the catcher block (innings caught, PB, steals allowed, attempts, CS, CS%, pickoffs, CI) and innings at each position. Innings are stored as outs. GameChanger's QAB is left out on purpose: its definition isn't ours.
+- **Reading GameChanger's files:** columns are read by name inside their Batting / Pitching / Fielding group (SB, CS, PIK and CI appear in more than one). Freshmen's sheet has its own order and "SB-ATT" as stolen-attempts ("13-18" = 18); Excel turned one "1-1" into the date Jan 1, which is read back as 1 attempt. "-", "N/A" and "0-0" are blank. Glossary rows are ignored.
+- **Re-importing** a season replaces only that season's rows for the levels in the file. A season's import never touches another season.
+- **Who:** coaches on the Coaches tab can preview; saving needs edit access to the season Sheet, and a view-only coach is told so.
+- **Annual reset:** keep the **GameChanger** and **GC_Links** tabs when the next season's Sheet is made; they carry the year-over-year history.
+- **Tests:** `tools/dashboard/gc-import.js`, 55 checks on made-up exports (no real player's stats in the repo). 9 of 10 deliberate breaks caught; the 10th made no difference. Dry run with the real 2026 workbook (kept out of the repo): 62 rows matched on their own, Jim's 5 links plus "Not on roster" for 11 graduated or departed players, 2 skipped (Varsity #8 with no name; a second Sophomore "Lythgoe" row with no first name, since Landon Lythgoe already has his own Sophomore row). 48 of the 66 rostered players get a 2026 line, 17 of them on 2 or more levels. Every row's position innings add up to its total, and PO + A + E = TC on every row. Driven end to end in a browser with the real file.
+
 ### dashboard 1.2 and the sample page · Nov 6, 2026
 
 **Headline:** a link the head coach can open on any phone or laptop, no sign-in: the Program overview on a made-up 2027 season through Apr 17, so he can confirm it shows what he wants before real games start.
@@ -82,6 +96,31 @@ is only for app code.
 - Tests: `tools/dashboard/dashboard.js` (120 checks, every number worked out separately from the rows, the cards and the dashboard agree on the counter, laptop and phone widths with no sideways scroll); `tools/dashboard/mutate.js` (15 of 15 bugs caught).
 
 ## Player cards
+
+### cards 4.4 · Nov 13, 2026
+
+**Headline:** a kid who pitches and hits in the same game gets 1 email with both cards and 1 page with 2 reflections, one for pitching and one for hitting, each saved and sent to its own coaches.
+
+- **Why** (Jim, Nov 13): *"A player could have a great game on the mound and totally suck hitting and need to evaluate both."* Reflections stay separate; the delivery is bundled ("I like the bundle approach").
+- **The email:** "Your game cards: at Ridgeview, Apr 6". The pitching card ("On the mound"), then the hitting card ("At the plate"), the Get back to green box once at the end, and a **Write your 2 reflections** button.
+- **The page:** both cards, each followed by its own form ("Your pitching reflection" asks about his arm, "Your hitting reflection" about his body). He can send either first; the other stays open. Pre-pitch and reset questions on both (Jim: hitters have a pre-pitch and reset process too).
+- **Reminder:** 1 for the pair a day later, naming what's missing ("your pitching and hitting reflections", or only the one he hasn't sent).
+- **Flags:** a pitching reflection still goes to the pitching coaches, a hitting one to the hitting coaches.
+- **Last time's START:** now comes back on the same side of his game only. A pitching START (pen or game) on his next pitching form, a hitting START on his next hitting form.
+- **When it does NOT bundle:** a doubleheader against the same team on the same day (the 2 games can't be told apart), or when one chart uploads a day after the other card already went out. Those cards go on their own, as before.
+- **Sheet:** a **Bundle** column on the Cards tab, added by the next run. Nothing to set up.
+- **Tests:** `tools/cards/cards.js` 278 checks (51 new, two-way); `tools/cards/two-way-check.js` taps both forms on a phone-size browser (11 checks); `page-check.js` unchanged (25); `mutate.js` 49 of 49.
+
+### cards 4.3 and sample 5 · Nov 12, 2026
+
+**Headline:** the hitter card now tells contact from a swing and miss: in the zone, a dot for a foul or a ball in play, an X for a swing and miss, a ring for a pitch taken; and a new **Swing and miss** number, his misses out of all his swings.
+
+- **Why:** the one suggestion from the players' session (Nov 12): the box showed swung or took, but a swing didn't say whether he made contact.
+- **What:** `cards/Code.gs` hitter card only. The legend reads "● contact · ✖ swing and miss · ○ took · orange box = chased off the plate". The orange chased box is unchanged, so an X in an orange box is a chase he missed.
+- **Color** (Jim: "Can those be color coded"): contact dot green `#1B7043`, swing and miss X red `#B83227`, take ring grey `#5A6781`, in the zone and in the legend; dots and rings drawn a little larger. Each color clears 4.5:1 on the white, grey and orange chase cells, and the shapes still differ, so color is never the only cue.
+- **Red X on iPhone** (Jim: "The sample card doesn't show red X"): the heavy X (U+2716) is drawn as an emoji on iPhones, which ignores the color. Now U+2715 in heavy weight, which stays a plain red X. Sample rebuilt as **sample 6** so phones drop the cached copy.
+- **Swing and miss tile** (Jim: yes): first in the Your swings row, "2 of 7" = misses of swings (fouls, balls in play, swings and misses). The row is now Swing and miss · Chased · Hit hard, with Strikeouts · Free bases on a second row so 5 fit on a phone.
+- **Tests:** `tools/cards/cards.js` now counts every mark and the tile on 3 hitters' cards against the Sheet (224 checks); putting the old dot back fails 4, counting fouls as misses fails 3. `mutate.js` 42 of 42. Sample page rebuilt as sample 5. Jim: "add a few of each": on the sample only, the hitter's 2 fouls before 2 strikes become swings and misses (same counts and results), so his zone shows 2 ✖, 3 ● and 4 ○, and the tile reads 2 of 5. The test fixture is unchanged.
 
 ### cards 4.2, sample 4 and dashboard 1.1 · Nov 6, 2026
 

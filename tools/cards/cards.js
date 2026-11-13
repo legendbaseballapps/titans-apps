@@ -260,6 +260,29 @@ const PEN1 = REC["bullpen2027-01-12"], PEN2 = REC["bullpen2027-01-19"], LIVE = R
   ok(hz.includes(HR.length / P.length === 0 ? "" : (Math.round(HR.length * 10 / P.length) / 10).toFixed(1) + " Pitches per at-bat"), "hitter card: pitches per at-bat");
   const oz = HR.filter(r => r.InZone === "N").length, ch = HR.filter(r => r.Chase === "Y").length;
   ok(hz.includes((oz ? ch + " of " + oz : "0") + " Chased"), "hitter card: chased");
+  /* Nov 12: the zone splits swings into contact (dot) and swing and miss (X). Each mark once per pitch, plus 1 in the legend. */
+  const nOf = (s, x) => s.split(x).length - 1;
+  let allWhiffs = 0;
+  [["Hazen", HAZEN], ["Bobo", BOBO], ["Herbert", HERBERT]].forEach(([nm, id]) => {
+    const raw = String(cardOf(rt, OFF, id));
+    const g = rowsOf("Offense_Pitches", OFF, "HitterID", id).filter(r => r.What !== "" && r.What !== "HBP" && +r.Row >= 1 && +r.Row <= 5 && +r.Col >= 1 && +r.Col <= 5);
+    const wh = g.filter(r => r.What === "Swing & miss").length, ct = g.filter(r => r.What === "Foul" || r.What === "In play").length, tk = g.filter(r => r.What === "Took it").length;
+    allWhiffs += wh;
+    ok(nOf(raw, "&#10005;") === wh + 1, nm + ": an X for every swing and miss (" + (nOf(raw, "&#10005;") - 1) + " of " + wh + ")");
+    ok(nOf(raw, "&#9679;") === ct + 1, nm + ": a dot for every foul or ball in play (" + (nOf(raw, "&#9679;") - 1) + " of " + ct + ")");
+    ok(nOf(raw, "&#9675;") === tk + 1, nm + ": a ring for every pitch taken (" + (nOf(raw, "&#9675;") - 1) + " of " + tk + ")");
+    ok(/#1B7043">&#9679;<\/span> contact &middot; <span style="color:#B83227[^"]*">&#10005;<\/span> swing and miss &middot; <span style="color:#5A6781">&#9675;<\/span> took/.test(raw), nm + ": legend names all 3 marks in their colors");
+    const nRe = re => (raw.match(re) || []).length;
+    ok(nRe(/color:#B83227[^"]*">&#10005;/g) === wh + 1 && nRe(/color:#1B7043[^"]*">&#9679;/g) === ct + 1 && nRe(/color:#5A6781[^"]*">&#9675;/g) === tk + 1, nm + ": every mark in its color");
+  });
+  ok(allWhiffs > 0, "hitter cards: the fixture has swings and misses to show (" + allWhiffs + ")");
+  /* Nov 12: the Swing and miss tile is his misses out of all his swings. */
+  [["Hazen", HAZEN], ["Bobo", BOBO], ["Herbert", HERBERT]].forEach(([nm, id]) => {
+    const all = rowsOf("Offense_Pitches", OFF, "HitterID", id);
+    const sw = all.filter(r => ["Foul", "In play", "Swing & miss"].includes(r.What)).length, mi = all.filter(r => r.What === "Swing & miss").length;
+    const tx = text(cardOf(rt, OFF, id));
+    ok(tx.includes((sw ? mi + " of " + sw : "0") + " Swing and miss"), nm + ": Swing and miss tile " + mi + " of " + sw);
+  });
   const bobo = text(cardOf(rt, OFF, BOBO));
   ok(bobo.includes("Great takes in the first."), "Bobo: note to him");
   ok(!bobo.includes("2-strike approach"), "Bobo: coach-only note never shown");
@@ -571,6 +594,151 @@ const PEN1 = REC["bullpen2027-01-12"], PEN2 = REC["bullpen2027-01-19"], LIVE = R
   const s4 = Math.round(bf * 0.179 - fb + 110 * 0.203 - 45);
   const want4 = s4 >= 0 ? s4 + " of 150 free bases saved so far, 3 games in." : (-s4) + " more free bases than 2026's rate so far, 3 games in. The goal is 150 saved.";
   ok(text(cardOf(rt, "jv2", "jvP")).includes(want4), "behind the 2026 rate reads plainly: " + want4);
+}
+
+/* ========================================================== 9. a two-way game (Nov 13, E-019)
+   Jim: pitching and hitting reflections stay separate ("a great game on the mound and
+   totally suck hitting"), but a kid who did both gets 1 email, 1 page and 1 reminder. */
+function twoWay(opts) {
+  opts = opts || {};
+  const rt = world();
+  /* Herbert's at-bats in the demo offense game become Smith's: Smith pitched and hit at Ridgeview. */
+  const OP = rt.b.getSheetByName("Offense_Pitches"), h = OP.header(), at = k => h.indexOf(k);
+  OP.data.forEach((r, i) => { if (i && r[at("HitterID")] === HERBERT) {
+    r[at("HitterID")] = SMITH; r[at("Hitter")] = "Smith"; r[at("HitterLast")] = "Smith"; r[at("HitterFirst")] = "Colten"; } });
+  if (opts.doubleheader) {   /* a second offense game against the same team the same day */
+    OP.data.filter((r, i) => i && r[at("RecordID")] === OFF && r[at("HitterID")] === SMITH)
+      .forEach(r => { const c = r.slice(); c[at("RecordID")] = "off2"; OP.data.push(c); });
+    const RS = rt.b.getSheetByName("Records"), rh = RS.header(), row = RS.data.find(r => r[0] === OFF).slice();
+    row[0] = "off2"; row[rh.indexOf("ReceivedAt")] = "2027-04-06T23:00:00Z"; RS.data.push(row);
+  }
+  let held = null;
+  if (opts.late) {           /* the offense chart uploads a day after the pitch chart */
+    const RS = rt.b.getSheetByName("Records"), i = RS.data.findIndex(r => r[0] === OFF);
+    held = RS.data.splice(i, 1)[0];
+  }
+  ready(rt, "test");
+  if (opts.hitSent) {        /* his hitting card already went out alone (the offense game was cut short by the email quota) */
+    const CS = rt.b.getSheetByName("Cards"), ch = CS.header();
+    CS.data.push(ch.map(k => ({ Key: OFF + "|" + SMITH + "|hit", RecordID: OFF, PlayerID: SMITH, Kind: "hit", Date: "2027-04-06", Event: "at Ridgeview, Apr 6", Status: "test", SentAt: "2027-04-06T12:00:00.000Z" })[k] ?? ""));
+  }
+  rt.call("runEvening");     /* pens first, so the game cards are his latest */
+  rt.clock.add(1);
+  rt.mail.length = 0;
+  rt.call("runMorning");
+  if (held) { rt.b.getSheetByName("Records").data.push(held); rt.clock.add(24); rt.call("runMorning"); }
+  return rt;
+}
+{
+  const rt = twoWay();
+  const mine = rt.mail.filter(m => /smith@example\.com/.test(m.subject));
+  eq(mine.length, 1, "two-way: Smith gets 1 email for the game, not 2");
+  const m = mine[0], mt = text(m.htmlBody);
+  ok(/\] Your game cards: at Ridgeview, Apr 6$/.test(m.subject), "two-way: subject 'Your game cards: at Ridgeview, Apr 6' (" + m.subject + ")");
+  ok(mt.indexOf("On the mound") >= 0 && mt.indexOf("At the plate") > mt.indexOf("On the mound"), "two-way: pitching first, then hitting");
+  ok(mt.includes("Fastball command was there all day.") && /Your at-bats/.test(mt), "two-way: both cards' content");
+  eq((mt.match(/Get back to green/g) || []).length, 1, "two-way: the process box once, not twice");
+  ok(mt.includes("Write your 2 reflections") && mt.includes("One for pitching, one for hitting"), "two-way: the button says 2 reflections");
+  ok(/r=gm[^&"]*&(amp;)?k=pitch/.test(m.htmlBody) || m.htmlBody.includes("&r=" + encodeURIComponent(GAME) + "&k=pitch"), "two-way: the link opens the pair");
+  ok(!/Hazen|Bobo|Herbert/.test(mt), "two-way: nobody else on it");
+  ok(rt.mail.some(x => /hazen@example\.com\] Your game card: at Ridgeview/.test(x.subject)), "two-way: Hazen still gets his own single card");
+  const C = tab(rt, "Cards"), cp = C.find(c => c.Key === GAME + "|" + SMITH + "|pitch"), ch = C.find(c => c.Key === OFF + "|" + SMITH + "|hit");
+  ok(cp && ch, "two-way: a Cards row for each card");
+  eq(cp.Bundle, GAME + "|" + SMITH + "|pitch", "two-way: pitch row carries the bundle");
+  eq(ch.Bundle, cp.Bundle, "two-way: hit row carries the same bundle");
+  eq(ch.SentAt, cp.SentAt, "two-way: sent together");
+  rt.mail.length = 0; rt.call("runMorning");
+  eq(rt.mail.length, 0, "two-way: running again sends nothing");
+
+  /* the page: both cards, 2 forms, each for its own side */
+  const st = tokenOf(rt, SMITH);
+  const get = q => text(rt.call("doGet", { parameter: q }).getContent());
+  const raw = q => rt.call("doGet", { parameter: q }).getContent();
+  const both = raw({ t: st, r: GAME, k: "pitch" });
+  ok(both.includes('id="f1"') && both.includes('id="f2"') && !both.includes('id="f"'), "page: 2 forms, numbered");
+  ok(both.indexOf("Your pitching reflection") < both.indexOf("Your hitting reflection") && both.indexOf("Your pitching reflection") > 0, "page: pitching form first, then hitting");
+  ok(both.indexOf("How&rsquo;s your arm?") < both.indexOf("How&rsquo;s your body?"), "page: arm for pitching, body for hitting");
+  ok(both.includes("f.querySelectorAll('.scale')") && !both.includes("document.querySelectorAll('.scale')"), "page: each form's buttons only touch its own form");
+  eq(raw({ t: st, r: OFF, k: "hit" }), both, "page: the hitting link opens the same pair");
+  eq((text(both).match(/Get back to green/g) || []).length, 1, "page: the process box once, not twice");
+  ok(/Write your reflection/.test(get({ t: st })) && get({ t: st }).includes("Hitting at Ridgeview, Apr 6") && get({ t: st }).includes("Pitching vs Ridgeview, Apr 6"), "home: both cards listed");
+  ok(get({ t: tokenOf(rt, HAZEN), r: GAME, k: "pitch" }).includes("Card not found"), "page: Hazen can't open Smith's pair");
+
+  /* saving: separate rows, separate coaches */
+  const save = o => rt.call("saveReflection", Object.assign({ t: st, arm: 4, feel: 4, pre: "Most", reset: "Every time", stop: "s", cont: "c", bother: "" }, o));
+  eq(save({ r: PEN1, k: "pen", start: "Pen start" }).ok, true, "save: a pen reflection first");
+  const p1 = raw({ t: st, r: GAME, k: "pitch" });
+  const pitchForm = p1.slice(p1.indexOf('id="f1"'), p1.indexOf('id="f2"')), hitForm = p1.slice(p1.indexOf('id="f2"'));
+  ok(pitchForm.includes("Pen start"), "last START: the pen's START comes back on his pitching form");
+  ok(!hitForm.includes("Last time you said"), "last START: but not on his hitting form");
+  rt.mail.length = 0;
+  eq(save({ r: GAME, k: "pitch", start: "Pitch start", feel: 5 }).ok, true, "save: pitching reflection");
+  eq(rt.mail.length, 0, "save: a good pitching day sends nothing");
+  const p2 = raw({ t: st, r: GAME, k: "pitch" });
+  ok(p2.includes("Your coaches have it") && p2.includes('id="f2"') && !p2.includes('id="f1"'), "page: pitching saved, hitting form still open");
+  ok(!p2.slice(p2.indexOf('id="f2"')).includes("Pitch start"), "last START: the pitching START never shows on the hitting form");
+  eq(save({ r: OFF, k: "hit", start: "Hit start", feel: 1, bother: "" }).flag, true, "save: hitting reflection, feel 1 flags");
+  ok(/^\[TEST for b@example\.com, d@example\.com\] Heads-up: Colten Smith, mental flag/.test(rt.mail[0].subject), "flag: the hitting reflection goes to the Varsity hitting coaches, not pitching (" + rt.mail[0].subject + ")");
+  const R = tab(rt, "Reflections").filter(r => r.RecordID === GAME || r.RecordID === OFF);
+  eq(R.length, 2, "save: 2 rows, one per side");
+  eq(R.map(r => r.Kind).join(), "pitch,hit", "save: one pitch, one hit");
+  eq(R.map(r => r.Feel).join(), "5,1", "save: a great day on the mound and a rough one at the plate, kept apart");
+  eq(R[1].LastStart, "", "save: the hitting row doesn't carry the pitching START");
+  ok(!raw({ t: st, r: GAME, k: "pitch" }).includes("<form"), "page: both saved, no forms left");
+
+  /* the test email sends what he'd get */
+  rt.mail.length = 0;
+  rt.call("sendTestCard", OFF, SMITH);
+  ok(/^\[TEST\] Your game cards: at Ridgeview, Apr 6$/.test(rt.mail[0].subject), "sendTestCard: a two-way game sends the pair");
+  rt.mail.length = 0;
+  rt.call("sendTestCard", OFF, HAZEN);
+  ok(/^\[TEST\] Your game card: at Ridgeview/.test(rt.mail[0].subject), "sendTestCard: a hitter only gets his single card");
+}
+/* reminders: 1 for the pair, naming what's missing */
+{
+  const rt = twoWay();
+  rt.clock.add(21); rt.mail.length = 0; rt.call("runMorning");
+  const r = rt.mail.filter(m => /smith@example\.com.*\] Reminder/.test(m.subject));
+  eq(r.length, 1, "reminder: 1 for the pair, not 2");
+  ok(/Reminder: your pitching and hitting reflections for vs Ridgeview, Apr 6$/.test(r[0].subject), "reminder: names both (" + r[0].subject + ")");
+  ok(text(r[0].htmlBody).includes("Each one takes 2 minutes"), "reminder: says each one takes 2 minutes");
+  const C = tab(rt, "Cards").filter(c => c.Bundle);
+  ok(C.length === 2 && C.every(c => c.ReminderAt), "reminder: stamped on both rows");
+  rt.clock.add(24); rt.mail.length = 0; rt.call("runMorning");
+  eq(rt.mail.filter(m => /smith@example\.com/.test(m.subject)).length, 0, "reminder: never a second one");
+}
+{
+  const rt = twoWay();
+  rt.call("saveReflection", { t: tokenOf(rt, SMITH), r: GAME, k: "pitch", arm: 4, feel: 4, pre: "Most", reset: "Every time", start: "a", stop: "b", cont: "c", bother: "" });
+  rt.clock.add(21); rt.mail.length = 0; rt.call("runMorning");
+  const r = rt.mail.filter(m => /smith@example\.com.*\] Reminder/.test(m.subject));
+  ok(r.length === 1 && /Reminder: your hitting reflection for/.test(r[0].subject), "reminder: pitching done, asks for the hitting one only");
+}
+{
+  const rt = twoWay(), st = tokenOf(rt, SMITH), base = { t: st, arm: 4, feel: 4, pre: "Most", reset: "Every time", start: "a", stop: "b", cont: "c", bother: "" };
+  rt.call("saveReflection", Object.assign({ r: GAME, k: "pitch" }, base));
+  rt.call("saveReflection", Object.assign({ r: OFF, k: "hit" }, base));
+  rt.clock.add(21); rt.mail.length = 0; rt.call("runMorning");
+  eq(rt.mail.filter(m => /smith@example\.com.*\] Reminder/.test(m.subject)).length, 0, "reminder: both done, none");
+}
+/* when it does NOT bundle */
+{
+  const rt = twoWay({ hitSent: true });
+  const g = rt.mail.filter(m => /smith@example\.com.*\] Your game card/.test(m.subject));
+  ok(g.length === 1 && /Your game card: vs Ridgeview/.test(g[0].subject), "hitting card already sent: the pitching card goes alone, the hitting card isn't sent twice");
+  ok(!tab(rt, "Cards").some(c => c.Bundle), "hitting card already sent: nothing bundled");
+}
+{
+  const rt = twoWay({ doubleheader: true });
+  const g = rt.mail.filter(m => /smith@example\.com.*\] Your game card/.test(m.subject));
+  eq(g.length, 3, "doubleheader vs the same team: can't tell the games apart, so 3 single cards (1 pitching, 2 hitting)");
+  ok(!tab(rt, "Cards").some(c => c.Bundle), "doubleheader: nothing bundled");
+}
+{
+  const rt = twoWay({ late: true });
+  const g = rt.mail.filter(m => /smith@example\.com.*\] Your game card/.test(m.subject));
+  eq(g.length, 2, "offense chart uploads a day late: the pitching card went alone, the hitting card follows alone");
+  ok(!tab(rt, "Cards").some(c => c.Bundle), "late upload: nothing bundled after the fact");
 }
 
 console.log(pass + " card checks" + (fail ? ", " + fail + " FAILED" : ""));

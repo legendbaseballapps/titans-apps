@@ -21,7 +21,7 @@ const ROSTER = fs.readFileSync(path.join(ROOT, "bullpen", "roster.js"), "utf8");
 const LOGO = "data:image/jpeg;base64," + require("child_process").execFileSync("python3", ["-c", "import sys,io;from PIL import Image;im=Image.open(sys.argv[1]).convert(\"RGB\").resize((160,79),Image.LANCZOS);b=io.BytesIO();im.save(b,\"JPEG\",quality=85,optimize=True);sys.stdout.buffer.write(b.getvalue())", path.join(ROOT, "cards", "lt-logo.png")]).toString("base64");
 const PITCHER = { id: "ad6bxsq", first: "Jake", last: "Miller" };
 const HITTER = { id: "fro8j13", first: "Ryan", last: "Torres" };
-const VERSION = "sample 4 (Nov 2026)";
+const VERSION = "sample 6 (Nov 2026)";
 
 const rt = makeRuntime(path.join(ROOT, "cards", "Code.gs"), { fetch: { "https://legendbaseballapps.github.io/titans-apps/bullpen/roster.js": ROSTER } });
 const b = rt.newBook("S");
@@ -32,6 +32,17 @@ rt.props.LOGO_URL = LOGO;
 const P = b.getSheetByName("Players"), h = P.header();
 [PITCHER, HITTER].forEach(x => { const r = P.data.find(r => r[0] === x.id); r[h.indexOf("First")] = x.first; r[h.indexOf("Last")] = x.last; });
 
+/* Nov 12: show every mark on the sample hitter's zone. The demo hitter never swung and
+   missed, so his 2 fouls before 2 strikes become swings and misses here (same count, same
+   strike, same at-bat results); he keeps 1 foul and 2 balls in play as contact, and 4 takes. */
+(function () {
+  const O = b.getSheetByName("Offense_Pitches"), oh = O.header(), c = k => oh.indexOf(k);
+  let n = 0;
+  O.data.forEach((r, i) => {
+    if (i && r[c("HitterID")] === HITTER.id && r[c("What")] === "Foul" && +r[c("CountS")] < 2) { r[c("What")] = "Swing & miss"; n++; }
+  });
+  if (n !== 2) throw new Error("expected 2 early fouls to turn into swings and misses, got " + n);
+})();
 const S = rt.sandbox, d = S.load_(b);
 const rec = (app, date) => b.getSheetByName("Records").records().find(r => r.App === app && (!date || r.Date === date)).RecordID;
 const pen = S.build_(d, rec("bullpen", "2027-01-19"), PITCHER.id);

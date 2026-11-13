@@ -3,7 +3,9 @@
    A standalone Google Apps Script owned by the program account
    (legendbaseballapps@gmail.com). It reads the season Sheet the upload receiver
    fills, and:
-     - emails each player his card after a pen (evening) or a game (next morning),
+     - emails each player his card after a pen (evening) or a game (next morning);
+       a two-way player gets his pitching and hitting cards for the same game in
+       ONE email, with a separate reflection for each (Nov 13, E-019),
      - sends 1 reminder if he hasn't written his reflection a day later,
      - serves his own page (a private link) with every card and the reflection form,
      - saves each reflection to the Reflections tab, and emails the right coaches
@@ -33,12 +35,12 @@
      function either ends in _ (private) or refuses to run unless it was started
      from the editor or one of this project's own triggers. */
 
-var VERSION = "cards 4.3 (Nov 2026)";
+var VERSION = "cards 4.4 (Nov 2026)";
 
 var PLAYERS_HEAD = ["PlayerID", "Last", "First", "Class", "Level", "Player email", "Parent email", "Send"];
 var LINKS_HEAD = ["PlayerID", "Token", "Made"];
 var CARDS_HEAD = ["Key", "RecordID", "PlayerID", "Kind", "Date", "Event", "Status", "SentTo", "SentAt",
-                  "ReminderAt", "ReflectionAt"];
+                  "ReminderAt", "ReflectionAt", "Bundle"];
 var REFL_HEAD = ["When", "PlayerID", "Player", "Level", "Kind", "RecordID", "Date", "Event", "Arm/Body", "Feel",
                  "PrePitch", "Reset",
                  "DidLastStart", "LastStart", "Start", "Stop", "Continue", "Bothering", "Flag", "FlaggedTo"];
@@ -173,6 +175,8 @@ function sendTestCard(recordId, playerId) {
   var c = build_(d, s_(recordId), s_(playerId));
   if (!c) throw new Error("No card for " + playerId + " in " + recordId);
   if (!cfg.testTo) throw new Error("Set the TEST_TO script property first.");
+  var prec = partner_(d, d.byRec[s_(recordId)], s_(playerId)), c2 = prec ? build_(d, s_(prec.RecordID), s_(playerId)) : null;
+  if (c2) c = bundle_(c.kind === "pitch" ? [c, c2] : [c2, c]);    /* a two-way game: the one email he'd get */
   var link = cfg.pageUrl ? cfg.pageUrl + "?t=preview" : "#";
   MailApp.sendEmail({to: cfg.testTo, subject: "[TEST] " + c.subject, htmlBody: emailDoc_(c, link, link),
                      body: c.subject, name: "Legend Titans Baseball"});
@@ -194,14 +198,16 @@ function run_(apps) {
   if (!lock.tryLock(30000)) { Logger.log("Another run is still going."); return out; }
   try {
     var ss = book_(), d = load_(ss);
+    sheet_(ss, "Cards", CARDS_HEAD);                 /* adds Bundle to a tab made before it existed */
     var log = table_(ss, "Cards"), done = {};
     log.rows.forEach(function (r) { done[s_(r.Key)] = r; });
     var from = cfg.cardsFrom ? Date.parse(cfg.cardsFrom) : 0;
     var budget = quota_() - MAIL_RESERVE;
-    var recs = d.records.filter(function (r) {
+    var due = function (r) {
       return apps.indexOf(s_(r.App)) >= 0 && !done[s_(r.RecordID) + "|*|done"] &&
              (!from || Date.parse(s_(r.ReceivedAt)) >= from);
-    });
+    };
+    var recs = d.records.filter(due);
     recs.sort(function (a, b) { return s_(a.ReceivedAt) < s_(b.ReceivedAt) ? -1 : 1; });
     for (var i = 0; i < recs.length; i++) {
       var rec = recs[i], rid = s_(rec.RecordID), ids = playersIn_(d, rec), finished = true;
@@ -217,17 +223,28 @@ function run_(apps) {
         if (row.Status) { out.skipped++; append_(log.sheet, [row]); done[c.key] = row; continue; }
         var cost = cfg.mode === "live" ? (cc ? 2 : 1) : 1;
         if (budget < cost) { finished = false; out.waiting++; continue; }
+        /* A two-way game: his other card for the same game rides in the same email. */
+        var cs = [c], prec = partner_(d, rec, ids[j]);
+        if (prec && due(prec)) {
+          var c2 = build_(d, s_(prec.RecordID), ids[j]);
+          if (c2 && !done[c2.key]) cs = c.kind === "pitch" ? [c, c2] : [c2, c];
+        }
         var tok = token_(ss, ids[j], false);
         var page = cfg.pageUrl ? cfg.pageUrl + "?t=" + tok : "";
-        var html = emailDoc_(c, page ? page + "&r=" + encodeURIComponent(rid) + "&k=" + c.kind : "", page);
-        mail_(cfg, {to: to, cc: cc, subject: c.subject, htmlBody: html,
-                    body: plain_(c, page ? page + "&r=" + encodeURIComponent(rid) + "&k=" + c.kind : "")});
+        var reflect = page ? page + "&r=" + encodeURIComponent(cs[0].rid) + "&k=" + cs[0].kind : "";
+        var m = cs.length > 1 ? bundle_(cs) : c;
+        mail_(cfg, {to: to, cc: cc, subject: m.subject, htmlBody: emailDoc_(m, reflect, page), body: plain_(m, reflect)});
         budget -= cost;
-        row.Status = cfg.mode === "live" ? "sent" : "test";
-        row.SentTo = to + (cc ? ", " + cc : "");
-        row.SentAt = new Date(now_()).toISOString();
-        append_(log.sheet, [row]); done[c.key] = row;
-        out[row.Status]++;
+        var at = new Date(now_()).toISOString();
+        cs.forEach(function (x) {
+          var rw = x === c ? row : {Key: x.key, RecordID: x.rid, PlayerID: ids[j], Kind: x.kind, Date: x.date, Event: x.event};
+          rw.Status = cfg.mode === "live" ? "sent" : "test";
+          rw.SentTo = to + (cc ? ", " + cc : "");
+          rw.SentAt = at;
+          if (cs.length > 1) rw.Bundle = cs[0].key;
+          append_(log.sheet, [rw]); done[x.key] = rw;
+          out[rw.Status]++;
+        });
       }
       if (finished) append_(log.sheet, [{Key: rid + "|*|done", RecordID: rid, Status: "done",
                                          SentAt: new Date(now_()).toISOString()}]);
@@ -241,7 +258,7 @@ function run_(apps) {
 /* One nudge per card, a day after it went out, if he hasn't reflected and hasn't
    had a newer card since. */
 function remind_(ss, d, cfg, budget) {
-  var log = table_(ss, "Cards"), refl = reflectedKeys_(ss), latest = {}, n = 0;
+  var log = table_(ss, "Cards"), refl = reflectedKeys_(ss), latest = {}, n = 0, seen = {};
   log.rows.forEach(function (r) {
     if (!/^(sent|test)$/.test(s_(r.Status))) return;
     var p = s_(r.PlayerID);
@@ -249,20 +266,28 @@ function remind_(ss, d, cfg, budget) {
   });
   var nowMs = now_();
   for (var i = 0; i < log.rows.length; i++) {
-    var r = log.rows[i], st = s_(r.Status);
-    if (!/^(sent|test)$/.test(st) || s_(r.ReminderAt) || s_(r.ReflectionAt) || refl[s_(r.Key)]) continue;
-    if (latest[s_(r.PlayerID)] !== r) continue;
+    var r = log.rows[i], st = s_(r.Status), b = s_(r.Bundle);
+    if (!/^(sent|test)$/.test(st)) continue;
+    /* A two-way game's 2 cards get 1 reminder, for whichever reflections are still missing. */
+    if (b) { if (seen[b]) continue; seen[b] = 1; }
+    var group = b ? log.rows.filter(function (x) { return s_(x.Bundle) === b; }) : [r];
+    if (group.some(function (x) { return s_(x.ReminderAt); })) continue;
+    var open = group.filter(function (x) { return !s_(x.ReflectionAt) && !refl[s_(x.Key)]; });
+    if (!open.length) continue;
+    if (group.indexOf(latest[s_(r.PlayerID)]) < 0) continue;
     if (nowMs - Date.parse(s_(r.SentAt)) < REMIND_HOURS * 3600000) continue;
     if (st === "test" && cfg.mode === "live") continue;      /* never remind a real kid about a test card */
     if (budget < 1) break;
     var who = d.players[s_(r.PlayerID)];
     if (!who || /^no/i.test(s_(who.Send)) || !s_(who["Player email"]).trim()) continue;
     var tok = token_(ss, s_(r.PlayerID), false);
-    var link = cfg.pageUrl ? cfg.pageUrl + "?t=" + tok + "&r=" + encodeURIComponent(s_(r.RecordID)) + "&k=" + s_(r.Kind) : "";
-    var subj = "Reminder: your reflection for " + s_(r.Event);
-    mail_(cfg, {to: s_(who["Player email"]).trim(), subject: subj, htmlBody: reminderDoc_(cfg, who, r, link),
-                body: "Your coaches haven't seen your reflection for " + s_(r.Event) + " yet. " + link});
-    setCells_(log.sheet, r._row, {ReminderAt: new Date(nowMs).toISOString()});
+    var anchor = group[0];
+    var link = cfg.pageUrl ? cfg.pageUrl + "?t=" + tok + "&r=" + encodeURIComponent(s_(anchor.RecordID)) + "&k=" + s_(anchor.Kind) : "";
+    var what = !b ? "reflection" : open.length > 1 ? "pitching and hitting reflections" : (s_(open[0].Kind) === "hit" ? "hitting" : "pitching") + " reflection";
+    var subj = "Reminder: your " + what + " for " + s_(r.Event);
+    mail_(cfg, {to: s_(who["Player email"]).trim(), subject: subj, htmlBody: reminderDoc_(cfg, who, r, link, what),
+                body: "Your coaches haven't seen your " + what + " for " + s_(r.Event) + " yet. " + link});
+    group.forEach(function (x) { setCells_(log.sheet, x._row, {ReminderAt: new Date(nowMs).toISOString()}); });
     budget--; n++;
   }
   return n;
@@ -283,7 +308,32 @@ function load_(ss) {
   });
   d.byRec = {};
   d.records.forEach(function (r) { d.byRec[s_(r.RecordID)] = r; });
+  /* Which game a Pitch Chart or Offense Chart record is: date, level, opponent. */
+  d.gk = {};
+  var first = {};
+  [d.game, d.inn, d.off].forEach(function (list) { list.forEach(function (r) { var k = s_(r.RecordID); if (!first[k]) first[k] = r; }); });
+  d.records.forEach(function (r) {
+    var rid = s_(r.RecordID), app = s_(r.App), f = first[rid];
+    if ((app !== "game" && app !== "offense") || !f) return;
+    d.gk[rid] = [dstr_(r.Date), (s_(f.Level) || s_(r.Team)).trim().toLowerCase(), s_(f.Opponent).trim().toLowerCase()].join("|");
+  });
   return d;
+}
+/* The other half of a two-way game: the Offense Chart record for a Pitch Chart
+   record (or the other way round) of the same game, if this player is in it.
+   A doubleheader against the same team on the same day can't be told apart, so
+   those never bundle; each card goes on its own. */
+function partner_(d, rec, pid) {
+  var rid = s_(rec.RecordID), app = s_(rec.App), key = d.gk[rid];
+  if (!key || (app !== "game" && app !== "offense")) return null;
+  var other = app === "game" ? "offense" : "game", same = 0, hits = [];
+  d.records.forEach(function (r) {
+    if (d.gk[s_(r.RecordID)] !== key) return;
+    if (s_(r.App) === app) same++;
+    else if (s_(r.App) === other) hits.push(r);
+  });
+  if (same !== 1 || hits.length !== 1) return null;
+  return playersIn_(d, hits[0]).indexOf(pid) >= 0 ? hits[0] : null;
 }
 function goals_(ss) {
   var cfg = {}, t = table_(ss, "Config");
@@ -708,7 +758,7 @@ function pitchCard_(d, rec, pid) {
                      (t.k === 1 ? " strikeout." : " strikeouts.") + (note ? " A note from your coaches inside." : ""),
           label: "Pitcher game card",
           sub: [e_(level), opp ? "vs " + e_(opp) : "", e_(longDate_(date)), e_(role)].filter(Boolean).join(" &middot; "),
-          body: body, level: level, role: "pitching", more: "See all your games and pens"};
+          body: body, level: level, role: "pitching", more: "See all your games and pens", tag: e_(role)};
 }
 
 /* ---- hitter, game */
@@ -820,7 +870,7 @@ function hitCard_(d, rec, pid) {
                      " quality at-bats." + (note ? " A note from your coaches inside." : ""),
           label: "Hitter game card",
           sub: [e_(level), opp ? ha + e_(opp) : "", e_(longDate_(date)), spot ? "Batting " + ord_(spot) : ""].filter(Boolean).join(" &middot; "),
-          body: body, level: level, role: "hitting", more: "See all your games"};
+          body: body, level: level, role: "hitting", more: "See all your games", tag: spot ? "Batting " + ord_(spot) : ""};
 }
 
 /* Every card: the pre-pitch and reset processes, in the program's own words (Get Back to Green). */
@@ -856,8 +906,8 @@ function footer_() {
 }
 function emailDoc_(c, reflectUrl, pageUrl) {
   var btn = '<tr><td style="padding:14px 18px 18px"><table role="presentation" cellpadding="0" cellspacing="0" width="100%"><tr><td align="center">' +
-    (reflectUrl ? '<a href="' + e_(reflectUrl) + '" style="display:inline-block;background:' + ORANGE + ';color:#FFFFFF;text-decoration:none;font-family:' + COND + ';font-weight:700;font-size:16px;letter-spacing:1.2px;text-transform:uppercase;padding:14px 26px;border-radius:8px">Write your reflection</a>' +
-      '<div style="font-size:13px;color:' + MUTED + ';margin-top:8px">Takes 2 minutes. Your coaches read every one.</div>' : "") +
+    (reflectUrl ? '<a href="' + e_(reflectUrl) + '" style="display:inline-block;background:' + ORANGE + ';color:#FFFFFF;text-decoration:none;font-family:' + COND + ';font-weight:700;font-size:16px;letter-spacing:1.2px;text-transform:uppercase;padding:14px 26px;border-radius:8px">' + (c.btn || "Write your reflection") + "</a>" +
+      '<div style="font-size:13px;color:' + MUTED + ';margin-top:8px">' + (c.btnSub || "Takes 2 minutes. Your coaches read every one.") + "</div>" : "") +
     (pageUrl ? '<div style="margin-top:12px"><a href="' + e_(pageUrl) + '" style="font-size:14px;color:' + NAVY + ';font-weight:600">' + e_(c.more) + " &rarr;</a></div>" : "") +
     "</td></tr></table></td></tr>";
   return '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
@@ -868,19 +918,38 @@ function emailDoc_(c, reflectUrl, pageUrl) {
     '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#FFFFFF;border:1px solid ' + LINE + ';border-radius:10px;overflow:hidden">' +
     cardTop_(c) + c.body + btn + footer_() + "</table></td></tr></table></body></html>";
 }
+/* A two-way game in one email: pitching, then hitting, the process box once at the end. */
+function roleBar_(c) {
+  return '<tr><td style="background:' + SOFT + ';border-top:4px solid ' + ORANGE + ';padding:10px 18px;font-family:' + COND +
+    ';font-weight:700;font-size:18px;letter-spacing:1.4px;text-transform:uppercase;color:' + NAVY + '">' + (c.kind === "hit" ? "At the plate" : "On the mound") +
+    '<span style="font-family:' + SANS + ';font-weight:400;font-size:13px;letter-spacing:0;text-transform:none;color:' + MUTED + ';margin-left:8px">' + (c.tag || "") + "</span></td></tr>";
+}
+function bundle_(cs) {
+  var p = cs[0], h = cs[1], box = processBox_();
+  var date = p.date, opp = h.event.indexOf(",") >= 0 ? h.event.replace(/,[^,]*$/, "") : "";
+  return {key: p.key, kind: p.kind, rid: p.rid, pid: p.pid, who: p.who, date: date, event: p.event, level: p.level, role: p.role,
+          subject: "Your game cards: " + (opp ? opp + ", " : "") + shortDate_(date),
+          preheader: p.who.full + " · pitching and hitting" + (opp ? " " + opp : "") + ". A reflection for each.",
+          label: "Game cards: pitching and hitting",
+          sub: [e_(p.level || h.level), e_(opp), e_(longDate_(date))].filter(Boolean).join(" &middot; "),
+          body: cs.map(function (c) { return roleBar_(c) + c.body.replace(box, ""); }).join("") + box,
+          btn: "Write your 2 reflections", btnSub: "One for pitching, one for hitting. About 2 minutes each.",
+          more: "See all your games"};
+}
 function plain_(c, reflectUrl) {
   return c.subject + "\n\n" + c.preheader + "\n\nOpen this email in your mail app to see the card." +
-    (reflectUrl ? "\n\nWrite your reflection (2 minutes): " + reflectUrl : "") +
+    (reflectUrl ? "\n\n" + (c.btn ? "Write your 2 reflections (pitching and hitting): " : "Write your reflection (2 minutes): ") + reflectUrl : "") +
     "\n\nThese are your numbers only. Don't want these emails? Tell a coach.";
 }
-function reminderDoc_(cfg, who, r, link) {
+function reminderDoc_(cfg, who, r, link, what) {
+  what = what || "reflection";
   var c = {label: "Reflection reminder", who: {full: s_(who.First) + " " + s_(who.Last)}, sub: e_(s_(r.Event))};
   return '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>' +
     '<body style="margin:0;padding:0;background:' + BG + ";font-family:" + SANS + ";color:" + INK + '">' +
     '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:' + BG + '"><tr><td align="center" style="padding:16px 10px">' +
     '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#FFFFFF;border:1px solid ' + LINE + ';border-radius:10px;overflow:hidden">' +
-    cardTop_(c) + section_("", read_("Your coaches haven't seen your reflection for " + e_(s_(r.Event)) +
-      " yet. It takes 2 minutes: how you feel, and one thing to start, stop and keep doing.")) +
+    cardTop_(c) + section_("", read_("Your coaches haven't seen your " + e_(what) + " for " + e_(s_(r.Event)) +
+      " yet. " + (/and/.test(what) ? "Each one takes 2 minutes" : "It takes 2 minutes") + ": how you feel, and one thing to start, stop and keep doing.")) +
     (link ? '<tr><td align="center" style="padding:10px 18px 20px"><a href="' + e_(link) + '" style="display:inline-block;background:' + ORANGE + ';color:#FFFFFF;text-decoration:none;font-family:' + COND + ';font-weight:700;font-size:16px;letter-spacing:1.2px;text-transform:uppercase;padding:14px 26px;border-radius:8px">Write your reflection</a></td></tr>' : "") +
     footer_() + "</table></td></tr></table></body></html>";
 }
@@ -944,6 +1013,22 @@ function doGet(e) {
   var r = s_(p.r), k = s_(p.k);
   if (r && k) {
     var row = mine.filter(function (x) { return s_(x.RecordID) === r && s_(x.Kind) === k; })[0];
+    if (row && s_(row.Bundle)) {
+      var grp = mine.filter(function (x) { return s_(x.Bundle) === s_(row.Bundle); })
+        .sort(function (a, b) { return s_(a.Kind) === "pitch" ? -1 : s_(b.Kind) === "pitch" ? 1 : 0; });
+      var cs = grp.map(function (x) { return build_(d, s_(x.RecordID), pid); }).filter(Boolean);
+      if (cs.length) {
+        var parts = cs.map(function (cx, n) {
+          var title = cx.kind === "hit" ? "Your hitting reflection" : "Your pitching reflection";
+          var body = n < cs.length - 1 ? cx.body.replace(processBox_(), "") : cx.body;     /* the process box once, on the last card */
+          return '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="card" style="margin-top:12px">' + roleBar_(cx) + body + "</table>" +
+            (refl[cx.key] ? savedHtml_(refl[cx.key], title) : formHtml_(p.t, cx, lastStart_(refl, mine, cx.key), String(n + 1), title));
+        }).join("");
+        var top = '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="card">' + cardTop_(bundle_(cs.length > 1 ? cs : [cs[0], cs[0]])) + "</table>";
+        return out_(pageDoc_("Your game cards", '<p class="back"><a href="' + e_(home) + '">&larr; All your cards</a></p>' + top +
+          '<p class="two">Two reflections, one for each side of your game. Each one goes to its own coaches.</p>' + parts));
+      }
+    }
     var c = row ? build_(d, r, pid) : null;
     if (!c) return out_(pageDoc_("Legend Titans", '<div class="box"><h1>Card not found</h1><p><a href="' + e_(home) + '">See all your cards</a></p></div>'));
     var mineR = refl[c.key];
@@ -979,19 +1064,23 @@ function penTrend_(d, pid) {
   }).join("") + "</table>";
 }
 function lastStart_(refl, mine, key) {
-  /* His most recent reflection on an EARLIER card, so the loop closes on the next one. */
+  /* His most recent reflection on an EARLIER card, so the loop closes on the next one.
+     Same side of his game only: a pitching START comes back on his next pen or
+     pitching card, a hitting START on his next hitting card (Nov 13). */
+  var side = function (k) { return /\|hit$/.test(k) ? "hit" : "pitch"; };
   var at = null;
   mine.forEach(function (x) { if (s_(x.Key) === key) at = x; });
   var best = null;
   Object.keys(refl).forEach(function (k) {
     var r = refl[k];
-    if (k === key || !s_(r.Start)) return;
+    if (k === key || !s_(r.Start) || side(k) !== side(key)) return;
     if (at && s_(r.Date) > s_(at.Date)) return;
     if (!best || s_(r.When) > s_(best.When)) best = r;
   });
   return best ? s_(best.Start) : "";
 }
-function formHtml_(t, c, last) {
+function formHtml_(t, c, last, n, title) {
+  n = n || "";
   var arm = c.role === "pitching" ? "How&rsquo;s your arm?" : "How&rsquo;s your body?";
   function scale(name, labels) {
     return '<div class="scale" data-name="' + name + '">' + [1, 2, 3, 4, 5].map(function (n) {
@@ -1002,8 +1091,8 @@ function formHtml_(t, c, last) {
     return '<div class="scale small" data-name="' + name + '">' + opts.map(function (v) {
       return '<button type="button" data-v="' + e_(v) + '"><b>' + e_(v) + "</b></button>"; }).join("") + "</div>";
   }
-  return '<form id="f" class="box" onsubmit="return false">' +
-    '<div class="org">Prepare &middot; Compete &middot; Evaluate</div><h2>Your reflection</h2>' +
+  return '<form id="f' + n + '" class="box" onsubmit="return false">' +
+    '<div class="org">Prepare &middot; Compete &middot; Evaluate</div><h2>' + (title || "Your reflection") + "</h2>" +
     (last ? '<div class="q"><p>Last time you said you&rsquo;d start: <b>' + e_(last) + "</b>. Did you?</p>" +
       pick("did", ["Yes", "Partly", "Not yet"]) + "</div>" : "") +
     '<div class="q"><p>' + arm + "</p>" + scale("arm", ["Hurting", "Sore", "OK", "Good", "Great"]) + "</div>" +
@@ -1015,11 +1104,11 @@ function formHtml_(t, c, last) {
     '<div class="q"><label>CONTINUE <span>one thing to keep doing</span><input name="cont" maxlength="' + TEXT_MAX + '"></label></div>' +
     '<div class="q"><label>Anything bothering you? <span>optional, on or off the field. Only your coaches see this.</span>' +
     '<textarea name="bother" rows="3" maxlength="' + TEXT_MAX + '"></textarea></label></div>' +
-    '<p id="msg" class="msg"></p><button id="go" class="go" type="button">Send to my coaches</button></form>' +
+    '<p id="msg' + n + '" class="msg"></p><button id="go' + n + '" class="go" type="button">Send to my coaches</button></form>' +
     "<script>(function(){var v={};" +
-    "document.querySelectorAll('.scale').forEach(function(s){s.addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;" +
+    "var f=document.getElementById('f" + n + "'),m=document.getElementById('msg" + n + "'),g=document.getElementById('go" + n + "');" +
+    "f.querySelectorAll('.scale').forEach(function(s){s.addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;" +
     "s.querySelectorAll('button').forEach(function(x){x.className=''});b.className='on';v[s.getAttribute('data-name')]=b.getAttribute('data-v');});});" +
-    "var f=document.getElementById('f'),m=document.getElementById('msg'),g=document.getElementById('go');" +
     "g.addEventListener('click',function(){var o={t:" + JSON.stringify(String(t)) + ",r:" + JSON.stringify(c.rid) + ",k:" + JSON.stringify(c.kind) + "," +
     "did:v.did||'',arm:Number(v.arm||0),feel:Number(v.feel||0),pre:v.pre||'',reset:v.reset||'',start:f.elements['start'].value.trim(),stop:f.elements['stop'].value.trim(),cont:f.elements['cont'].value.trim(),bother:f.elements['bother'].value.trim()};" +
     "if(!o.arm||!o.feel){m.textContent='Pick a number for both questions.';return;}" +
@@ -1029,9 +1118,9 @@ function formHtml_(t, c, last) {
     "google.script.run.withSuccessHandler(function(r){if(r&&r.ok){f.innerHTML='<h2>Thanks. Your coaches will read it.</h2><p>'+(r.flag?'A coach will check in with you.':'See you at the next one.')+'</p>';}else{g.disabled=false;m.textContent=(r&&r.error)||'That did not save. Try again.';}})" +
     ".withFailureHandler(function(){g.disabled=false;m.textContent='That did not save. Check your signal and try again.';}).saveReflection(o);});})();</script>";
 }
-function savedHtml_(r) {
+function savedHtml_(r, title) {
   function line(l, v) { return v ? "<p><b>" + l + "</b> " + e_(s_(v)) + "</p>" : ""; }
-  return '<div class="box"><div class="org">Prepare &middot; Compete &middot; Evaluate</div><h2>Your reflection</h2>' +
+  return '<div class="box"><div class="org">Prepare &middot; Compete &middot; Evaluate</div><h2>' + (title || "Your reflection") + "</h2>" +
     '<p class="ok">Sent ' + e_(shortDate_(s_(r.When).slice(0, 10))) + ". Your coaches have it.</p>" +
     line("Did you start it?", r.DidLastStart) + line("Arm/body:", r["Arm/Body"] + " of 5") + line("Feel:", r.Feel + " of 5") +
     line("Pre-pitch process:", r.PrePitch) + line("Reset:", r.Reset) +
@@ -1053,7 +1142,7 @@ function pageDoc_(title, inner) {
     "label{display:block;font-weight:700;font-family:" + COND + ";letter-spacing:1px}label span{font-family:" + SANS + ";font-weight:400;letter-spacing:0;color:" + MUTED + ";font-size:13px;margin-left:4px}" +
     "input,textarea{display:block;width:100%;box-sizing:border-box;margin-top:6px;padding:10px;border:1px solid " + LINE + ";border-radius:8px;font:inherit;font-size:16px}" +
     ".go{width:100%;padding:14px;border:0;border-radius:8px;background:" + ORANGE + ";color:#fff;font-family:" + COND + ";font-weight:700;font-size:16px;letter-spacing:1.2px;text-transform:uppercase}" +
-    ".msg{color:" + ORANGE + ";min-height:1em}.trend{width:100%;border-collapse:collapse;font-size:14px}.trend th{font-size:11px;text-transform:uppercase;color:" + MUTED + ";text-align:left}.trend td,.trend th{padding:6px 4px;border-bottom:1px solid " + SOFT + "}" +
+    ".two{color:" + MUTED + ";font-size:14px;margin:12px 2px 0}.msg{color:" + ORANGE + ";min-height:1em}.trend{width:100%;border-collapse:collapse;font-size:14px}.trend th{font-size:11px;text-transform:uppercase;color:" + MUTED + ";text-align:left}.trend td,.trend th{padding:6px 4px;border-bottom:1px solid " + SOFT + "}" +
     '</style></head><body><div class="wrap">' + inner + "</div></body></html>";
 }
 function out_(html) {
