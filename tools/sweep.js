@@ -841,16 +841,16 @@ async function wipeOff(b) {
        'document.querySelectorAll(\'[data-f="mode"]\')[0]'+
        '.dispatchEvent(new Event("input",{bubbles:true}));'+
        'document.getElementById("tab-chart").click();', "false"],
-    ["result pad",        null,  n("#abRes button"), null, 16],
+    ["result pad",        null,  n("#abRes button"), null, 18],   /* v48: the Pitch Chart's 18 (IBB and SF added) */
     /* v47: a live AB pitch is CALLED EVERY PITCH on the call pad. "? Not known" is the
        answer when nobody saw the call, and it must stay distinguishable from a called
        spot that was missed. */
     ["not-known offered",  null,
-       '(!!document.querySelector(\'#f-spot button[data-lu]\'))+""', null, "true"],
+       '(!!document.querySelector(\'#lvAb button[data-lu]\'))+""', null, "true"],
     /* An uncalled spot once threw inside drawCall and took the entire render down
        with it - the pitch landed in the model and the screen never moved. */
     ["not-known still renders", null,
-       '(function(){ document.querySelector(\'#f-spot button[data-lu]\').click();'+
+       '(function(){ document.querySelector(\'#lvAb button[data-lu]\').click();'+
        ' document.querySelector(\'#zone button[data-r="0"][data-c="0"]\').click();'+
        ' var k=document.querySelectorAll("#liveKpis .kpi");'+
        ' return (k.length && k[0].querySelector(".v").textContent==="1") ? "logged":"DEAD"; })()',

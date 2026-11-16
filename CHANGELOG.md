@@ -17,7 +17,7 @@ old one — tap the amber stamp to fix it.
 
 | App | Source & folder | Live on GitHub Pages |
 |---|---|---|
-| **Bullpen Chart** | **v47** | **v46** (Jim pushed Nov 13: Mound on Setup; with v45, the middle snowman). **v47 (Nov 13) waiting:** push `bullpen/index.html`, `bullpen/sw.js` and `bullpen/guide.html` (the Live AB call pad). Before Jan 8, then open it online on each iPad | Real-iPad upload test **passed Oct 19** (practice pen stayed off the Sheet, real pen landed) |
+| **Bullpen Chart** | **v48** | **v46** (Jim pushed Nov 13: Mound on Setup; with v45, the middle snowman). **v48 (Nov 16) waiting:** push `bullpen/index.html`, `bullpen/sw.js` and `bullpen/guide.html`: Live ABs laid out like the Pitch Chart; includes v47 (the Live AB call pad). Before Jan 8, then open it online on each iPad | Real-iPad upload test **passed Oct 19** (practice pen stayed off the Sheet, real pen landed) |
 | **Pitch Chart** (game) | **v38** | **v37** (Jim pushed Nov 13: the opponent list, picked on Setup; with v35 and v36). **v38 (Nov 13) waiting:** push `game/index.html`, `game/sw.js` and `game/guide.html` (the dropdown always shows on Setup). `opponents.js` is unchanged |
 | **Offense Chart** | **v56** | **v55** (Jim pushed Nov 13: the opponent list, picked on Setup). **v56 (Nov 13) waiting:** push `offense/index.html`, `offense/sw.js` and `offense/guide.html` (the dropdown always shows on Setup). `opponents.js` is unchanged |
 | **Receiver** | **receiver 4** | Redeploy as a new version of the same deployment (URL and key unchanged). Includes receiver 3 (game notes) |
@@ -202,6 +202,17 @@ is only for app code.
 - Tests: `tools/cards/fixture.js` builds a stand-in Sheet through the real apps and receiver; `tools/cards/cards.js` (173 checks), `tools/cards/mutate.js` (27 of 27 bugs caught), `tools/cards/page-check.js` (24 checks in a browser at phone width). `tools/receiver/mock-gas.js` gained MailApp, HtmlService, ScriptApp, Session and UrlFetchApp stand-ins; `upload.js` still 215 of 215.
 
 ## Bullpen Chart
+
+### v48 · Nov 16, 2026
+**Headline:** Live ABs look and work like the Pitch Chart: one way to chart a live at-bat in both apps.
+
+- **Why:** Jim, Nov 16, on v47: *"I don't know that I love how that was implemented in the bullpen chart. Can't we make it behave almost exactly like the pitch chart does so we don't have to learn two approaches?"* v47 had the Pitch Chart's rules but its own screen: one long stack, a small pad above, the location grid further down, results above the pad.
+- **The screen, in a live AB:** the at-bat header (At-bat 3, the pitcher, + New AB) and a big count, then **1 · Pitch type (stays set)**, then **2 · Called spot** and **3 · Location** side by side and the same size, Glove and ? Not known under the pad, the Pitch Chart's hints under each. **End the at-bat** sits on the right like the Pitch Chart's, with the at-bat chips under it, then This pen, the pitch log and the notes. W/S/SS, the situation and velo stay (bullpen-only) under the steps.
+- **Like the Pitch Chart:** each call in the at-bat stays marked on the pad with its pitch number and type (hollow; the next call dashed; glove calls dashed grey). The location grid shows **this at-bat's** pitches, numbered 1, 2, 3 with the type, colored by execution. Tapping an at-bat chip shows its pitches; a closed at-bat can't take a call.
+- **Decisions (Jim, Nov 16):** the pad calls **only the 8 numbered boxes** (the other 17 drawn, dimmed); the results column has the Pitch Chart's result buttons only, **no** How it was hit / Hard contact / Where it went. The 18 results in its order, so **IBB** and **SF** (an out) are new; the export's ABResult carries them; no new columns.
+- **Unchanged:** scripted and freeform pens keep their screen (the same controls move back). Data, grading and CallSource as v47.
+- **Also:** below 900px wide the Chart no longer scrolls sideways (the single column was growing to the velo strip).
+- **Tests:** `tools/live-calls.js` 37 checks (+9: the layout, the 18 results in order, pad marks and the per-at-bat grid, an old at-bat's pitches, a closed at-bat refusing a call, back to a scripted pen); 5 of 5 deliberate breaks of the layout code caught. Sweep: the result pad is 18, its Not known checks point at the new pad; its 4 standing failures are unchanged. Upload, cards (fixture rebuilt with v48), location-numbers (footer v48), swcache, consistency, contrast, header, reset, roster, summary and opponents suites pass.
 
 ### v47 · Nov 13, 2026
 **Headline:** Live ABs get the Pitch Chart's call pad. Every pitch is called before it is charted, with Glove for the catcher's calls and ? Not known.

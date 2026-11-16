@@ -188,7 +188,7 @@ a.topbtn{display:inline-block;text-decoration:none}
 }
 .panel .body{padding:16px}
 .stack{display:flex;flex-direction:column;gap:18px}
-.cols{display:grid;gap:18px}
+.cols{display:grid;gap:18px;grid-template-columns:minmax(0,1fr)}   /* v48: one column below 900 must not grow to its widest child (the velo strip) */
 @media (min-width:900px){ .cols.c2{grid-template-columns:minmax(0,1fr) minmax(300px,380px)} }
 
 label.fld{display:flex;flex-direction:column;gap:4px;min-width:0;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2);font-family:"Avenir Next Condensed","HelveticaNeue-CondensedBold","Arial Narrow",-apple-system,system-ui,sans-serif;font-weight:600}
@@ -399,25 +399,61 @@ table.grid select,table.grid input[type=text],table.grid input[type=number]{
 .pick small{display:block;font-size:11px;font-weight:600;letter-spacing:.02em;text-transform:none;opacity:.7}
 .pick.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .pick.on small{opacity:.85}
-/* v47: the Live AB call pad, the Pitch Chart's (game v36) in the bullpen. The 8 numbered boxes are
-   the calls; the rest of the 5x5 is drawn so it reads like the location grid, but can't be called. */
-.pickrow.lcmode{display:block}
-.pickrow.lcmode > .lb{display:block;margin-bottom:6px}
-.lcwrap{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}
-.lcpad{display:grid;grid-template-columns:repeat(5,44px);grid-template-rows:repeat(5,44px);gap:3px}
-.lcpad button{position:relative;border:1px solid var(--line);background:var(--card);border-radius:3px;padding:0;
-  font-family:var(--cond);font-weight:700;font-size:17px;color:var(--ink)}
+/* v48: Live ABs laid out like the Pitch Chart: the at-bat header, the count, then the called spot and the
+   location side by side and the same size. */
+.lvab{overflow:hidden}
+.lvhead{display:flex;align-items:center;gap:12px;background:var(--bar,#16325C);color:#fff;padding:12px 14px}
+.lvnum{display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:8px;
+  background:rgba(255,255,255,.14);font-family:var(--cond);font-weight:700;font-size:22px}
+.lvtt{display:flex;flex-direction:column;line-height:1.1;flex:1;min-width:0}
+.lvtt b{font-family:var(--cond);font-weight:700;font-size:24px;letter-spacing:.04em;text-transform:uppercase}
+.lvtt small{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.72);margin-top:3px}
+.lvhead .btn{background:transparent;color:#fff;border-color:rgba(255,255,255,.4)}
+.lvcount{display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--line)}
+.lvcount .abcount{font-size:44px;line-height:1}
+.lvbs{font-family:var(--cond);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-2);line-height:1.3}
+.lvn{margin-left:auto;font-family:var(--cond);font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2)}
+.lvbody{padding:12px 14px 14px}
+.lvbody .lbl.step{display:block;font-family:var(--cond);font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2);margin:4px 0 6px}
+.lvbody .lbl.step em{font-style:normal;font-weight:600;opacity:.75;margin-left:6px}
+.lvbody .pickrow{margin-bottom:8px}
+.gridpair{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:8px}
+@media (max-width:560px){.gridpair{grid-template-columns:1fr}}
+.gridcell{min-width:0}
+.gridcell .zonewrap{margin:0;max-width:none}
+.zonehint{text-align:center;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2);margin-top:6px;line-height:1.35}
+.zonehint.nope{color:var(--miss);font-weight:700}
+.callopts{display:flex;gap:8px;margin-top:8px}
+.callopts .lcopt{flex:1}
+.lcpad{display:grid;grid-template-columns:repeat(5,1fr);gap:4px}
+.lcpad button{position:relative;aspect-ratio:1/1;border:1px solid var(--line);background:var(--card-2);border-radius:6px;padding:0;overflow:hidden;
+  font-family:var(--cond);font-weight:700;font-size:15px;color:var(--ink-2)}
 .lcpad button.inzone{background:var(--zone-fill)}
-.lcpad button:disabled{opacity:.35;cursor:default}
-.lcpad button.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.lcpad button:disabled{opacity:.45;cursor:default}
+.lcpad .sn{position:absolute;top:4px;left:4px;width:23px;height:23px;line-height:23px;text-align:center;border-radius:50%;
+  background:var(--bar-2);color:#fff;font-size:15px;pointer-events:none}
+.lcpad button.on{border-color:var(--accent);box-shadow:inset 0 0 0 3px var(--accent)}
+.lcpad button.on .sn{background:var(--accent);color:var(--accent-ink)}
 .lcpad.glove button:not(:disabled){border-style:dashed;border-width:2px}
 .lcpad.unk{opacity:.5}
 .lcpad.need{outline:3px solid var(--miss);outline-offset:3px}
-.lcside{display:flex;flex-direction:column;gap:8px;min-width:150px;flex:1 1 150px}
+.lcpad .cmks{position:absolute;inset:0;display:flex;flex-wrap:wrap;align-content:center;justify-content:center;gap:3px;padding:28px 3px 4px;pointer-events:none}
+.lcpad .cmk{min-width:19px;height:19px;padding:0 5px;border-radius:99px;font-size:11px;line-height:17px;font-weight:700;
+  color:var(--ink);box-shadow:inset 0 0 0 1.5px var(--ink-2);background:var(--card)}
+.lcpad .cmk i{font-style:normal;font-size:9px;margin-left:2px;opacity:.8}
+.lcpad .cmk.pend{box-shadow:inset 0 0 0 1.5px var(--accent);border:0;outline:1.5px dashed var(--accent);outline-offset:1px}
+.lcpad .cmk.glv{box-shadow:inset 0 0 0 1.5px var(--ink-2);outline:1.5px dashed var(--ink-2)}
+#lvTypeSlot .lb,#lvTypeSlot .pick small{display:none}   /* the step label says it; the Pitch Chart has no numbers here */
+.zone .pip.wt{width:auto;min-width:19px;padding:0 5px;border-radius:99px}
+.zone .pip.wt i{font-style:normal;font-size:9px;margin-left:2px;opacity:.85}
+#lvResSlot .resgrid{grid-template-columns:repeat(4,1fr);gap:7px}
+#lvResSlot .resgrid button{padding:14px 4px;font-size:16px}
+/* v47: the Live AB call pad, the Pitch Chart's (game v36) in the bullpen. The 8 numbered boxes are
+   the calls; the rest of the 5x5 is drawn so it reads like the location grid, but can't be called. */
+.lvgone{display:none !important}
 .lcopt{min-height:40px;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:8px;font-weight:700;font-size:14px}
 .lcopt[aria-pressed="true"]{background:var(--navy);border-color:var(--navy);color:#fff}
-.lchint{font-size:13px;color:var(--ink-2);line-height:1.35}
-.lchint.nope{color:var(--miss);font-weight:700}
+
 .velostrip{display:flex;gap:6px;overflow-x:auto;padding:8px 2px;-webkit-overflow-scrolling:touch}
 .velostrip button{
   flex:0 0 auto;min-width:48px;border:1px solid var(--line);background:var(--card-2);
@@ -740,6 +776,44 @@ footer{max-width:1340px;margin:0 auto;padding:14px 16px 30px;color:var(--ink-3);
       <div class="stack">
         <div class="call" id="call"></div>
 
+        <!-- v48: Live ABs laid out like the Pitch Chart (Jim, Nov 16: "Can't we make it behave almost exactly like
+             the pitch chart does so we don't have to learn two approaches?"). The at-bat, then 1 Pitch type,
+             2 Called spot and 3 Location side by side. The controls themselves are the ones below; liveLayout()
+             moves them in here for a live AB and back for a scripted or freeform pen. -->
+        <div class="panel lvab" id="lvAb" hidden>
+          <div class="lvhead">
+            <span class="lvnum" id="lvNum">1</span>
+            <div class="lvtt"><b id="lvTitle">At-bat 1</b><small id="lvSub"></small></div>
+            <span id="lvNewSlot"></span>
+          </div>
+          <div class="lvcount"><span id="lvCountSlot"></span><span class="lvbs">Balls<br>Strikes</span><span class="lvn" id="lvPitches"></span></div>
+          <div class="lvbody">
+            <span class="lbl step">1 &middot; Pitch type <em>stays set</em></span>
+            <div id="lvTypeSlot"></div>
+            <div id="lvWsSlot"></div>
+            <div class="gridpair">
+              <div class="gridcell">
+                <span class="lbl step">2 &middot; Called spot</span>
+                <div class="lcpad" id="lvPad"></div>
+                <div class="callopts">
+                  <button class="lcopt" id="lvGlove" data-lg="1" aria-pressed="false" title="The catcher is calling: tap where he sets up. Stays on until you turn it off">Glove</button>
+                  <button class="lcopt" id="lvUnk" data-lu="1" aria-pressed="false" title="Nobody saw the call: charted, never graded on execution">? Not known</button>
+                </div>
+                <div class="zonehint" id="lcHint">Tap what you called</div>
+              </div>
+              <div class="gridcell">
+                <span class="lbl step">3 &middot; Location</span>
+                <div id="lvZoneSlot"></div>
+                <div class="zonehint" id="lvZoneHint">Catcher&rsquo;s view &middot; tap where it crossed</div>
+                <div id="lvLegendSlot"></div>
+              </div>
+            </div>
+            <div id="lvSitSlot"></div>
+            <div id="lvVeloSlot"></div>
+            <div id="lvUndoSlot"></div>
+          </div>
+        </div>
+
         <div class="panel" id="abbar" hidden>
           <h2>The at-bat</h2>
           <div class="body">
@@ -766,13 +840,13 @@ footer{max-width:1340px;margin:0 auto;padding:14px 16px 30px;color:var(--ink-3);
               <div class="pickrow" id="f-type" style="margin:0"><span class="lb">Pitch</span></div>
             </div>
             <div class="pickrow" id="f-spot"><span class="lb">Location</span></div>
-            <label class="fld" style="margin-top:4px">Situation &mdash; optional, sticks until you change it
+            <label class="fld" style="margin-top:4px" id="sitBox">Situation &mdash; optional, sticks until you change it
               <select id="f-sit"></select>
             </label>
           </div>
         </div>
 
-        <div class="panel">
+        <div class="panel" id="zonePanel">
           <div class="body">
             <div class="axis"><span>In</span><span id="zoneTitle">Catcher's view</span><span>Out</span></div>
             <div class="zonewrap">
@@ -781,19 +855,19 @@ footer{max-width:1340px;margin:0 auto;padding:14px 16px 30px;color:var(--ink-3);
               <div class="plate"></div>
             </div>
             <p class="tiny" style="text-align:center;margin:10px 0 0">Tap where it actually finished. The chart advances on its own.</p>
-            <div class="legend" style="justify-content:center;margin-top:8px">
+            <div class="legend" id="zLegend" style="justify-content:center;margin-top:8px">
               <span><b style="color:var(--good)">&#9679;</b> on the spot</span>
               <span><b style="color:var(--close)">&#9679;</b> one cell off</span>
               <span><b style="color:var(--miss)">&#9679;</b> missed</span>
               <span>numbers are the pitch number</span>
             </div>
 
-            <div style="margin-top:14px">
+            <div style="margin-top:14px" id="veloBox">
               <div class="axis" style="padding-bottom:2px"><span id="veloLbl">Velo &mdash; last pitch</span><span class="tiny" style="letter-spacing:0;text-transform:none">optional</span></div>
               <div class="velostrip" id="velo"></div>
             </div>
 
-            <div class="row" style="margin-top:6px">
+            <div class="row" style="margin-top:6px" id="undoRow">
               <button class="btn" id="goBack" style="flex:0 0 auto">Undo last pitch</button>
               <button class="btn" id="changeCall" style="flex:0 0 auto">Change the call</button>
               <button class="btn" id="extraPitch" style="flex:0 0 auto">+ Extra pitch</button>
@@ -818,6 +892,16 @@ footer{max-width:1340px;margin:0 auto;padding:14px 16px 30px;color:var(--ink-3);
       </div>
 
       <div class="stack">
+        <!-- v48: End the at-bat, where the Pitch Chart has it. -->
+        <div class="panel" id="lvEnd" hidden>
+          <h2>End the at-bat</h2>
+          <div class="body">
+            <div id="lvResSlot"></div>
+            <div class="lb" style="margin:12px 0 5px">At-bats</div>
+            <div id="lvStripSlot"></div>
+            <p class="tiny" style="margin:6px 0 0">A result closes the at-bat and opens the next one. Tap an at-bat to fix its result.</p>
+          </div>
+        </div>
         <div class="panel">
           <h2>This pen</h2>
           <div class="body"><div class="kpis" id="liveKpis"></div><div class="read" id="liveRead" style="margin-top:12px"></div></div>
@@ -947,15 +1031,16 @@ function sitOpts(sel){
 /* Live AB results. Deliberately the SAME list and the same out/not-out split as
    the Pitch Chart's, so a winter live AB and a spring at-bat are the same kind of
    record and a season roll-up does not need a translation table. */
+/* v48: the Pitch Chart's 18, in its order (IBB and SF added), so End the at-bat reads the same in both. */
 var RESULTS = [{k:"K", l:"Strikeout, swinging"},{k:"Kc",l:"Strikeout, called"},
-               {k:"BB",l:"Walk"},            {k:"HBP",l:"Hit by pitch"},
+               {k:"BB",l:"Walk"},            {k:"IBB",l:"Intentional walk"},{k:"HBP",l:"Hit by pitch"},
                {k:"1B",l:"Single"},          {k:"2B",l:"Double"},
                {k:"3B",l:"Triple"},          {k:"HR",l:"Home run"},
                {k:"GO",l:"Ground out"},      {k:"FO",l:"Fly out"},
                {k:"LO",l:"Line out"},        {k:"PO",l:"Pop out"},
                {k:"FC",l:"Fielder's choice"},{k:"E", l:"Error"},
-               {k:"SAC",l:"Sacrifice"},      {k:"DP",l:"Double play"}];
-var OUT_RESULT = {K:1,Kc:1,GO:1,FO:1,LO:1,PO:1,FC:1,DP:1,SAC:1};
+               {k:"SAC",l:"Sacrifice"},      {k:"SF",l:"Sacrifice fly"},{k:"DP",l:"Double play"}];
+var OUT_RESULT = {K:1,Kc:1,GO:1,FO:1,LO:1,PO:1,FC:1,DP:1,SAC:1,SF:1};
 function resLabel(k){
   for(var i=0;i<RESULTS.length;i++) if(RESULTS[i].k===k) return RESULTS[i].l;
   return k || "";
@@ -1423,7 +1508,7 @@ function cur(){ return byId(S.cur); }
    gateWipe(), wipeEverything(), WIPE_KEYS, the #wipeBox markup and its listener. */
 var ALLOW_WIPE = false;
 
-var BUILD = "v47";
+var BUILD = "v48";
 
 /* ======================= DASHBOARD UPLOAD =======================
    Where a filed session goes: the Titans Upload Receiver, an Apps Script web app
@@ -2276,11 +2361,14 @@ function drawZone(){
   var p = cur(), i = p ? activeIdx(p) : 0, c = p ? call(p,i) : null;
   var t = c ? SPOTS[c.spot] : null, h = "";
   var mark = {};
+  var lvAB = (p && plive(p)) ? abTarget(p) : null, lvN = 0;
   if(p){
     for(var q=0;q<p.pitches.length;q++){
       var pt = p.pitches[q], key = pt.r+"-"+pt.c;
+      /* v48: a live AB shows its own pitches, numbered 1, 2, 3 in the at-bat, like the Pitch Chart */
+      if(lvAB !== null){ if(pt.ab !== lvAB) continue; lvN++; }
       if(!mark[key]) mark[key] = [];
-      mark[key].push({n:q+1, g:grade(pt)});
+      mark[key].push({n:q+1, g:grade(pt), ln:lvN, t:pt.type});
     }
   }
   for(var r=0;r<5;r++){
@@ -2289,13 +2377,15 @@ function drawZone(){
       for(var k=0;k<SPOTKEYS.length;k++){ var sk=SPOTKEYS[k]; if(SPOTS[sk].r===r && SPOTS[sk].c===cc) spotNum = sk; }
       var cls = inZone(r,cc) ? "inzone" : "";
       if(spotNum!=="") cls += " spot";
-      if(t && t.r===r && t.c===cc) cls += " target";
+      if(t && t.r===r && t.c===cc && lvAB === null) cls += " target";   /* v48: live shows the call on the pad */
       var stack = mark[r+"-"+cc] || [], pips = "";
       if(stack.length){
         var lim = stack.length>6 ? 5 : stack.length;
         for(var s=0;s<lim;s++){
           var sel = (pending!==null && stack[s].n===pending+1) ? " sel" : "";
-          pips += '<span class="pip '+stack[s].g+sel+'">'+stack[s].n+'</span>';
+          pips += lvAB !== null
+            ? '<span class="pip wt '+stack[s].g+sel+'">'+stack[s].ln+'<i>'+esc(stack[s].t||"")+'</i></span>'
+            : '<span class="pip '+stack[s].g+sel+'">'+stack[s].n+'</span>';
         }
         if(stack.length>lim) pips += '<span class="pip more">+'+(stack.length-lim)+'</span>';
         pips = '<span class="pips">'+pips+'</span>';
@@ -2439,7 +2529,6 @@ function drawFree(){
   el("f-ws").innerHTML = h;
 
   if(plive(p)){ drawLivePad(p); el("f-sit").innerHTML = sitOpts(f.sit); return; }
-  el("f-spot").classList.remove("lcmode");
   h = '<span class="lb">Location</span>';
   for(var k=0;k<SPOTKEYS.length;k++){
     var sk = SPOTKEYS[k];
@@ -2456,34 +2545,93 @@ function drawFree(){
 var SPOTAT = {};
 SPOTKEYS.forEach(function(k){ SPOTAT[SPOTS[k].r + "-" + SPOTS[k].c] = k; });
 function drawLivePad(p){
-  var f = pfree(p), lc = plc(p), h = '<span class="lb">Called spot &mdash; every pitch</span><div class="lcwrap"><div class="lcpad' +
-    (f.glove ? " glove" : "") + (lc && lc.unk ? " unk" : "") + '" id="lcPad">';
+  /* v48: the Pitch Chart's pad. The 8 numbered boxes are the calls (Jim, Nov 16: "Only the 8 numbered");
+     the other 17 are drawn, dimmed. Every call in THIS at-bat is marked where it was called, hollow, with
+     its pitch number in the at-bat and the pitch type, so pitch 3 here and pitch 3 on the location grid are
+     the same pitch. The call waiting for its pitch is dashed. */
+  var f = pfree(p), lc = plc(p), ai = abTarget(p), ps = abPitches(p, ai), marks = {};
+  ps.forEach(function(q, n){
+    if(q.spot == null || !SPOTS[q.spot]) return;
+    (marks[q.spot] = marks[q.spot] || []).push({n:n+1, t:q.type, g:q.cs === "G"});
+  });
+  var liveAB = ai === liveIdx(p) && !pabs(p)[ai].result;
+  if(lc && !lc.unk && liveAB) (marks[lc.s] = marks[lc.s] || []).push({n:ps.length+1, t:f.type, pend:true, g:!!lc.g});
+  var h = "";
   for(var r=0;r<5;r++) for(var c=0;c<5;c++){
-    var k = SPOTAT[r + "-" + c], on = lc && !lc.unk && k != null && lc.s === k;
+    var k = SPOTAT[r + "-" + c], on = lc && !lc.unk && k != null && lc.s === k, here = k != null ? (marks[k] || []) : [], mk = "";
+    if(here.length){
+      var more = here.length > 3 ? here.length - 3 : 0;
+      here.slice(0, 3).forEach(function(m){ mk += '<span class="cmk' + (m.pend ? " pend" : "") + (m.g ? " glv" : "") + '">' + m.n + '<i>' + esc(m.t) + '</i></span>'; });
+      if(more) mk += '<span class="cmk">+' + more + '</span>';
+      mk = '<span class="cmks">' + mk + '</span>';
+    }
     h += '<button class="' + (inZone(r,c) ? "inzone" : "") + (on ? " on" : "") + '"' +
          (k == null ? ' disabled aria-hidden="true" tabindex="-1">' :
-          ' data-lc="' + k + '" aria-pressed="' + (on ? "true" : "false") + '" aria-label="Location ' + k + ', ' + esc(SPOTS[k].l) + '" title="' + k + ' \u00b7 ' + esc(SPOTS[k].l) + '">' + k) +
+          ' data-lc="' + k + '" aria-pressed="' + (on ? "true" : "false") + '" aria-label="Location ' + k + ', ' + esc(SPOTS[k].l) + '" title="' + k + ' \u00b7 ' + esc(SPOTS[k].l) + '"><span class="sn">' + k + '</span>' + mk) +
          '</button>';
   }
-  var hint = lc && lc.unk ? "Call not known \u00b7 now tap where it went"
-    : lc ? (lc.g ? "Glove set at " : "Called ") + lc.s + " \u00b7 " + SPOTS[lc.s].l + " \u00b7 now tap where it went"
+  var pad = el("lvPad");
+  pad.innerHTML = h;
+  pad.className = "lcpad" + (f.glove ? " glove" : "") + (lc && lc.unk ? " unk" : "");
+  el("lvGlove").setAttribute("aria-pressed", f.glove ? "true" : "false");
+  el("lvUnk").setAttribute("aria-pressed", lc && lc.unk ? "true" : "false");
+  var hint = el("lcHint");
+  hint.classList.remove("nope");
+  hint.textContent = !liveAB ? "At-bat closed \u00b7 tap the live one to call a pitch"
+    : lc && lc.unk ? "Call not known \u00b7 now tap where it crossed"
+    : lc ? (lc.g ? "Glove set \u00b7 now tap where it crossed" : "Called \u00b7 now tap where it crossed")
     : f.glove ? "Glove \u00b7 tap where the catcher set up"
     : "Tap what was called, every pitch";
-  h += '</div><div class="lcside">' +
-    '<button class="lcopt" data-lg="1" aria-pressed="' + (f.glove ? "true" : "false") + '" title="The catcher is calling: tap where he sets up. Stays on until you turn it off">Glove</button>' +
-    '<button class="lcopt" data-lu="1" aria-pressed="' + (lc && lc.unk ? "true" : "false") + '" title="Nobody saw the call: charted, never graded on execution">? Not known</button>' +
-    '<div class="lchint" id="lcHint">' + hint + '</div></div></div>';
-  el("f-spot").innerHTML = h;
-  el("f-spot").classList.add("lcmode");
+}
+/* v48: in a live AB the controls sit where the Pitch Chart has them. They are the same elements (same
+   handlers, same ids), moved into the live panels and back again for a scripted or freeform pen. */
+var LV_MOVES = [["abNew","lvNewSlot"],["abCount","lvCountSlot"],["f-type","lvTypeSlot"],["f-ws","lvWsSlot"],
+                ["zonewrap","lvZoneSlot"],["zLegend","lvLegendSlot"],["sitBox","lvSitSlot"],["veloBox","lvVeloSlot"],
+                ["undoRow","lvUndoSlot"],["abRes","lvResSlot"],["abStrip","lvStripSlot"]];
+var lvHome = null, lvOn = null;
+function lvNode(id){ return id === "zonewrap" ? el("zone").parentNode : el(id); }
+function liveLayout(on){
+  if(on === lvOn) return;
+  if(!lvHome){
+    lvHome = {};
+    LV_MOVES.forEach(function(m){ var n = lvNode(m[0]), mark = document.createComment("lv:" + m[0]); n.parentNode.insertBefore(mark, n); lvHome[m[0]] = mark; });
+  }
+  LV_MOVES.forEach(function(m){
+    var n = lvNode(m[0]);
+    if(on) el(m[1]).appendChild(n);
+    else lvHome[m[0]].parentNode.insertBefore(n, lvHome[m[0]].nextSibling);
+  });
+  ["call","abbar","freebar","zonePanel"].forEach(function(id){ el(id).classList.toggle("lvgone", !!on); });
+  el("lvAb").hidden = !on; el("lvEnd").hidden = !on;
+  lvOn = on;
 }
 var lcT = null;
 function flagLiveCall(){
-  var h = el("lcHint"), pad = el("lcPad");
+  var h = el("lcHint"), pad = el("lvPad");
   if(!h || !pad) return;
-  h.textContent = "Called spot needed \u00b7 tap the number first"; h.classList.add("nope"); pad.classList.add("need");
+  h.textContent = "Called spot needed \u00b7 tap what was called first"; h.classList.add("nope"); pad.classList.add("need");
   clearTimeout(lcT);
   lcT = setTimeout(function(){ drawChart(); }, 2200);
 }
+el("lvAb").addEventListener("click", function(e){
+  var p = cur(), x; if(!p || !plive(p)) return;
+  var f = pfree(p), lc = plc(p);
+  if((x = e.target.closest("button[data-lc]"))){
+    if(abTarget(p) !== liveIdx(p) || pabs(p)[liveIdx(p)].result){ note("That at-bat is closed \u2014 tap the live one, or + New AB."); return; }
+    var k = +x.getAttribute("data-lc");
+    f.lc = (lc && !lc.unk && lc.s === k) ? null : (f.glove ? {s:k, g:1} : {s:k});   /* tap again to clear */
+    save(); drawChart(); return;
+  }
+  if(e.target.closest("button[data-lg]")){
+    f.glove = !f.glove;
+    if(lc && !lc.unk) f.lc = f.glove ? {s:lc.s, g:1} : {s:lc.s};
+    save(); drawChart(); return;
+  }
+  if(e.target.closest("button[data-lu]")){
+    f.lc = (lc && lc.unk) ? null : {unk:1};
+    save(); drawChart(); return;
+  }
+});
 el("f-type").addEventListener("click", function(e){
   var b = e.target.closest("button[data-t]"); if(!b) return;
   pfree(cur()).type = b.getAttribute("data-t"); save(); drawChart();
@@ -2493,25 +2641,6 @@ el("f-ws").addEventListener("click", function(e){
   pfree(cur()).ws = b.getAttribute("data-w"); save(); drawChart();
 });
 el("f-spot").addEventListener("click", function(e){
-  var p = cur(), x;
-  if(p && plive(p)){
-    var f = pfree(p), lc = plc(p);
-    if((x = e.target.closest("button[data-lc]"))){
-      var k = +x.getAttribute("data-lc");
-      f.lc = (lc && !lc.unk && lc.s === k) ? null : (f.glove ? {s:k, g:1} : {s:k});   /* tap again to clear */
-      save(); drawChart(); return;
-    }
-    if(e.target.closest("button[data-lg]")){
-      f.glove = !f.glove;
-      if(lc && !lc.unk) f.lc = f.glove ? {s:lc.s, g:1} : {s:lc.s};
-      save(); drawChart(); return;
-    }
-    if(e.target.closest("button[data-lu]")){
-      f.lc = (lc && lc.unk) ? null : {unk:1};
-      save(); drawChart(); return;
-    }
-    return;
-  }
   var b = e.target.closest("button[data-s]"); if(!b) return;
   var v = b.getAttribute("data-s");
   pfree(cur()).spot = (v === "x") ? null : +v;
@@ -2537,6 +2666,11 @@ function drawAB(){
   var a = pabs(p), ti = abTarget(p), li = liveIdx(p), c = abCount(p, ti);
 
   el("abCount").textContent = c.b + "\u2013" + c.s;
+  el("lvNum").textContent = ti + 1;
+  el("lvTitle").textContent = "At-bat " + (ti + 1);
+  el("lvSub").textContent = (pname(p) || "Pitcher") + " \u00b7 " + (a[ti].result ? a[ti].result + " \u00b7 " + resLabel(a[ti].result).toLowerCase()
+                            : (ti === li ? "live" : "no result")) + " \u00b7 " + a.length + (a.length === 1 ? " at-bat" : " at-bats");
+  el("lvPitches").textContent = c.n + (c.n === 1 ? " pitch" : " pitches");
   el("abWho").textContent = "AB " + (ti+1) + " of " + a.length + " \u00b7 " +
     c.n + (c.n===1?" pitch":" pitches") +
     (a[ti].result ? " \u00b7 " + a[ti].result + " (" + resLabel(a[ti].result).toLowerCase() + ")"
@@ -2590,6 +2724,7 @@ el("abNew").onclick = function(){
 };
 
 function drawChart(){
+  liveLayout(!!(cur() && plive(cur())));
   drawStrip(); drawFree(); drawAB(); drawCall(); drawZone(); drawVelo(); drawLog(); drawKpis();
   var p = cur();
   el("comments").value = p ? (p.comments||"") : "";

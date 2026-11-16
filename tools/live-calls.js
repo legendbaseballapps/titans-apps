@@ -1,4 +1,4 @@
-/* Live AB calls in the Bullpen Chart (v47, Nov 13, 2026).
+/* Live AB calls in the Bullpen Chart (v47, Nov 13, 2026; laid out like the Pitch Chart in v48, Nov 16).
 
        cd titans-apps && python3 -m http.server 8807 &
        node tools/live-calls.js
@@ -43,31 +43,31 @@ async function open(b, mode, seed) {
 }
 const pitches = pg => pg.evaluate(k => JSON.parse(localStorage.getItem(k)).pitchers[0].pitches.map(x => [x.spot == null ? null : x.spot, x.cs || ""]), KEY);
 const pad = pg => pg.evaluate(() => ({
-  callable: [...document.querySelectorAll("#lcPad button[data-lc]")].map(b => b.textContent).join(""),
-  dead: document.querySelectorAll("#lcPad button:disabled").length,
-  on: [...document.querySelectorAll("#lcPad button.on")].map(b => b.textContent).join(""),
+  callable: [...document.querySelectorAll("#lvPad button[data-lc]")].map(b => b.getAttribute("data-lc")).join(""),
+  dead: document.querySelectorAll("#lvPad button:disabled").length,
+  on: [...document.querySelectorAll("#lvPad button.on")].map(b => b.getAttribute("data-lc")).join(""),
   hint: (document.getElementById("lcHint") || {}).textContent || ""}));
 const zone = (pg, r, c) => pg.click('#zone button[data-r="' + r + '"][data-c="' + c + '"]');
 
 (async () => {
   const b = await chromium.launch();
 
-  console.log("BULLPEN v47 · the call pad");
+  console.log("BULLPEN v48 · the call pad");
   let pg = await open(b, "live");
   is("the 8 numbered boxes are the calls, the other 17 can't be called", await pad(pg), {callable: "72103456", dead: 17, on: "", hint: "Tap what was called, every pitch"});
-  is("  laid out like the location grid: 7 top middle, 2 up and in, 6 below", await pg.evaluate(() => { const b = [...document.querySelectorAll("#lcPad button")]; return [b[2].textContent, b[6].textContent, b[22].textContent]; }), ["7", "2", "6"]);
-  is("no Location buttons and no 'no spot called' in a live AB", await pg.evaluate(() => !!document.querySelector('#f-spot button[data-s]')), false);
+  is("  laid out like the location grid: 7 top middle, 2 up and in, 6 below", await pg.evaluate(() => { const b = [...document.querySelectorAll("#lvPad button")]; return [b[2].textContent, b[6].textContent, b[22].textContent]; }), ["7", "2", "6"]);
+  is("no Location buttons and no 'no spot called' in a live AB", await pg.evaluate(() => [...document.querySelectorAll('#f-spot button[data-s]')].some(b => b.offsetParent)), false);
 
   console.log("\nCALLED EVERY PITCH");
   await zone(pg, 2, 2);
   is("no call: the location grid refuses the pitch", (await pitches(pg)).length, 0);
-  is("  and says so on the pad", [(await pad(pg)).hint, await pg.evaluate(() => document.getElementById("lcPad").classList.contains("need"))], ["Called spot needed · tap the number first", true]);
+  is("  and says so on the pad", [(await pad(pg)).hint, await pg.evaluate(() => document.getElementById("lvPad").classList.contains("need"))], ["Called spot needed · tap what was called first", true]);
   is("  the call card says the same", await pg.evaluate(() => /tap the call on the pad first/.test(document.getElementById("call").textContent)), true);
-  await pg.click('#lcPad button[data-lc="5"]');
+  await pg.click('#lvPad button[data-lc="5"]');
   is("tap 5: called", (await pad(pg)).on, "5");
-  await pg.click('#lcPad button[data-lc="5"]');
+  await pg.click('#lvPad button[data-lc="5"]');
   is("  tap it again: cleared", (await pad(pg)).on, "");
-  await pg.click('#lcPad button[data-lc="5"]');
+  await pg.click('#lvPad button[data-lc="5"]');
   await zone(pg, 3, 3);
   is("called 5, pitch on the spot: filed as a Coach call", await pitches(pg), [[5, "C"]]);
   is("the call clears after the pitch", (await pad(pg)).on, "");
@@ -76,20 +76,20 @@ const zone = (pg, r, c) => pg.click('#zone button[data-r="' + r + '"][data-c="' 
   is("so the next pitch is refused until it is called", (await pitches(pg)).length, 1);
 
   console.log("\nGLOVE AND ? NOT KNOWN");
-  await pg.click("[data-lg]");
-  is("Glove on: the pad goes dashed", await pg.evaluate(() => document.getElementById("lcPad").classList.contains("glove")), true);
-  await pg.click('#lcPad button[data-lc="3"]');
+  await pg.click("#lvGlove");
+  is("Glove on: the pad goes dashed", await pg.evaluate(() => document.getElementById("lvPad").classList.contains("glove")), true);
+  await pg.click('#lvPad button[data-lc="3"]');
   await zone(pg, 2, 1);
-  await pg.click('#lcPad button[data-lc="2"]');
+  await pg.click('#lvPad button[data-lc="2"]');
   await zone(pg, 1, 1);
   is("Glove stays on pitch to pitch: 2 glove calls", (await pitches(pg)).slice(1), [[3, "G"], [2, "G"]]);
-  await pg.click("[data-lg]");
-  await pg.click('#lcPad button[data-lc="0"]');
-  await pg.click("[data-lg]");
-  is("turning Glove on after calling moves that call to the glove", (await pad(pg)).hint, "Glove set at 0 · Middle · now tap where it went");
-  await pg.click("[data-lg]");
-  await pg.click("[data-lu]");
-  is("? Not known answers the pitch", (await pad(pg)).hint, "Call not known · now tap where it went");
+  await pg.click("#lvGlove");
+  await pg.click('#lvPad button[data-lc="0"]');
+  await pg.click("#lvGlove");
+  is("turning Glove on after calling moves that call to the glove", (await pad(pg)).hint, "Glove set · now tap where it crossed");
+  await pg.click("#lvGlove");
+  await pg.click("#lvUnk");
+  is("? Not known answers the pitch", (await pad(pg)).hint, "Call not known · now tap where it crossed");
   await zone(pg, 0, 0);
   is("  filed with no spot, Unknown", (await pitches(pg)).slice(-1), [[null, "U"]]);
   is("  and only for that pitch", (await pad(pg)).on + "|" + (await pad(pg)).hint, "|Tap what was called, every pitch");
@@ -128,9 +128,42 @@ const zone = (pg, r, c) => pg.click('#zone button[data-r="' + r + '"][data-c="' 
     await pg.ctx.close();
   }
 
+  console.log("\nv48 · LAID OUT LIKE THE PITCH CHART");
+  {
+    pg = await open(b, "live");
+    const lay = () => pg.evaluate(() => { const p = document.getElementById("lvPad").getBoundingClientRect(), z = document.getElementById("zone").getBoundingClientRect();
+      return {sideBySide: Math.abs(p.top - z.top) < 2 && p.right < z.left, sameSize: Math.abs(p.width - z.width) < 2,
+              steps: [...document.querySelectorAll("#lvAb .lbl.step")].map(x => x.textContent.replace(/\s+/g, " ").trim()),
+              oldGone: ["call", "abbar", "freebar", "zonePanel"].every(id => getComputedStyle(document.getElementById(id)).display === "none")}; });
+    is("1 Pitch type, 2 Called spot, 3 Location; pad and grid side by side, the same size; the old panels gone",
+       await lay(), {sideBySide: true, sameSize: true, steps: ["1 · Pitch type stays set", "2 · Called spot", "3 · Location"], oldGone: true});
+    is("End the at-bat: the Pitch Chart's 18, in its order",
+       await pg.evaluate(() => [...document.querySelectorAll("#lvEnd #abRes button")].map(x => x.textContent).join(" ")), "K Kc BB IBB HBP 1B 2B 3B HR GO FO LO PO FC E SAC SF DP");
+    await pg.click('#lvPad button[data-lc="5"]'); await zone(pg, 3, 3);
+    await pg.click('#lvPad button[data-lc="3"]'); await zone(pg, 3, 1);
+    await pg.click('#lvPad button[data-lc="0"]');
+    const marks = () => pg.evaluate(() => ({pad: [...document.querySelectorAll("#lvPad .cmk")].map(x => x.textContent + (x.classList.contains("pend") ? "*" : "")).sort(),
+                                            zone: [...document.querySelectorAll("#zone .pip")].map(x => x.textContent).sort()}));
+    is("the pad marks this at-bat's calls (pitch number + type), the next call dashed; the grid numbers the at-bat's pitches", await marks(), {pad: ["1FB", "2FB", "3FB*"], zone: ["1FB", "2FB"]});
+    is("  the count and header read like the Pitch Chart", await pg.evaluate(() => [document.getElementById("abCount").textContent, document.getElementById("lvTitle").textContent, document.getElementById("lvPitches").textContent]), ["0\u20132", "At-bat 1", "2 pitches"]);
+    await pg.click('#abRes button[data-res="K"]');
+    is("a result opens the next at-bat: its grid and pad start empty", await marks(), {pad: ["1FB*"], zone: []});
+    await pg.click('#abStrip button[data-ab="0"]');
+    is("tap AB 1: its pitches come back on the grid and the pad", await marks(), {pad: ["1FB", "2FB"], zone: ["1FB", "2FB"]});
+    await pg.click('#lvPad button[data-lc="4"]');
+    is("  a closed at-bat can't take a call", (await pad(pg)).on, "0");
+    await pg.evaluate(() => { document.getElementById("tab-setup").click(); const m = document.querySelectorAll('[data-f="mode"]')[0]; m.value = "script"; m.dispatchEvent(new Event("input", {bubbles: true})); });
+    await pg.click("#tab-chart");
+    is("back to a scripted pen: the call card, the full zone panel and the velo strip are back where they were",
+       await pg.evaluate(() => [getComputedStyle(document.getElementById("call")).display !== "none", !!document.getElementById("zone").closest("#zonePanel"),
+                                !!document.getElementById("velo").closest("#zonePanel"), document.getElementById("lvAb").hidden]), [true, true, true, true]);
+    is("no page errors", pg.errs, []);
+    await pg.ctx.close();
+  }
+
   console.log("\nFREEFORM AND SCRIPT PENS ARE UNCHANGED");
   pg = await open(b, "free");
-  is("freeform keeps its Location buttons, no pad", await pg.evaluate(() => [document.querySelectorAll('#f-spot button[data-s]').length, !!document.getElementById("lcPad")]), [8, false]);
+  is("freeform keeps its Location buttons, no pad", await pg.evaluate(() => [document.querySelectorAll('#f-spot button[data-s]').length, !document.getElementById("lvAb").hidden]), [8, false]);
   await zone(pg, 3, 3);
   is("  and its call sticks: a pitch with no tap on the buttons is taken", (await pitches(pg)).length, 1);
   is("no page errors", pg.errs, []);
