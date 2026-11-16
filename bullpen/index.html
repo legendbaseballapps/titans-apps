@@ -399,6 +399,25 @@ table.grid select,table.grid input[type=text],table.grid input[type=number]{
 .pick small{display:block;font-size:11px;font-weight:600;letter-spacing:.02em;text-transform:none;opacity:.7}
 .pick.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .pick.on small{opacity:.85}
+/* v47: the Live AB call pad, the Pitch Chart's (game v36) in the bullpen. The 8 numbered boxes are
+   the calls; the rest of the 5x5 is drawn so it reads like the location grid, but can't be called. */
+.pickrow.lcmode{display:block}
+.pickrow.lcmode > .lb{display:block;margin-bottom:6px}
+.lcwrap{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}
+.lcpad{display:grid;grid-template-columns:repeat(5,44px);grid-template-rows:repeat(5,44px);gap:3px}
+.lcpad button{position:relative;border:1px solid var(--line);background:var(--card);border-radius:3px;padding:0;
+  font-family:var(--cond);font-weight:700;font-size:17px;color:var(--ink)}
+.lcpad button.inzone{background:var(--zone-fill)}
+.lcpad button:disabled{opacity:.35;cursor:default}
+.lcpad button.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.lcpad.glove button:not(:disabled){border-style:dashed;border-width:2px}
+.lcpad.unk{opacity:.5}
+.lcpad.need{outline:3px solid var(--miss);outline-offset:3px}
+.lcside{display:flex;flex-direction:column;gap:8px;min-width:150px;flex:1 1 150px}
+.lcopt{min-height:40px;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:8px;font-weight:700;font-size:14px}
+.lcopt[aria-pressed="true"]{background:var(--navy);border-color:var(--navy);color:#fff}
+.lchint{font-size:13px;color:var(--ink-2);line-height:1.35}
+.lchint.nope{color:var(--miss);font-weight:700}
 .velostrip{display:flex;gap:6px;overflow-x:auto;padding:8px 2px;-webkit-overflow-scrolling:touch}
 .velostrip button{
   flex:0 0 auto;min-width:48px;border:1px solid var(--line);background:var(--card-2);
@@ -733,8 +752,9 @@ footer{max-width:1340px;margin:0 auto;padding:14px 16px 30px;color:var(--ink-3);
             <div class="lb" style="margin:4px 0 5px">How it ended</div>
             <div class="resgrid" id="abRes"></div>
             <p class="tiny" style="margin:9px 0 0">A result closes the at-bat and opens the next one.
-              Tap an at-bat above to fix its result. The called spot is optional in here &mdash;
-              pitches with no spot called are left out of the execution numbers rather than counted as misses.</p>
+              Tap an at-bat above to fix its result. <b>Call every pitch</b> on the pad, the same as the
+              Pitch Chart: tap the number, then where it went. The catcher calling? Turn on <b>Glove</b> and tap where
+              he sets up. Nobody saw it? <b>? Not known</b>: charted, never graded.</p>
           </div>
         </div>
 
@@ -1218,6 +1238,13 @@ function pfree(p){
   if(!p.free) p.free = {type:"FB",ws:"S",spot:0,sit:""};
   return p.free;
 }
+/* v47 (Jim, Nov 13: "Don't we need the where the pitch was called grid in the bullpen app for the
+   live ABs?"). A live AB pitch is CALLED EVERY PITCH, like the Pitch Chart since v35: the call clears
+   after each pitch, so nothing carries over unseen. Through v46 the call stuck from pitch to pitch
+   and a new arm started on Middle, so an untouched picker graded every pitch against Middle.
+   free.lc  = the call for the next pitch: null (none yet) | {s:spot, g:1 if on the glove} | {unk:1}
+   free.glove = Glove mode: the catcher is calling; stays on until turned off. */
+function plc(p){ var f = pfree(p); return f.lc || null; }
 function pabs(p){
   if(!p.abs) p.abs = [];
   if(!p.abs.length) p.abs.push({result:""});
@@ -1396,7 +1423,7 @@ function cur(){ return byId(S.cur); }
    gateWipe(), wipeEverything(), WIPE_KEYS, the #wipeBox markup and its listener. */
 var ALLOW_WIPE = false;
 
-var BUILD = "v46";
+var BUILD = "v47";
 
 /* ======================= DASHBOARD UPLOAD =======================
    Where a filed session goes: the Titans Upload Receiver, an Apps Script web app
@@ -1529,6 +1556,15 @@ function call(p, i){
     var rec = (pending!==null && pending===i) ? p.pitches[i] : null;
     var src = rec || pfree(p);
     var fc = {type:src.type, ws:src.ws, spot:src.spot, sit:src.sit, off:false, free:true};
+    if(plive(p)){
+      if(rec) fc.cs = rec.cs || "";
+      else {
+        var lc = plc(p);
+        fc.spot = (lc && !lc.unk) ? lc.s : null;
+        fc.cs = lc ? (lc.unk ? "U" : (lc.g ? "G" : "C")) : "";
+        fc.need = !lc;                  /* no call yet: the location grid waits for one */
+      }
+    }
     if(p.stretch && fc.ws === "W") fc.ws = "S";
     return fc;
   }
@@ -1578,7 +1614,7 @@ function stats(p){
 function pct(a,b){ return b ? Math.round(a*100/b) : 0; }
 function missRead(o){
   if(!o.n) return "No pitches charted yet.";
-  if(!o.graded) return o.n + (o.n===1?" pitch":" pitches")+" charted with no spot called \u2014 "+
+  if(!o.graded) return o.n + (o.n===1?" pitch":" pitches")+" charted with the call not known \u2014 "+
                  "nothing to grade, so there is no miss pattern yet.";
   if(!o.miss) return "Every graded pitch on the spot. Move the targets.";
   var vert = o.up>o.down ? [o.up," up"] : (o.down>o.up ? [o.down," down"] : null);
@@ -2229,7 +2265,8 @@ function drawCall(){
         '<span class="big" style="color:var(--accent)">'+(c.spot==null?"\u2014":c.spot)+'</span>'+
       '</div>'+
       '<div class="spotname">'+esc(typeLabel(c.type))+' &mdash; '+
-        (t ? esc(t.l) : 'no spot called \u2014 this one is not graded')+'</div>'+
+        (c.need ? 'tap the call on the pad first' : t ? esc(t.l) + (c.cs === "G" ? ' (the catcher\u2019s glove)' : '')
+                : (c.cs === "U" ? 'call not known \u2014 this one is not graded' : 'no spot called \u2014 this one is not graded'))+'</div>'+
       (c.sit ? '<div class="sit">'+esc(sitLabel(c.sit))+'</div>' : '')+
     '</div>'+
     '<div class="mini"><div class="minizone">'+mini+'</div></div>';
@@ -2287,8 +2324,10 @@ el("zone").addEventListener("click", function(e){
   var p = cur(); if(!p) return;
   var i = activeIdx(p), c = call(p,i);
   if(!c) return;
+  if(c.need && pending === null){ flagLiveCall(); return; }   /* v47: a live AB pitch is called first */
   var rec = {type:c.type, ws:c.ws, spot:c.spot, sit:c.sit, off:!!c.off, free:!!c.free,
              r:+b.getAttribute("data-r"), c:+b.getAttribute("data-c"), velo:null};
+  if(plive(p) && c.cs) rec.cs = c.cs;
   if(pending!==null){
     rec.ab = p.pitches[pending] ? p.pitches[pending].ab : undefined;
     rec.velo = p.pitches[pending] ? p.pitches[pending].velo : null;
@@ -2303,6 +2342,7 @@ el("zone").addEventListener("click", function(e){
         return;
       }
       rec.ab = ai;
+      pfree(p).lc = null;              /* v47: the next pitch is called fresh */
     }
     p.pitches.push(rec);
   }
@@ -2398,20 +2438,51 @@ function drawFree(){
   if(p.stretch) h += '<span class="tiny" style="margin-left:6px">stretch only</span>';
   el("f-ws").innerHTML = h;
 
+  if(plive(p)){ drawLivePad(p); el("f-sit").innerHTML = sitOpts(f.sit); return; }
+  el("f-spot").classList.remove("lcmode");
   h = '<span class="lb">Location</span>';
   for(var k=0;k<SPOTKEYS.length;k++){
     var sk = SPOTKEYS[k];
     h += '<button class="pick'+(f.spot===sk?" on":"")+'" data-s="'+sk+'">'+sk+
          '<small>'+esc(SPOTS[sk].l)+'</small></button>';
   }
-  /* Live ABs only. "No spot" is a real answer during a competitive inning, and it
-     has to be distinguishable from a spot that was called and missed. */
-  if(plive(p))
-    h += '<button class="pick'+(f.spot==null?" on":"")+'" data-s="x">\u2014'+
-         '<small>no spot called</small></button>';
   el("f-spot").innerHTML = h;
 
   el("f-sit").innerHTML = sitOpts(f.sit);
+}
+/* v47: the Live AB call pad. The catcher's view, In on the left, the same 5x5 and the same 0 to 7 as
+   the Pitch Chart's pad and the script; only the 8 numbered boxes can be called (the bullpen grades
+   against its 8 locations). Hollow until called, orange when called; dashed on the glove. */
+var SPOTAT = {};
+SPOTKEYS.forEach(function(k){ SPOTAT[SPOTS[k].r + "-" + SPOTS[k].c] = k; });
+function drawLivePad(p){
+  var f = pfree(p), lc = plc(p), h = '<span class="lb">Called spot &mdash; every pitch</span><div class="lcwrap"><div class="lcpad' +
+    (f.glove ? " glove" : "") + (lc && lc.unk ? " unk" : "") + '" id="lcPad">';
+  for(var r=0;r<5;r++) for(var c=0;c<5;c++){
+    var k = SPOTAT[r + "-" + c], on = lc && !lc.unk && k != null && lc.s === k;
+    h += '<button class="' + (inZone(r,c) ? "inzone" : "") + (on ? " on" : "") + '"' +
+         (k == null ? ' disabled aria-hidden="true" tabindex="-1">' :
+          ' data-lc="' + k + '" aria-pressed="' + (on ? "true" : "false") + '" aria-label="Location ' + k + ', ' + esc(SPOTS[k].l) + '" title="' + k + ' \u00b7 ' + esc(SPOTS[k].l) + '">' + k) +
+         '</button>';
+  }
+  var hint = lc && lc.unk ? "Call not known \u00b7 now tap where it went"
+    : lc ? (lc.g ? "Glove set at " : "Called ") + lc.s + " \u00b7 " + SPOTS[lc.s].l + " \u00b7 now tap where it went"
+    : f.glove ? "Glove \u00b7 tap where the catcher set up"
+    : "Tap what was called, every pitch";
+  h += '</div><div class="lcside">' +
+    '<button class="lcopt" data-lg="1" aria-pressed="' + (f.glove ? "true" : "false") + '" title="The catcher is calling: tap where he sets up. Stays on until you turn it off">Glove</button>' +
+    '<button class="lcopt" data-lu="1" aria-pressed="' + (lc && lc.unk ? "true" : "false") + '" title="Nobody saw the call: charted, never graded on execution">? Not known</button>' +
+    '<div class="lchint" id="lcHint">' + hint + '</div></div></div>';
+  el("f-spot").innerHTML = h;
+  el("f-spot").classList.add("lcmode");
+}
+var lcT = null;
+function flagLiveCall(){
+  var h = el("lcHint"), pad = el("lcPad");
+  if(!h || !pad) return;
+  h.textContent = "Called spot needed \u00b7 tap the number first"; h.classList.add("nope"); pad.classList.add("need");
+  clearTimeout(lcT);
+  lcT = setTimeout(function(){ drawChart(); }, 2200);
 }
 el("f-type").addEventListener("click", function(e){
   var b = e.target.closest("button[data-t]"); if(!b) return;
@@ -2422,6 +2493,25 @@ el("f-ws").addEventListener("click", function(e){
   pfree(cur()).ws = b.getAttribute("data-w"); save(); drawChart();
 });
 el("f-spot").addEventListener("click", function(e){
+  var p = cur(), x;
+  if(p && plive(p)){
+    var f = pfree(p), lc = plc(p);
+    if((x = e.target.closest("button[data-lc]"))){
+      var k = +x.getAttribute("data-lc");
+      f.lc = (lc && !lc.unk && lc.s === k) ? null : (f.glove ? {s:k, g:1} : {s:k});   /* tap again to clear */
+      save(); drawChart(); return;
+    }
+    if(e.target.closest("button[data-lg]")){
+      f.glove = !f.glove;
+      if(lc && !lc.unk) f.lc = f.glove ? {s:lc.s, g:1} : {s:lc.s};
+      save(); drawChart(); return;
+    }
+    if(e.target.closest("button[data-lu]")){
+      f.lc = (lc && lc.unk) ? null : {unk:1};
+      save(); drawChart(); return;
+    }
+    return;
+  }
   var b = e.target.closest("button[data-s]"); if(!b) return;
   var v = b.getAttribute("data-s");
   pfree(cur()).spot = (v === "x") ? null : +v;
@@ -2701,7 +2791,11 @@ function table(){
               "AB","ABResult","ABOut","AO3plus",
               /* v32. Practice sessions are never uploaded, but a hand export of one
                  must still say so before it gets merged with real pens. */
-              "Practice"];
+              "Practice",
+              /* v47: who made the call. Coach (the dugout, the script or the pad), Glove (the
+                 catcher called it; graded, but kept apart) or Unknown (charted, never graded).
+                 The same words as the Pitch Chart's CallSource. */
+              "CallSource"];
   var rows = [], sid = scriptId(S.script);
   for(var i=0;i<S.pitchers.length;i++){
     var p = S.pitchers[i], who = moundPerson(p);
@@ -2722,7 +2816,8 @@ function table(){
         g==="none"?"":(g==="hit"?"Spot":(g==="near"?"Close":"Miss")),mv,mh,x.velo==null?"":x.velo,
         ai==null?"":(ai+1), (ab&&ab.result)||"",
         (ab&&ab.result)?(OUT_RESULT[ab.result]?"Y":"N"):"",
-        a3?a3.state:"", S.practice?"Y":"N"]);
+        a3?a3.state:"", S.practice?"Y":"N",
+        x.cs === "G" ? "Glove" : (x.cs === "U" || (mode === "Live" && x.spot == null)) ? "Unknown" : "Coach"]);
     }
   }
   return {head:head, rows:rows};

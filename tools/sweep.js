@@ -842,14 +842,15 @@ async function wipeOff(b) {
        '.dispatchEvent(new Event("input",{bubbles:true}));'+
        'document.getElementById("tab-chart").click();', "false"],
     ["result pad",        null,  n("#abRes button"), null, 16],
-    /* The called spot is OPTIONAL in a live AB, and a skipped call must stay
-       distinguishable from a called spot that was missed. */
-    ["no-spot offered",   null,
-       '(!!document.querySelector(\'#f-spot button[data-s="x"]\'))+""', null, "true"],
+    /* v47: a live AB pitch is CALLED EVERY PITCH on the call pad. "? Not known" is the
+       answer when nobody saw the call, and it must stay distinguishable from a called
+       spot that was missed. */
+    ["not-known offered",  null,
+       '(!!document.querySelector(\'#f-spot button[data-lu]\'))+""', null, "true"],
     /* An uncalled spot once threw inside drawCall and took the entire render down
        with it - the pitch landed in the model and the screen never moved. */
-    ["no-spot still renders", null,
-       '(function(){ document.querySelector(\'#f-spot button[data-s="x"]\').click();'+
+    ["not-known still renders", null,
+       '(function(){ document.querySelector(\'#f-spot button[data-lu]\').click();'+
        ' document.querySelector(\'#zone button[data-r="0"][data-c="0"]\').click();'+
        ' var k=document.querySelectorAll("#liveKpis .kpi");'+
        ' return (k.length && k[0].querySelector(".v").textContent==="1") ? "logged":"DEAD"; })()',
@@ -865,7 +866,7 @@ async function wipeOff(b) {
        null, "true"],
     ["ungraded is not a miss", null,
        '(function(){ var t=document.getElementById("liveRead").textContent||"";'+
-       ' return /no spot called/.test(t) ? "ungraded":t.slice(0,40); })()',
+       ' return /call not known/.test(t) ? "ungraded":t.slice(0,40); })()',
        null, "ungraded"],
     /* ---- the released roster (v26) ---- */
     /* The roster SHIPS with the app as roster.js and is read-only on the iPad.

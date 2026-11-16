@@ -745,9 +745,12 @@ function twoWay(opts) {
 {
   const rt = world(); ready(rt, "test");
   const spotsOn = h => [...new Set((h.match(/spot (\d)</g) || []).map(x => x.replace(/\D/g, "")))].sort().join(",");
-  /* the fixture pens were filed by bullpen v44 with the old six: 0-5 */
-  eq(spotsOn(cardOf(rt, PEN2, SMITH)), "0,2,3,5,6,7", "v44 pen: old 1/4/5 shown as the new 7/5/6, the same boxes");
+  /* A pen filed by bullpen v44 with the old six, 0-5. Set up here rather than assumed from the
+     fixture: the fixture is built by whatever bullpen version is current (v47 since Nov 13). */
   const BP = rt.b.getSheetByName("Bullpen_Pitches"), bh = BP.header();
+  let cyc = 0;
+  BP.data.forEach((r, i) => { if (i && r[bh.indexOf("RecordID")] === PEN2) { r[bh.indexOf("Build")] = "v44"; if (r[bh.indexOf("CalledSpot")] !== "") r[bh.indexOf("CalledSpot")] = String(cyc++ % 6); } });
+  eq(spotsOn(cardOf(rt, PEN2, SMITH)), "0,2,3,5,6,7", "v44 pen: old 1/4/5 shown as the new 7/5/6, the same boxes");
   BP.data.forEach((r, i) => { if (i && r[bh.indexOf("RecordID")] === PEN2) r[bh.indexOf("Build")] = "v45"; });
   eq(spotsOn(cardOf(rt, PEN2, SMITH)), "0,1,2,3,4,5", "v45 pen: the numbers are read as they are");
 

@@ -17,7 +17,7 @@ old one — tap the amber stamp to fix it.
 
 | App | Source & folder | Live on GitHub Pages |
 |---|---|---|
-| **Bullpen Chart** | **v46** | **v46** (Jim pushed Nov 13: Mound on Setup; with v45, the middle snowman). Before Jan 8: open it online on each iPad | Real-iPad upload test **passed Oct 19** (practice pen stayed off the Sheet, real pen landed) |
+| **Bullpen Chart** | **v47** | **v46** (Jim pushed Nov 13: Mound on Setup; with v45, the middle snowman). **v47 (Nov 13) waiting:** push `bullpen/index.html`, `bullpen/sw.js` and `bullpen/guide.html` (the Live AB call pad). Before Jan 8, then open it online on each iPad | Real-iPad upload test **passed Oct 19** (practice pen stayed off the Sheet, real pen landed) |
 | **Pitch Chart** (game) | **v38** | **v37** (Jim pushed Nov 13: the opponent list, picked on Setup; with v35 and v36). **v38 (Nov 13) waiting:** push `game/index.html`, `game/sw.js` and `game/guide.html` (the dropdown always shows on Setup). `opponents.js` is unchanged |
 | **Offense Chart** | **v56** | **v55** (Jim pushed Nov 13: the opponent list, picked on Setup). **v56 (Nov 13) waiting:** push `offense/index.html`, `offense/sw.js` and `offense/guide.html` (the dropdown always shows on Setup). `opponents.js` is unchanged |
 | **Receiver** | **receiver 4** | Redeploy as a new version of the same deployment (URL and key unchanged). Includes receiver 3 (game notes) |
@@ -202,6 +202,18 @@ is only for app code.
 - Tests: `tools/cards/fixture.js` builds a stand-in Sheet through the real apps and receiver; `tools/cards/cards.js` (173 checks), `tools/cards/mutate.js` (27 of 27 bugs caught), `tools/cards/page-check.js` (24 checks in a browser at phone width). `tools/receiver/mock-gas.js` gained MailApp, HtmlService, ScriptApp, Session and UrlFetchApp stand-ins; `upload.js` still 215 of 215.
 
 ## Bullpen Chart
+
+### v47 · Nov 13, 2026
+**Headline:** Live ABs get the Pitch Chart's call pad. Every pitch is called before it is charted, with Glove for the catcher's calls and ? Not known.
+
+- **Why:** Jim, Nov 13: *"Don't we need the where the pitch was called grid in the bullpen app for the live ABs?"* Through v46 a live AB took its call from a row of 8 buttons that **stuck from pitch to pitch**, and a new arm started on **0 (Middle)**. A charter who never touched it graded every pitch against Middle, with nothing on screen to say so, and E-022's pitch plan weighs live ABs the same as pens.
+- **The pad:** in Live ABs the Location row is replaced by the call pad: the catcher's view, In on the left, the same 5x5 and the same 0 to 7 as the Pitch Chart's pad and the script. Only the 8 numbered boxes can be called (the bullpen grades against its 8 locations); the other 17 are drawn, dimmed. Tap a number again to clear it.
+- **Called every pitch:** the location grid refuses a live pitch until it is called (*Called spot needed*, the pad outlined, the call card says *tap the call on the pad first*). The call clears after each pitch; pitch type and W/S/SS stay set. A live session saved by v46 reopens with nothing called.
+- **Glove:** the catcher is calling; stays on until turned off; the pad goes dashed. Graded, and marked Glove. **? Not known:** one pitch; charted, never graded (the old *no spot called*, renamed to match the Pitch Chart).
+- **Export and upload:** a **CallSource** column, last: Coach (the pad, the script or freeform), Glove or Unknown, the same words as the Pitch Chart. A v46 live pitch with no spot reads Unknown. The receiver adds the column by name; no receiver change.
+- **Unchanged:** scripted and freeform pens (freeform keeps its Location buttons and its sticky call); grading (Unknown is left out, never a miss).
+- **Not yet:** pen cards and the dashboard count a Glove pitch as graded like any other. The Pitch Chart's game card keeps glove calls apart; doing the same on pen cards is a cards change, logged.
+- **Tests:** new `tools/live-calls.js` (28 checks: the pad, the refusal, clearing, Glove, Not known, the report, the CSV, a v46 session, freeform untouched); 5 of 5 deliberate breaks caught. Sweep's live checks updated (*? Not known* replaces *no spot called*; its 4 standing failures unchanged). Upload suite 218 (+1: CallSource reaches the Sheet). `cards.js`: the location-number check now builds its own v44 pen instead of assuming the fixture was filed by v44 (the fixture is built by the current bullpen); 285 pass. `location-numbers.js` footer v47. swcache passes.
 
 ### v46 · Nov 13, 2026
 **Headline:** Name the mound on Setup. The header shows it, and tapping it opens Setup.

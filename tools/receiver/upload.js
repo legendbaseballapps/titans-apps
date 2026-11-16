@@ -357,7 +357,8 @@ async function part2() {
     check("and all 7 pitches", pitches(), 7);
     const pit = book.getSheetByName("Bullpen_Pitches");
     const head = pit.header();
-    check("the pitch tab carries every export column, RecordID first", head[0] + " … " + head.length + " columns, Practice=" + (head.indexOf("Practice") > 0), "RecordID … 39 columns, Practice=true");
+    check("the pitch tab carries every export column, RecordID first", head[0] + " … " + head.length + " columns, Practice=" + (head.indexOf("Practice") > 0), "RecordID … 40 columns, Practice=true");
+    check("v47: CallSource is the last column, Coach on a scripted pen", head[head.length - 1] + " " + pit.records()[0].CallSource, "CallSource Coach");
     check("the rows join on the session id", pit.records()[0].RecordID === pit.records()[0].SessionID, true);
     check("a formula-shaped coach name stayed text", pit.records()[0].Coach, "=cmd|' /C calc'!A0");
     const notes = book.getSheetByName("Bullpen_Notes").records();

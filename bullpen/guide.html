@@ -195,7 +195,7 @@ footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--rule);
       <div class="eyebrow">Legend Titans Baseball</div>
       <h1>Bullpen Chart Coach's Guide</h1>
       <p>How to run a winter bullpen on the iPad. The script goes in before anybody warms up; after that it's one tap a pitch.</p>
-      <div class="meta">App v46 &nbsp;·&nbsp; November 2026 &nbsp;·&nbsp; Winter workouts</div>
+      <div class="meta">App v47 &nbsp;·&nbsp; November 2026 &nbsp;·&nbsp; Winter workouts</div>
     </div>
   </div>
 
@@ -230,7 +230,7 @@ footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--rule);
     </ul>
     <div class="note">
       <span class="lab">Which version am I on?</span>
-      <p>The build is printed in the header, right after &ldquo;Bullpen Chart.&rdquo; This guide describes <b>v46</b>. If it shows two numbers in amber, like <code>v9 &ne; v8</code>, that iPad downloaded an update but is still showing the old one &mdash; see below.</p>
+      <p>The build is printed in the header, right after &ldquo;Bullpen Chart.&rdquo; This guide describes <b>v47</b>. If it shows two numbers in amber, like <code>v9 &ne; v8</code>, that iPad downloaded an update but is still showing the old one &mdash; see below.</p>
     </div>
 
     <h3 class="upd">Getting a new version</h3>
@@ -434,7 +434,7 @@ footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--rule);
 
   <section>
     <h2 class="upd">Live ABs</h2>
-    <p class="sub">Set a pitcher's mode to <b>Live ABs</b> on Setup when he's facing hitters. He gets the same <b>Call it</b> panel as a freeform pitcher, plus an at-bat around it.</p>
+    <p class="sub">Set a pitcher's mode to <b>Live ABs</b> on Setup when he's facing hitters. He gets the <b>Call it</b> panel with the call pad (v47), plus an at-bat around it.</p>
     <ul>
       <li>A big <b>count</b> at the top, worked out from where you plotted the pitches &mdash; in the zone is a strike, outside it is a ball. Nothing to enter.</li>
       <li>A strip of <b>at-bat chips</b> below it. One per AB, with its result and pitch count on it. The live one is outlined.</li>
@@ -442,9 +442,15 @@ footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--rule);
       <li>Tapped the wrong result? Tap that at-bat's chip and tap the right one. A closed at-bat won't take another pitch &mdash; it says so rather than quietly appending.</li>
       <li><b>+ New AB</b> is there for a hitter who never finishes.</li>
     </ul>
-    <h3 class="upd">The called spot is optional in here</h3>
-    <p>The Location row grows a <b>&mdash; no spot called</b> button. Use it when you're competing and nobody called a spot.</p>
-    <p><b>Those pitches are left out of the execution numbers, not counted as misses.</b> That matters: a competitive inning where nobody called spots would otherwise look like the worst command of the winter. The pitch still counts for strike %, velo and the at-bat; it just has nothing to be graded against. When some pitches are ungraded the KPI label tells you &mdash; <b>Spot &middot; of 12 graded</b> instead of <b>On the spot</b> &mdash; and the pip in the zone is outlined instead of coloured.</p>
+    <h3 class="upd">Call every pitch (new in v47)</h3>
+    <p>The Call it panel has the <b>call pad</b> in place of the Location row: the catcher's view, In on the left, the same grid and the same 0 to 7 as the Pitch Chart's pad and the script. Tap the number that was called, then where it went. <b>The call clears after every pitch</b>, so each one is called fresh; the pitch type and W/S/SS stay set.</p>
+    <ul>
+      <li><b>No call yet?</b> The location grid won't take the pitch: it says <i>Called spot needed</i> and outlines the pad. Through v46 the last call stuck and a new arm started on 0 (Middle), so a picker nobody touched graded every pitch against Middle.</li>
+      <li><b>Glove</b> &mdash; the catcher is calling. Turn it on and tap where he sets up, every pitch. It stays on until you turn it off. Graded, and marked <i>Glove</i> in the export so the coaches' calls and his can be read apart.</li>
+      <li><b>? Not known</b> &mdash; nobody saw the call. One tap answers one pitch. It counts for strike %, velo and the at-bat; it is <b>left out of the execution numbers, never counted as a miss</b>.</li>
+      <li>Tap a called number again to clear it.</li>
+    </ul>
+    <p>Export: a <code>CallSource</code> column on every row: <code>Coach</code>, <code>Glove</code> or <code>Unknown</code>, the same words as the Pitch Chart. Script and freeform pitches read <code>Coach</code>. Freeform pens keep the Location buttons as before.</p>
     <h3 class="upd">AO3+</h3>
     <p>Two characters, the same as the Pitch Chart and the same as the old spreadsheet. The first says whether he <b>got ahead</b> (ahead after three pitches, or the at-bat was over inside three). The second says whether he <b>got the out</b>.</p>
     <ul>
@@ -539,7 +545,7 @@ footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--rule);
     </ul>
   </section>
 
-  <footer>Legend Titans Bullpen Chart · app v46 · Guide prepared for winter workouts</footer>
+  <footer>Legend Titans Bullpen Chart · app v47 · Guide prepared for winter workouts</footer>
 
 </div>
 </body>
