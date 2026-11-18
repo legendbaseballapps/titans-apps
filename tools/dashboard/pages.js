@@ -34,8 +34,26 @@ function world(mutate) {
   rt.session.active = "coachv@example.com";
   return { rt, G, T: G.sheet };
 }
+/* 2.0.4: Notify on the Coaches tab decides who writes Winter comments (Pitching, Both or All) */
+const NOTIFY = { "jim@example.com": "Both", "coachv@example.com": "Pitching", "coachj@example.com": "Hitting" };
+function addNotify(T) { const C = T.Coaches; if (C[0].indexOf("Notify") < 0) { C[0].push("Notify"); C.slice(1).forEach((r) => r.push(NOTIFY[r[1]] || "")); } }
 const rowsOf = (T, n) => { const t = T[n], h = t[0]; return t.slice(1).map((r) => Object.fromEntries(h.map((k, i) => [k, r[i]]))); };
 
+/* ---------------------------------------------------------------- a pens-only pitcher with no Level on the Players tab (2.0.2) */
+{
+  let T0; const { rt } = world((T) => { T0 = T; const P = T.Players, h = P[0], r = P.find((x) => x[h.indexOf("First")] === "Tyler" && x[h.indexOf("Last")] === "Moss"); r[h.indexOf("Level")] = ""; addNotify(T); });
+  const M = JSON.parse(rt.sandbox.doGet({ parameter: {} }).getContent().match(/window\.MODEL = (\{[^]*?\});<\/script>/)[1]);
+  ok(!!M.pens[Object.keys(M.people).find((id) => M.people[id].name === "Tyler Moss")], "Tyler Moss has pens and no Level (the test is real)");
+  globalThis.__noLevel = rt; globalThis.__noLevelT = T0;
+  ok(M.me.winter === true && M.me.levels.join() === "Varsity", "a Pitching coach can write Winter comments, and his levels don't change");
+}
+/* a Level typed as "Winter" is the same as blank: no level page, no stat line (2.0.4) */
+{
+  const { rt } = world((T) => { const P = T.Players, h = P[0], r = P.find((x) => x[h.indexOf("First")] === "Tyler" && x[h.indexOf("Last")] === "Moss"); r[h.indexOf("Level")] = "Winter"; });
+  const M = JSON.parse(rt.sandbox.doGet({ parameter: {} }).getContent().match(/window\.MODEL = (\{[^]*?\});<\/script>/)[1]);
+  const id = Object.keys(M.people).find((i) => M.people[i].name === "Tyler Moss");
+  eq(M.people[id].home, "", "Level 'Winter' never becomes a level");
+}
 /* ---------------------------------------------------------------- who can open it */
 {
   const { rt } = world();
@@ -52,19 +70,20 @@ const rowsOf = (T, n) => { const t = T[n], h = t[0]; return t.slice(1).map((r) =
 }
 
 /* ---------------------------------------------------------------- comments: setup and the level rule */
-const W = world();
+const W = world(addNotify);
 {
   const { rt } = W;
   rt.session.active = "owner@example.com";
   rt.sandbox.setupComments();
   const cid = rt.props.COMMENTS_SHEET_ID, cb = rt.book(cid);
   ok(!!cb, "setupComments makes the comments spreadsheet and saves its id");
-  eq(cb.getSheets().map((s) => s.getName()).join(","), "Varsity,JV,Sophomore,Freshman", "one tab per level, and nothing else");
+  eq(cb.getSheets().map((s) => s.getName()).join(","), "Varsity,JV,Sophomore,Freshman,Winter", "one tab per level, plus Winter, and nothing else");
+  eq(((cb.getSheetByName("Winter") || { getProtections: () => [{ eds: [] }] }).getProtections()[0] || { eds: [] }).eds.sort().join(","), "coachv@example.com,jim@example.com", "only pitching coaches (Notify Pitching or Both) write the Winter tab");
   eq(cb.getSheetByName("Varsity").getProtections()[0].eds.sort().join(","), "coachv@example.com,jim@example.com", "only Varsity coaches can write the Varsity tab");
   eq(cb.getSheetByName("Sophomore").getProtections()[0].eds.sort().join(","), "coachf@example.com,coachs@example.com,jim@example.com", "a coach on 2 levels writes both");
   eq(cb.editors.length, 5, "every coach can open it");
   rt.sandbox.setupComments();
-  eq(cb.getSheets().length, 4, "running it again changes nothing");
+  eq(cb.getSheets().length, 5, "running it again changes nothing");
   rt.session.active = "coachv@example.com";
   const v = rt.sandbox.saveComment({ id: "t001", lv: "Varsity", role: "", text: "=Great year. 3-2 counts were his best.", player: "Cole Avery" });
   eq(v.text, "=Great year. 3-2 counts were his best.", "a Varsity coach saves a Varsity comment");
@@ -80,6 +99,14 @@ const W = world();
   ok(/under 1500/.test(err), "too long is refused");
   rt.sandbox.saveComment({ id: "t001", lv: "Varsity", role: "", text: "" });
   eq(cb.getSheetByName("Varsity").data.length, 1, "an empty save removes the comment");
+  rt.sandbox.saveComment({ id: "t001", lv: "winter", role: "", text: "Good winter.", player: "Cole Avery" });
+  eq(((cb.getSheetByName("Winter") || { data: [[]] }).data.slice(-1)[0] || [])[3], "Good winter.", "a pitching coach saves a Winter comment, on the Winter tab");
+  rt.session.active = "coachj@example.com";
+  try { rt.sandbox.saveComment({ id: "t001", lv: "Winter", role: "", text: "x" }); err = ""; } catch (e) { err = e.message; }
+  ok(/Only pitching coaches/.test(err), "a Hitting coach can't write a Winter comment (" + err + ")");
+  rt.session.active = "coachv@example.com";
+  rt.sandbox.saveComment({ id: "t001", lv: "Winter", role: "", text: "" });
+  eq((cb.getSheetByName("Winter") || { data: [] }).data.length, 1, "an empty Winter save removes it");
 }
 
 /* ---------------------------------------------------------------- the page */
@@ -178,6 +205,26 @@ const W = world();
   eq(await pg.$$eval("[data-cedit]", (x) => x.length), 0, "no Write button on a JV player for a Varsity coach");
   await click("[data-back]");
 
+  /* --- 2.0.5: reflections fold. Newest open, the next 4 one line each, the rest under "Show N older" */
+  {
+    await clickData("level", "Varsity"); await click('#sub [data-tab="players"]');
+    await clickData("person", "Cole Avery"); await pg.waitForTimeout(40);
+    const R0 = rowsOf(T, "Reflections").filter((r) => r.PlayerID === "t001" && /^(pen|pitch)$/.test(r.Kind)).length;
+    const f = await pg.evaluate(() => ({ all: document.querySelectorAll("details.rf").length, open: document.querySelectorAll("details.rf[open]").length,
+      top: document.querySelectorAll("section.card > details.rf").length, more: (document.querySelector("details.rmore > summary") || {}).textContent || "",
+      firstOpen: !!document.querySelector("section.card > details.rf:first-of-type[open]"), pv: (document.querySelector("details.rf:not([open]) .pv") || {}).textContent || "" }));
+    ok(R0 > 5, "Cole Avery has more than 5 reflections (" + R0 + "), so the test is real");
+    eq(f.all, R0, "every one of his reflections is on his page");
+    eq(f.open, 1, "only one is open");
+    ok(f.firstOpen, "and it's the newest");
+    eq(f.top, 5, "5 show before the fold");
+    eq(f.more, "Show " + (R0 - 5) + " older", "the rest sit under Show N older");
+    ok(/^(Start|Stop|Continue): \S/.test(f.pv), "a folded one shows the start of his answer (" + f.pv + ")");
+    await pg.click("section.card > details.rf:nth-of-type(2) > summary"); await pg.waitForTimeout(40);
+    eq(await pg.evaluate(() => document.querySelectorAll("details.rf[open]").length), 2, "tapping one opens it");
+    await click("[data-back]");
+  }
+
   /* --- every view */
   for (const side of ["Pitching", "Hitting", "Defense"]) {
     await click(`[data-side="${side}"]`);
@@ -218,6 +265,40 @@ const W = world();
     if (SHOTS) await pg.screenshot({ path: path.join(SHOTS, `phone-${side}-${lv}-${tab}.png`), fullPage: true });
   }
   await b.close();
+
+  /* --- a pens-only pitcher with no Level still shows on the Winter pages (2.0.2) */
+  {
+    const h3 = globalThis.__noLevel.sandbox.doGet({ parameter: {} }).getContent(), f3 = path.join(TMP, "nolevel.html");
+    fs.writeFileSync(f3, h3);
+    const b3 = await chromium.launch(), p3 = await b3.newPage();
+    await p3.route(/^https?:\/\//, (r) => r.abort());
+    await p3.goto("file://" + f3); await p3.waitForTimeout(150);
+    await p3.click('[data-season="Winter"]'); await p3.click('#sub [data-tab="teams"]'); await p3.waitForTimeout(50);
+    ok((await p3.innerText("#view")).includes("Tyler Moss"), "a pitcher with pens and no Level shows on the Winter staff table");
+    await p3.click('#sub [data-tab="players"]'); await p3.waitForTimeout(50);
+    ok((await p3.innerText("#view")).includes("Tyler Moss"), "and on the Winter players page");
+    /* 2.0.3: his pen reflections and the pen's coach notes are on his page; comments say why they can't open yet */
+    await p3.evaluate(() => [...document.querySelectorAll("[data-open]")].find((e) => /Tyler Moss/.test(e.textContent)).click()); await p3.waitForTimeout(60);
+    const tv = await p3.innerText("#view");
+    ok(/BULLPEN · |Bullpen · /.test(tv) && /Start:|Continue:/.test(tv), "his pen reflections show, labelled Bullpen");
+    ok(/Winter · pitching coaches/i.test(tv) && !/\ncoaches\s/.test(tv), "a pitcher with no level gets the Winter comment box, no blank 'coaches' box");
+    const NL = globalThis.__noLevel; NL.session.active = "owner@example.com"; NL.sandbox.setupComments(); NL.session.active = "coachv@example.com";
+    await p3.exposeFunction("__save", (c) => { try { return { ok: NL.sandbox.saveComment(c) }; } catch (e) { return { err: e.message }; } });
+    await p3.evaluate(() => {
+      function runner(s, f) { return { withSuccessHandler: (h) => runner(h, f), withFailureHandler: (h) => runner(s, h),
+        saveComment: (c) => { window.__save(c).then((r) => (r.err ? f && f(new Error(r.err)) : s && s(r.ok))); } }; }
+      window.google = { script: { run: runner(null, null) } }; });
+    eq(await p3.$$eval("[data-cedit]", (x) => x.length), 1, "a pitching coach sees Write on the Winter box");
+    await p3.click("[data-cedit]"); await p3.fill("#cbox", "Lands the curve now."); await p3.click("[data-csave]"); await p3.waitForTimeout(150);
+    ok((await p3.innerText("#view")).includes("Lands the curve now."), "the Winter comment saves and shows on his page");
+    eq(((NL.book(NL.props.COMMENTS_SHEET_ID).getSheetByName("Winter") || { data: [[]] }).data.slice(-1)[0] || [])[3], "Lands the curve now.", "and it is on the Winter tab");
+    const NT = globalThis.__noLevelT, nh = NT.Bullpen_Notes[0], nr = NT.Bullpen_Notes.slice(1).find((r) => r[nh.indexOf("ToPitcher")]);
+    const who = NT.Players.slice(1).find((r) => r[0] === nr[nh.indexOf("PitcherID")]);
+    await p3.click('#sub [data-tab="players"]'); await p3.waitForTimeout(40);
+    await p3.evaluate((n) => [...document.querySelectorAll("[data-open]")].find((e) => e.textContent.indexOf(n) >= 0).click(), who[2] + " " + who[1]); await p3.waitForTimeout(60);
+    ok((await p3.innerText("#view")).includes(nr[nh.indexOf("ToPitcher")]), "a pen's To the pitcher note shows in his Winter work (" + who[2] + " " + who[1] + ")");
+    await b3.close();
+  }
 
   /* --- an empty Sheet (the day it's deployed): every page still draws */
   {

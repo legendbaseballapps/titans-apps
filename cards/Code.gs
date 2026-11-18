@@ -35,7 +35,7 @@
      function either ends in _ (private) or refuses to run unless it was started
      from the editor or one of this project's own triggers. */
 
-var VERSION = "cards 4.5 (Nov 2026)";
+var VERSION = "cards 4.6 (Nov 2026)";
 
 var PLAYERS_HEAD = ["PlayerID", "Last", "First", "Class", "Level", "Player email", "Parent email", "Send"];
 var LINKS_HEAD = ["PlayerID", "Token", "Made"];
@@ -1222,14 +1222,15 @@ function flags_(arm, feel, a) {
   if (feel <= 2 || has(all, FLAG_MENTAL) || has(ssc, FLAG_STRONG_MENTAL)) out.push("Mental");
   return out;
 }
-/* Coaches whose Notify covers this role and whose Level(s) cover this level. */
+/* Coaches whose Notify covers this role and whose Level(s) cover this level. A blank or "Winter" Level
+   (Nov 2026: no level until tryouts) goes to every coach whose Notify covers the role. */
 function flagTo_(ss, role, level, cfg) {
   var t = table_(ss, "Coaches"), out = [];
   t.rows.forEach(function (r) {
     var em = s_(r["Google account"]).trim(), n = s_(r.Notify).toLowerCase(), lv = s_(r["Level(s)"]).toLowerCase();
     if (!em || !n) return;
     var roleOk = n.indexOf("both") >= 0 || n.indexOf("all") >= 0 || n.indexOf(role === "hitting" ? "hit" : "pitch") >= 0;
-    var lvOk = !level || !lv || lv.indexOf("all") >= 0 ||
+    var lvOk = !level || /^winter$/i.test(String(level).trim()) || !lv || lv.indexOf("all") >= 0 ||
       lv.split(/[,\/;]+/).map(function (x) { return x.trim(); }).indexOf(String(level).toLowerCase()) >= 0;
     if (roleOk && lvOk && out.indexOf(em) < 0) out.push(em);
   });

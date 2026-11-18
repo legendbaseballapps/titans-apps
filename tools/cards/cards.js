@@ -413,6 +413,9 @@ const PEN1 = REC["bullpen2027-01-12"], PEN2 = REC["bullpen2027-01-19"], LIVE = R
   eq(rt.mail.length, 1, "one heads-up email");
   ok(/^\[TEST for a@example\.com, c@example\.com, d@example\.com\] Heads-up: Colten Smith, physical flag/.test(rt.mail[0].subject), "pen flag: every pitching coach (no level on a pen), test redirect");
   ok(rt.mail[0].htmlBody.includes("2 of 5"), "heads-up shows the rating");
+  /* cards 4.6: a Level of "Winter" (no level until tryouts) is the same as blank: every pitching coach */
+  eq(rt.sandbox.flagTo_(rt.b, "pitching", "Winter", {}), rt.sandbox.flagTo_(rt.b, "pitching", "", {}), "Level 'Winter' goes to every pitching coach, same as blank");
+  eq(rt.sandbox.flagTo_(rt.b, "pitching", "Winter", {}), "a@example.com, c@example.com, d@example.com", "and that's a, c and d");
   /* pitcher game: Varsity -> Varsity pitching coach + Both */
   rt.mail.length = 0;
   save({ t: st, r: GAME, k: "pitch", arm: 5, feel: 1, pre: "Most", reset: "Every time", start: "a", stop: "b", cont: "c", bother: "" });

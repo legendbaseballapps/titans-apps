@@ -22,7 +22,7 @@ var COMMENT_MAX = 1500;
 
 function coachLevels_(coaches) {
   var o = {};
-  coaches.forEach(function (r) { var em = String(r["Google account"] || "").toLowerCase().trim(); if (em) o[em] = mLevels_(r["Level(s)"]); });
+  coaches.forEach(function (r) { var em = String(r["Google account"] || "").toLowerCase().trim(); if (em) o[em] = mLevels_(r["Level(s)"]).concat(pitchCoach_(r) ? [WINTER] : []); });
   return o;
 }
 function commentsBook_() {
@@ -34,7 +34,7 @@ function commentsFor_(coaches) {
   var out = {};
   try {
     var book = commentsBook_(); if (!book) return out;
-    LEVELS.forEach(function (lv) { out[lv] = rows_(book, lv); });
+    CLEVELS.forEach(function (lv) { if (book.getSheetByName(lv)) out[lv] = rows_(book, lv); });
   } catch (x) {}
   return out;
 }
@@ -45,11 +45,11 @@ function saveComment(c) {
   var me = "";
   try { me = String(Session.getActiveUser().getEmail() || "").toLowerCase().trim(); } catch (x) {}
   var ss = SpreadsheetApp.openById(PropertiesService.getScriptProperties().getProperty("SEASON_SHEET_ID"));
-  var lv = levelName_(c.lv), id = String(c.id || "").trim(), role = /^(Pitching|Hitting)$/.test(c.role) ? c.role : "";
+  var lv = commentLevelName_(c.lv), id = String(c.id || "").trim(), role = /^(Pitching|Hitting)$/.test(c.role) ? c.role : "";
   var text = String(c.text == null ? "" : c.text).replace(/\r\n?/g, "\n").trim();
   if (!lv || !id) throw new Error("Which player and level is missing.");
   var mine = coachLevels_(rows_(ss, "Coaches"))[me] || [];
-  if (mine.indexOf(lv) < 0) throw new Error("Only " + lv + " coaches can write " + lv + " comments. Ask Jim to add " + lv + " to your row on the Coaches tab.");
+  if (mine.indexOf(lv) < 0) throw new Error(lv === WINTER ? "Only pitching coaches can write Winter comments. Ask Jim to set Notify to Pitching or Both on your row of the Coaches tab." : "Only " + lv + " coaches can write " + lv + " comments. Ask Jim to add " + lv + " to your row on the Coaches tab.");
   if (text.length > COMMENT_MAX) throw new Error("Keep it under " + COMMENT_MAX + " characters.");
   var book = commentsBook_();
   if (!book) throw new Error("Comments aren't set up yet. Jim runs setupComments once.");
@@ -81,13 +81,13 @@ function setupComments() {
     props.setProperty("COMMENTS_SHEET_ID", book.getId());
   }
   var levels = coachLevels_(rows_(ss, "Coaches")), everyone = Object.keys(levels);
-  LEVELS.forEach(function (lv) {
+  CLEVELS.forEach(function (lv) {
     var sh = book.getSheetByName(lv) || book.insertSheet(lv);
     if (sh.getLastRow() < 1) sh.getRange(1, 1, 1, COMMENT_HEAD.length).setValues([COMMENT_HEAD]);
     sh.getRange("D:D").setNumberFormat("@");
     var who = everyone.filter(function (em) { return levels[em].indexOf(lv) >= 0; });
     var prot = sh.getProtections(SpreadsheetApp.ProtectionType.SHEET)[0] || sh.protect();
-    prot.setDescription(lv + " coaches only");
+    prot.setDescription(lv === WINTER ? "Pitching coaches only" : lv + " coaches only");
     var now = prot.getEditors().map(function (u) { return u.getEmail().toLowerCase(); });
     var drop = now.filter(function (em) { return who.indexOf(em) < 0; });
     if (drop.length) prot.removeEditors(drop);
@@ -95,9 +95,9 @@ function setupComments() {
     if (prot.canDomainEdit && prot.canDomainEdit()) prot.setDomainEdit(false);
   });
   var first = book.getSheets()[0];
-  if (book.getSheets().length > LEVELS.length && first && LEVELS.indexOf(first.getName()) < 0 && first.getLastRow() === 0) book.deleteSheet(first);
+  if (book.getSheets().length > CLEVELS.length && first && CLEVELS.indexOf(first.getName()) < 0 && first.getLastRow() === 0) book.deleteSheet(first);
   /* every coach can open it (to read on the page); the tab protections decide who can write */
   if (everyone.length) book.addEditors(everyone);
-  Logger.log("Comments ready: " + book.getUrl() + " . Writers: " + LEVELS.map(function (lv) {
+  Logger.log("Comments ready: " + book.getUrl() + " . Writers: " + CLEVELS.map(function (lv) {
     return lv + " " + everyone.filter(function (em) { return levels[em].indexOf(lv) >= 0; }).length; }).join(", "));
 }

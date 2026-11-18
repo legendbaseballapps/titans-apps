@@ -128,6 +128,11 @@ function buildModel_(get, opt) {
   M.pit.sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : a.rid < b.rid ? -1 : 1; });
   M.games = Object.keys(games).map(function (k) { return games[k]; })
     .sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : a.rid < b.rid ? -1 : 1; });
+  /* 2.0.3: the Bullpen Chart's notes too, keyed on the session (To the pitcher, Coach only) */
+  get("Bullpen_Notes").filter(keep).forEach(function (r) {
+    var t = s_(r.ToPitcher).trim(), c = s_(r.CoachOnly).replace(/^=/, "").trim();
+    if (t || c) M.notes[s_(r.SessionID || r.RecordID) + "|" + s_(r.PitcherID)] = {to: t, coach: c};
+  });
   get("Game_Notes").filter(keep).forEach(function (r) {
     var t = s_(r.ToPitcher).trim(), c = s_(r.CoachOnly).replace(/^=/, "").trim();
     if (t || c) M.notes[s_(r.RecordID) + "|" + s_(r.PitcherID)] = {to: t, coach: c};
@@ -440,9 +445,9 @@ function mLevels_(raw) { raw = s_(raw); return /all/i.test(raw) ? LEVELS.slice()
 function mCoach_(coaches, me) {
   me = String(me || "").toLowerCase().trim();
   var r = coaches.filter(function (x) { return me && String(x["Google account"] || "").toLowerCase().trim() === me; })[0];
-  return {email: me, name: r ? s_(r.Name) : "", levels: r ? mLevels_(r["Level(s)"]) : []};
+  return {email: me, name: r ? s_(r.Name) : "", levels: r ? mLevels_(r["Level(s)"]) : [], winter: !!(r && pitchCoach_(r))};
 }
-/* the comments spreadsheet's 4 tabs -> one list, with each writer's name from the Coaches tab */
+/* the comments spreadsheet's tabs (4 levels + Winter) -> one list, with each writer's name from the Coaches tab */
 function mComments_(byLv, coaches) {
   var names = {}, out = [];
   coaches.forEach(function (r) { var em = String(r["Google account"] || "").toLowerCase().trim(); if (em) names[em] = s_(r.Name); });
@@ -450,7 +455,7 @@ function mComments_(byLv, coaches) {
     (byLv[lv] || []).forEach(function (r) {
       var t = s_(r.Comment).trim(), pid = s_(r.PlayerID).trim(); if (!t || !pid) return;
       var by = String(r.By || "").toLowerCase().trim();
-      out.push({id: pid, lv: levelName_(lv), role: s_(r.Role).trim(), text: t, by: names[by] || by, at: s_(r.At)});
+      out.push({id: pid, lv: commentLevelName_(lv), role: s_(r.Role).trim(), text: t, by: names[by] || by, at: s_(r.At)});
     });
   });
   return out;

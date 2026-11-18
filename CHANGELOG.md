@@ -21,11 +21,11 @@ old one — tap the amber stamp to fix it.
 | **Pitch Chart** (game) | **v38** | **v38 live** (Jim pushed it after Nov 13: the opponent dropdown always shows on Setup; with v37, the opponent list picked on Setup) |
 | **Offense Chart** | **v56** | **v56 live** (Jim pushed it after Nov 13: the opponent dropdown always shows on Setup; with v55, the opponent list picked on Setup) |
 | **Receiver** | **receiver 4** | Redeploy as a new version of the same deployment (URL and key unchanged). Includes receiver 3 (game notes) |
-| **Player cards** | **cards 4.5**, **reflections 2** (`cards/`) | **cards 4.5 (Nov 13) waiting:** paste `cards/Code.gs` and deploy a New version (pen cards read the new location numbers; game cards keep glove and unknown calls apart). **cards 4.4 deployed Nov 13** as a New version (two-way games: 1 email, 2 reflections; includes 4.3, the hitter zone's contact vs swing and miss). Test files pushed. **cards 4.2 deployed Nov 6** as a New version (Jim: "works and looks great"); reflections 2 live. Test mode. Next: the test-mode run, player and parent emails, then `SEND_MODE` live (school / AD approval done Nov 6) |
-| **Demo page** | `demo/index.html` | **Live Nov 2** (adds Load the 7th inning; checked against the site). **Rebuilt Nov 11, waiting:** push `demo/index.html`, `demo/chart-this-inning.html`, `demo/Chart-This-Inning-Group-Card.pdf` and `demo/Players-Session-Run-of-Show.pdf`. Safe to push now: live offense v52 ignores the new inning fields (checked). Adds a Players' session card linking Chart This Inning, the group card and the run of show. Offense v53 must not go live BEFORE this demo page (the old demo opens v53 at inning 1). Rebuild with `tools/demo-build.js`, then `LIVE=1`, then `tools/demo-page.py` |
-| **Sample card page** | **sample 7** (`cards/sample.html`, `cards/sample-sw.js`) | **sample 7 (Nov 13) waiting:** push both files (the pen card's spot numbers, the middle snowman). **sample 6 (Nov 12):** push both files (hitter zone: colored marks, red X fixed for iPhone). **sample 3 live Nov 6. sample 4 (Nov 6) waiting:** push both files (bold markers). For the player meeting Nov 12 (QR code). Rebuild with `tools/cards/sample-page.js` |
-| **Coaches dashboard** | **dashboard 2.0** (`dashboard/Code.gs`, `Model.gs`, `Comments.gs`, `Dash.html`): the full dashboard (sandbox v36, real numbers), coach comments, GameChanger import | **dashboard 2.0.1 live Nov 16** (Jim deployed it; the /exec link shows the version in the footer and the coach's name). Comments spreadsheet set up. 2.0 was deployed first the same day and showed every page empty (see 2.0.1 below). To update later: paste the changed files, then Deploy > Manage deployments > edit > Version: **New version** (leaving the old number keeps the link on the old code) **dashboard 1.4 live Nov 13** (Jim deployed it and re-imported 2026). The Coaches tab header must read exactly `Google account` |
-| **Dashboard sample page** | **dashboard sample 1** (`dashboard/sample.html`) | **Waiting:** push it; the head coach opens legendbaseballapps.github.io/titans-apps/dashboard/sample.html. Rebuild with `tools/dashboard/sample-page.js` |
+| **Player cards** | **cards 4.6**, **reflections 3** (`cards/`) | **cards 4.6 (Nov 18) waiting:** paste `cards/Code.gs` and Save (a Winter Level flags every pitching coach). **reflections 3 live Nov 17** (shows Google's real reason on No access; Jim deployed it). **cards 4.5 deployed Nov 18** as a New version (Jim; pen cards read the new location numbers; game cards keep glove and unknown calls apart). Test mode. Next: the test-mode run; student emails requested from the school (head coach, Nov 18), parents reply only to opt out or ask for a copy; one delivery test to a school address; then `SEND_MODE` live before Jan 8 |
+| **Demo page** | `demo/index.html` | **Rebuilt Nov 11, pushed by Jim Nov 18** (with the Players' session card, the group card and the run of show). Rebuild with `tools/demo-build.js`, then `LIVE=1`, then `tools/demo-page.py` |
+| **Sample card page** | **sample 7** (`cards/sample.html`, `cards/sample-sw.js`) | **sample 7 pushed by Jim Nov 18** (the pen card's spot numbers, the middle snowman). Rebuild with `tools/cards/sample-page.js` |
+| **Coaches dashboard** | **dashboard 2.0** (`dashboard/Code.gs`, `Model.gs`, `Comments.gs`, `Dash.html`): the full dashboard (sandbox v36, real numbers), coach comments, GameChanger import | **dashboard 2.0.5 (Nov 18) waiting:** paste `Code.gs` and `Dash.html`, then deploy a New version (reflections fold: the newest is open, the rest one line each, plus Show N older). **2.0.4 live Nov 18** (Winter comment box for pitchers with no level, written by the pitching coaches). **2.0.3 live Nov 18** (pen reflections and pen notes on the player page). **2.0.2 live Nov 18** (pens-only pitchers with no Level show on Winter; No access says why). **dashboard 2.0.1 live Nov 16, rolled out to all 11 coaches Nov 18** (coach setup guide: `Claude outputs/dashboard-coach-setup/Coaches Dashboard Setup.pdf`; Jim deployed it; the /exec link shows the version in the footer and the coach's name). Comments spreadsheet set up. 2.0 was deployed first the same day and showed every page empty (see 2.0.1 below). To update later: paste the changed files, then Deploy > Manage deployments > edit > Version: **New version** (leaving the old number keeps the link on the old code) **dashboard 1.4 live Nov 13** (Jim deployed it and re-imported 2026). The Coaches tab header must read exactly `Google account` |
+| **Dashboard sample page** | **dashboard sample 1** (`dashboard/sample.html`) | **Pushed by Jim Nov 18.** The 1.x one-page summary on a made-up season. Rebuild with `tools/dashboard/sample-page.js` |
 
 **The site moved Oct 14, 2026** to the program-owned account: **legendbaseballapps.github.io/titans-apps** (repo transferred from vaughnzj, so the live files, including the real `roster.js`, moved as they were). Every iPad installs from the new link; History saved under the old address does not carry over. The Coach's Guides in the pending builds (bullpen v31, game v23, offense v42) carry the new address, so pushing those builds is what puts it on the iPads.
 
@@ -60,6 +60,49 @@ is only for app code.
 - Tests: `tools/demo-live-check.js` loads it, charts a 4-pitch strikeout in the Pitch Chart and a pitch in the Offense Chart; `tools/demo-check.js` still all ok.
 
 ## Coaches dashboard (Titans Coaches Dashboard)
+
+### dashboard 2.0.5 · Nov 18, 2026
+
+**Headline:** a player's reflections fold. The newest is open, the rest are one line each, and every one he has written is on his page.
+
+- **Why:** Jim wanted more than 3 reflections without taking up the screen (mockup Nov 18).
+- **How it reads:** the newest reflection is open. The next 4 show one line each: the event, date, feel, any arm flag, "bothering him" when he wrote something there, and the start of his Start answer. Tap a line to open it. Everything older sits under "Show N older". Pitching (pens and games) and hitting reflections both work this way.
+- **Printing** a player page opens every fold first, so nothing is cut off.
+- **Jim:** paste `dashboard/Code.gs` and `dashboard/Dash.html`, then Save. Deploy > Manage deployments > edit > **New version**. The footer reads dashboard 2.0.5. Includes 2.0.4, so if 2.0.4 isn't deployed yet, its steps apply too (paste Model.gs and Comments.gs, run setupComments).
+- **Tests:** `pages.js` 64 checks. The 8 new ones fail on 2.0.4. Model, dashboard, import and sample checks all pass.
+
+### dashboard 2.0.4 · Nov 18, 2026
+
+**Headline:** pitchers with no level yet get a Winter comment box that the pitching coaches can write in. Nothing on the dashboard hints at the level a player will make.
+
+- **Why:** after 2.0.3, Jim's test pitcher still had no comment box. Jim doesn't want a provisional Level on anyone before tryouts, since it could suggest a spring level.
+- **Winter level (comments only):** a blank Level or a Level of "Winter" on the Players tab gives the pitcher a "Winter · pitching coaches" comment box. Winter never appears on the level pages, the level tabs or in any stat.
+- **Who writes:** coaches whose Notify is Pitching or Both (or All). Level(s) doesn't matter. Every coach can read.
+- **After tryouts:** once a pitcher gets a real Level, that level's box takes over. If a Winter comment was written, it stays on his page under it.
+- **Comments spreadsheet:** `setupComments` adds a Winter tab, locked to the pitching coaches. Rerun it after a coach's Notify changes, the same as after a Level(s) change.
+- **Jim:** paste `dashboard/Code.gs`, `dashboard/Model.gs`, `dashboard/Comments.gs` and `dashboard/Dash.html`, then Save. Run **setupComments** once. Deploy > Manage deployments > edit > **New version**. The footer reads dashboard 2.0.4. Includes 2.0.3.
+- **Tests:** `pages.js` 56 checks. The 9 new ones fail on 2.0.3: Winter tab and its editors, a Hitting coach refused, a typed "Winter" never becomes a level, and the Winter box written and saved on the page. Model, dashboard, import and sample checks all pass.
+
+### dashboard 2.0.3 · Nov 18, 2026
+
+**Headline:** a pitcher's page shows his bullpen reflections and the coaches' pen notes, and coach comments no longer show an empty "coaches" box for a pitcher with no level.
+
+- **Why:** Jim's test pen (Nov 18) showed on the dashboard after 2.0.2, but His Reflections said "None yet" though he had written one, the pen's coach note was nowhere, and Coach Comments showed a blank "coaches" box. 2.0 showed game reflections only and never read Bullpen_Notes.
+- **Reflections:** pen reflections now show with game reflections, newest first, labelled "Bullpen · <routine>".
+- **Winter work:** a Coach note column with the pen's To the pitcher note, and the Coach only note in grey italics.
+- **Comments:** a pitcher with no level gets a note (comments open once his Level is filled in or he pitches in a game) in place of a box nobody can write in.
+- **Jim:** paste `dashboard/Code.gs`, `dashboard/Model.gs` and `dashboard/Dash.html`, Save, Deploy > Manage deployments > edit > **New version**. Footer reads dashboard 2.0.3. Includes 2.0.2.
+- **Tests:** `pages.js` 47 checks (3 new, all fail on 2.0.2); model, dashboard, import green.
+
+### dashboard 2.0.2 · Nov 18, 2026
+
+**Headline:** a pitcher with pens but no Level on the Players tab now shows on the Winter pages, and "No access" says what Google said.
+
+- **Why:** Jim's test pen (Nov 18) filed and uploaded, the cards and reflections worked, but the pen was missing from the dashboard. The 2 test pitchers had no Level on the Players tab and no games, so 2.0 never gave them a line, and the Winter pages (which go by class) had nobody to show.
+- **Fix:** every pitcher with pens gets a line; without a Level he shows on the Winter pages by class, and joins his level's pages once a Level is filled in or he pitches a game.
+- **No access:** the box now adds "Google said: ..." (the same change as reflections 3), so an unticked permission box isn't mistaken for "not shared".
+- **Jim:** paste `dashboard/Code.gs` and `dashboard/Dash.html`, Save, Deploy > Manage deployments > edit > **New version**. Model.gs and Comments.gs unchanged. Footer then reads dashboard 2.0.2. Filling in Level and Class on the Players tab is still worth doing: Level puts a pitcher on his team's pages before his first game.
+- **Tests:** `pages.js` 44 checks (new: a pens-only pitcher with no Level is on the Winter staff and players pages; fails on 2.0.1); dashboard 121 with the new access message; model, import, mutation (15 of 15) green.
 
 ### dashboard 2.0.1 · Nov 16, 2026
 
@@ -129,6 +172,14 @@ is only for app code.
 - Tests: `tools/dashboard/dashboard.js` (120 checks, every number worked out separately from the rows, the cards and the dashboard agree on the counter, laptop and phone widths with no sideways scroll); `tools/dashboard/mutate.js` (15 of 15 bugs caught).
 
 ## Player cards
+
+### cards 4.6 · Nov 18, 2026
+
+**Headline:** a reflection flag from a pitcher whose Level is "Winter" goes to every pitching coach, the same as a blank Level.
+
+- **Why:** with dashboard 2.0.4, Jim can type Winter in Level until tryouts. Without this fix, a flag from that pitcher would reach only coaches whose Level(s) was All.
+- **Jim:** paste `cards/Code.gs` and Save. The triggers run the saved code, so no new deployment is needed (the player page doesn't change).
+- **Tests:** `cards.js` 287 checks. The 2 new ones fail on 4.5.
 
 ### reflections 3 · Nov 17, 2026
 

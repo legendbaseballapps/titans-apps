@@ -188,6 +188,17 @@ td.gnote { white-space: normal; min-width: 180px; text-align: left; color: var(-
 .refl .rh span { font-size: 12px; color: var(--muted); }
 .refl p { margin: 4px 0 0; line-height: 1.5; }
 .refl p.empty { color: var(--faint); font-style: italic; }
+details.rf > summary { cursor: pointer; list-style: none; }
+details.rf > summary::-webkit-details-marker { display: none; }
+details.rf > summary::before { content: "▸"; color: var(--muted); font-size: 11px; width: 10px; }
+details.rf[open] > summary::before { content: "▾"; }
+details.rf .pv { flex: 1 1 200px; min-width: 0; font-style: normal; font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+details.rf[open] .pv { display: none; }
+details.rf > p { margin-left: 20px; }
+details.rmore { border-top: 1px solid var(--soft); padding-top: 10px; }
+details.rmore > summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--muted); }
+details.rmore[open] > summary { margin-bottom: 4px; }
+details.rmore .refl:first-of-type { border-top: 1px solid var(--soft); padding-top: 10px; }
 .sheet { background: #fff; border: 2px solid var(--navy); border-radius: 12px; padding: 20px 22px; display: grid; gap: 12px; }
 .sheet .sh-top { display: flex; align-items: center; gap: 10px; border-bottom: 2px solid var(--navy); padding-bottom: 8px; }
 .sheet .sh-top b { display: block; font-family: var(--display); font-size: 18px; letter-spacing: 1px; text-transform: uppercase; color: var(--navy); }
@@ -459,7 +470,9 @@ function pline(id, lv) {
   if (L.xn) p.gameEx.push({rid: L.rid, date: L.date, lv: L.lv, ok: L.xok, g: L.xn, v: Math.round(L.xok * 100 / L.xn)});
 });
 /* every arm with winter work or a game has a line on his own level, even before he pitches there */
-Object.keys(WINTER).concat(Object.keys(BFBY)).forEach(function (id) { var h = homeOf(id); if (h) pline(id, h); });
+/* A pitcher with pens but no Level on the Players tab and no games yet still gets a line, with no level: the
+   winter pages go by class, so he shows there (Nov 18: Jim's test pen was missing from Winter). */
+Object.keys(WINTER).concat(Object.keys(BFBY)).forEach(function (id) { var h = homeOf(id); if (h) pline(id, h); else if (WINTER[id]) pline(id, ""); });
 function metrics(o) {
   var ip = o.outs / 3;
   return {free: o.bf ? o.free * 100 / o.bf : null, fps: o.fp ? o.fps * 100 / o.fp : null, strike: o.pitches ? o.strikes * 100 / o.pitches : null,
@@ -815,7 +828,7 @@ function commentFor(name, lv, role) {
   return c.length ? c[c.length - 1] : null;
 }
 function commentDone(name, lv, role) { return !!commentFor(name, lv, role); }
-function canWrite(lv) { return ((MODEL.me || {}).levels || []).indexOf(lv) >= 0; }
+function canWrite(lv) { var me = MODEL.me || {}; return lv === "Winter" ? !!me.winter : (me.levels || []).indexOf(lv) >= 0; }
 function backBtn(what) {
   if (WIN()) return '<button class="back" data-back="1">‹ ' + (S.from ? clsName(S.cls) + " " + ({teams: "Staff", board: "Leaderboard"}[S.from] || "Overview") : "All " + (S.cls === "All" ? "pitchers" : clsName(S.cls).toLowerCase())) + "</button>";
   return '<button class="back" data-back="1">‹ ' + (S.from ? S.level + " " + ({teams: "Team", overview: "Overview", reports: "Reports", scout: "Scouting"}[S.from] || "") : "All " + S.level + " " + what) + "</button>"; }
@@ -896,39 +909,55 @@ function winterLog(o) {
   var p = o.first, all = p.pens.concat(p.live).sort(function (a, b) { return a.d < b.d ? -1 : a.d > b.d ? 1 : 0; });
   if (!all.length) return '<section class="card"><h2>Winter work</h2><p class="note" style="margin:0">No bullpens charted.</p></section>';
   var k = 0;
-  return '<section class="card"><h2>Winter work <small>' + p.pens.length + (p.pens.length === 1 ? " scripted pen" : " scripted pens") + (p.live.length ? " and " + p.live.length + (p.live.length === 1 ? " live AB session" : " live AB sessions") : "") + "</small></h2><div class=\"scroll\"><table><tr><th>Pen</th><th>Date</th><th>Routine</th><th>Execution</th><th>Reflection</th></tr>" +
+  return '<section class="card"><h2>Winter work <small>' + p.pens.length + (p.pens.length === 1 ? " scripted pen" : " scripted pens") + (p.live.length ? " and " + p.live.length + (p.live.length === 1 ? " live AB session" : " live AB sessions") : "") + "</small></h2><div class=\"scroll\"><table><tr><th>Pen</th><th>Date</th><th>Routine</th><th>Execution</th><th>Reflection</th><th>Coach note</th></tr>" +
     all.map(function (s) {
       var v = s.g ? Math.round(s.ok * 100 / s.g) : null, goal = s.mode === "Live" ? LADDER.live : LADDER.pen;
       return "<tr><td>" + (s.mode === "Live" ? "Live" : ++k) + "</td><td>" + sd(s.d) + "</td><td>" + (s.mode === "Live" ? "Live ABs" : esc(s.tpl || "Freeform")) + "</td><td>" +
-        (v == null ? "–" : '<span class="cell">' + v + '%<i class="' + (v >= goal ? "ok" : "ring") + ' sm"></i></span>') + "</td><td>" + (s.flag ? '<span class="pill go">Arm flag</span>' : s.refl ? "Written" : "–") + "</td></tr>";
+        (v == null ? "–" : '<span class="cell">' + v + '%<i class="' + (v >= goal ? "ok" : "ring") + ' sm"></i></span>') + "</td><td>" + (s.flag ? '<span class="pill go">Arm flag</span>' : s.refl ? "Written" : "–") + '</td><td class="gnote">' + noteCell(s.sid, o.first.name) + "</td></tr>";
     }).join("") + "</table></div></section>";
 }
 var REFL = MODEL.refl || [];
-function reflBox(r) {
+/* printing a player page prints every reflection, folded or not */
+window.addEventListener("beforeprint", function () { [].forEach.call(document.querySelectorAll("details.rf, details.rmore"), function (d) { d.open = true; }); });
+/* 2.0.5: every reflection is a fold. The newest is open; the rest show one line (event, date, feel, any arm flag,
+   and the start of his Start answer) and open on a tap. Past the first 5, the rest sit under "Show N older". */
+function reflBox(r, open) {
   var bits = [["Start", r.start], ["Stop", r.stop], ["Continue", r.cont]].filter(function (x) { return x[1]; });
-  return '<div class="refl"><div class="rh"><b>' + esc(r.ev || "Reflection") + "</b><span>" + sd(r.date) + (r.feel ? " · feel " + esc(r.feel) + " of 5" : "") + (r.flag ? ' · <span class="pill go">Arm flag</span>' : "") + "</span></div><p>" +
-    (bits.length ? bits.map(function (x) { return "<b>" + x[0] + ":</b> " + esc(x[1]); }).join("<br>") : "No written answers.") + (r.bother ? "<br><b>Bothering him:</b> " + esc(r.bother) : "") + "</p></div>";
+  var ev = r.kind === "pen" ? "Bullpen" + (r.ev ? " · " + r.ev : "") : r.ev || "Reflection";
+  var pv = bits.length ? bits[0][0] + ": " + bits[0][1] : "";
+  return '<details class="refl rf"' + (open ? " open" : "") + '><summary class="rh"><b>' + esc(ev) + "</b><span>" + sd(r.date) + (r.feel ? " · feel " + esc(r.feel) + " of 5" : "") + (r.flag ? ' · <span class="pill go">Arm flag</span>' : "") + (r.bother ? " · bothering him" : "") + "</span>" +
+    (pv ? '<em class="pv">' + esc(pv) + "</em>" : "") + "</summary><p>" +
+    (bits.length ? bits.map(function (x) { return "<b>" + x[0] + ":</b> " + esc(x[1]); }).join("<br>") : "No written answers.") + (r.bother ? "<br><b>Bothering him:</b> " + esc(r.bother) : "") + "</p></details>";
 }
-function reflList(name, kind) { var id = PID[name]; return REFL.filter(function (r) { return r.id === id && r.kind === kind; }); }
+function reflStack(list, n) {
+  var top = list.slice(0, n).map(function (r, i) { return reflBox(r, i === 0); }).join(""), rest = list.slice(n);
+  return top + (rest.length ? '<details class="rmore"><summary>Show ' + rest.length + " older</summary>" + rest.map(function (r) { return reflBox(r, false); }).join("") + "</details>" : "");
+}
+/* kind: "pitch", "hit", or a list; a pitcher's reflections include his pens (2.0.3) */
+function reflList(name, kind) { var id = PID[name], ks = [].concat(kind); return REFL.filter(function (r) { return r.id === id && ks.indexOf(r.kind) >= 0; }); }
 function reflections(o, n, you, role) {
-  var rl = role ? role + " " : "", list = reflList(o.first.name, "pitch").slice(0, n);
-  if (!list.length) return '<section class="card"><h2>' + (you ? "Your " : "His ") + rl + 'reflections</h2><p class="note" style="margin:0">None yet. Reflections come with ' + (you ? "your" : "his") + ' player card after each game.</p></section>';
-  return '<section class="card"><h2>' + (you ? "Your " + rl + "reflections <small>from your player cards" : "His " + rl + "reflections <small>from his player cards") + ', newest first</small></h2>' + list.map(reflBox).join("") + "</section>";
+  var rl = role ? role + " " : "", list = reflList(o.first.name, ["pitch", "pen"]);
+  if (!list.length) return '<section class="card"><h2>' + (you ? "Your " : "His ") + rl + 'reflections</h2><p class="note" style="margin:0">None yet. Reflections come with ' + (you ? "your" : "his") + ' player card after each pen and game.</p></section>';
+  return '<section class="card"><h2>' + (you ? "Your " + rl + "reflections <small>from your player cards" : "His " + rl + "reflections <small>from his player cards") + ', newest first</small></h2>' + reflStack(list, n) + "</section>";
 }
 function commentBox(name, lv, role, forReport) {
   var c = commentFor(name, lv, role), edit = !forReport && canWrite(lv), key = PID[name] + "|" + lv + "|" + (role || "");
-  var who2 = lv + (role ? " " + role.toLowerCase() : "") + " coaches";
+  var who2 = lv === "Winter" ? "Winter · pitching coaches" : lv + (role ? " " + role.toLowerCase() : "") + " coaches";
   if (edit && S.editing === key) {
     return '<div class="refl"><div class="rh"><b>' + who2 + '</b><span>you can write this one</span></div><textarea class="cbox" id="cbox" rows="4" maxlength="1500">' + esc(c ? c.text : "") + "</textarea>" +
       '<div class="cbtns"><button class="mini-btn" data-csave="' + esc(key) + '">Save</button><button class="mini-btn" data-cedit="">Cancel</button><span class="cmsg" id="cmsg"></span></div></div>';
   }
   return '<div class="refl"><div class="rh"><b>' + who2 + "</b><span>" + (c ? "written" + (c.by && !forReport ? " by " + esc(c.by) : "") : "not written yet") + "</span></div><p" + (c ? "" : ' class="empty"') + ">" +
-    (c ? esc(c.text) : "Waiting on the " + lv + " coaches.") + "</p>" + (edit ? '<button class="mini-btn noprint" data-cedit="' + esc(key) + '">' + (c ? "Edit" : "Write") + " comment</button>" : "") + "</div>";
+    (c ? esc(c.text) : "Waiting on the " + (lv === "Winter" ? "pitching" : lv) + " coaches.") + "</p>" + (edit ? '<button class="mini-btn noprint" data-cedit="' + esc(key) + '">' + (c ? "Edit" : "Write") + " comment</button>" : "") + "</div>";
 }
 function coachComments(o, forReport, role) {
-  var lvs = o.lines.filter(function (l) { return l.bf || !l.home; }).map(function (l) { return l.lv; });
+  var lvs = o.lines.filter(function (l) { return l.lv && (l.bf || !l.home); }).map(function (l) { return l.lv; });
+  /* Winter: the box for a pitcher with no level yet, and kept after he gets one if a Winter comment was written */
+  var pid = PID[o.first.name], wrote = COMMENTS.some(function (c) { return c.id === pid && c.lv === "Winter"; });
+  if (wrote || (!lvs.length && !forReport)) lvs.push("Winter");
   return '<section class="card"><h2>' + (role ? role + " coach comments" : "Coach comments") + " <small>written by the " + (role ? role.toLowerCase() + " " : "") + "coaches of each level he " + (role ? "pitched" : "played") + " for" + (forReport ? "" : " · every coach can read") + "</small></h2>" +
-    lvs.map(function (lv) { return commentBox(o.first.name, lv, role, forReport); }).join("") + "</section>";
+    (lvs.length ? lvs.map(function (lv) { return commentBox(o.first.name, lv, role, forReport); }).join("")
+      : '<p class="note" style="margin:0">' + "No comments yet." + "</p>") + "</section>";
 }
 function playerPage(name) { return personPage(name); }
 function met_(g, x) { return met(g, x); }
@@ -1168,10 +1197,10 @@ function hswings(o) {
     counts.map(function (c) { return c[1] == null ? "<td>–</td>" : '<td><span class="cell">' + c[1] + '%<i class="' + (c[1] >= HGOALS[0].goal ? "ok" : "ring") + ' sm"></i></span><small class="n">' + c[2] + "</small></td>"; }).join("") + "</tr></table></div></section>";
 }
 function hreflections(o, n, you, role) {
-  var rl = role ? role + " " : "", list = reflList(o.name, "hit").slice(0, n);
+  var rl = role ? role + " " : "", list = reflList(o.name, "hit");
   var head = '<section class="card"><h2>' + (you ? "Your " : "His ") + rl + "reflections";
   if (!list.length) return head + '</h2><p class="note" style="margin:0">None yet. Reflections come with ' + (you ? "your" : "his") + " player card after each game.</p></section>";
-  return head + " <small>from " + (you ? "your" : "his") + " player cards, newest first</small></h2>" + list.map(reflBox).join("") + "</section>";
+  return head + " <small>from " + (you ? "your" : "his") + " player cards, newest first</small></h2>" + reflStack(list, n) + "</section>";
 }
 function hcomments(o, forReport, role) {
   return '<section class="card"><h2>' + (role ? role + " coach comments" : "Coach comments") + " <small>" + o.lv + " " + (role ? role.toLowerCase() + " " : "") + "coaches" + (forReport ? "" : " · every coach can read") + "</small></h2>" +
@@ -1644,9 +1673,9 @@ function hLowNote_(o, you) {
 }
 function secPitching_(o) {
   var p = o.p;
-  return hLowNote_(o) + seasonTable(p) + gameLog(p) + playerLadder(p, false) + '<div class="cols">' + missPattern(p) + pitchMix(p) + "</div>" + reflections(p, 3, false, o.h ? "pitching" : "") + winterLog(p);
+  return hLowNote_(o) + seasonTable(p) + gameLog(p) + playerLadder(p, false) + '<div class="cols">' + missPattern(p) + pitchMix(p) + "</div>" + reflections(p, 5, false, o.h ? "pitching" : "") + winterLog(p);
 }
-function secHitting_(o) { return hseason(o.h) + '<div class="cols">' + hqab(o.h) + hswings(o.h) + "</div>" + hreflections(o.h, 3, false, o.p ? "hitting" : ""); }
+function secHitting_(o) { return hseason(o.h) + '<div class="cols">' + hqab(o.h) + hswings(o.h) + "</div>" + hreflections(o.h, 5, false, o.p ? "hitting" : ""); }
 function secDefense_(o, you) { return o.d ? defenseCard(dsrc(o.d), you) : ""; }
 function comments_(o, forReport) {
   if (o.p && o.h) return coachComments(o.p, forReport, "Pitching") + hcomments(o.h, forReport, "Hitting");

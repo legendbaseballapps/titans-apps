@@ -111,7 +111,7 @@ function expected(S, cfg) {
   rt = world(S, " ");
   ok(/is not on the Coaches tab/.test(rt.page()), "no signed-in account sees no numbers");
   rt = world(S); rt.props.SEASON_SHEET_ID = "nope";
-  ok(/is not shared with jim@example.com/.test(rt.page()), "a Sheet he can't open: plain message");
+  ok(/could not be opened as jim@example.com[^]*Google said: no spreadsheet nope/.test(rt.page()), "a Sheet he can't open: plain message, with Google's reason (2.0.2)");
   rt = world(S, "JIM@Example.com ");
   ok(/Program overview/.test(rt.page()) && /free bases saved/.test(rt.page()), "a coach on the list gets in (case and spaces ignored)");
 }

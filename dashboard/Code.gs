@@ -22,9 +22,16 @@
    the program goals. Every number here comes from the Sheet; Config can change any goal,
    any 2026 rate, any team's share of 150 and each level's games on the schedule. */
 
-var VERSION = "dashboard 2.0.1 (Nov 2026)";
+var VERSION = "dashboard 2.0.5 (Nov 2026)";
 
 var LEVELS = ["Varsity", "JV", "Sophomore", "Freshman"];
+/* Winter is a comments-only level (Nov 2026, Jim): a pitcher whose Level is blank or "Winter" gets a Winter
+   comment box, written by the pitching coaches (Notify Pitching, Both or All). It never appears on the level
+   pages or in any stat, so it never hints at the level a player will make. */
+var WINTER = "Winter";
+var CLEVELS = LEVELS.concat([WINTER]);
+function pitchCoach_(r) { return /pitch|both|all/i.test(String((r || {}).Notify || "")); }
+function commentLevelName_(s) { return /^\s*w/i.test(String(s || "")) ? WINTER : levelName_(s); }
 
 /* The program goal (locked Nov 2026). Same names and math as the player cards. */
 var SAVE_GOAL = {setting: "Free bases saved goal", v: 150};
@@ -59,7 +66,12 @@ function doGet(e) {
   try { me = String(Session.getActiveUser().getEmail() || "").toLowerCase().trim(); } catch (x) {}
   var ss;
   try { ss = SpreadsheetApp.openById(PropertiesService.getScriptProperties().getProperty("SEASON_SHEET_ID")); }
-  catch (x) { return page_(box_("No access", "The season Sheet is not shared with " + e_(me || "this account") + ". Ask Jim to share it.")); }
+  catch (x) {
+    /* 2.0.2: say what Google said, as the Reflections page does (Nov 17: an unticked permission box read as "not shared") */
+    var why = String(x && x.message || x || "");
+    return page_(box_("No access", "The season Sheet could not be opened as " + e_(me || "this account") + ". If Jim hasn't shared it with you yet, ask him to." +
+      '<br><span style="color:#5A6781;font-size:13px">Google said: ' + e_(why || "no reason given") + "</span>"));
+  }
   var coach = rows_(ss, "Coaches").filter(function (r) { return me && String(r["Google account"] || "").toLowerCase().trim() === me; })[0];
   if (!coach) return page_(box_("No access", e_(me || "This account") + " is not on the Coaches tab. Ask Jim to add it."));
   var p = e && e.parameter ? e.parameter.p : "";
@@ -74,7 +86,7 @@ function doGet(e) {
    cached for a few minutes, keyed on every tab's row count, so a coach clicking around doesn't re-read
    the whole Sheet; a new upload or import changes a row count and the next load reads it fresh. */
 var CACHE_MIN = 5;
-var MODEL_TABS = ["Records", "Players", "Coaches", "Config", "Game_Innings", "Game_Pitches", "Game_Notes", "Bullpen_Pitches",
+var MODEL_TABS = ["Records", "Players", "Coaches", "Config", "Game_Innings", "Game_Pitches", "Game_Notes", "Bullpen_Pitches", "Bullpen_Notes",
                   "Offense_Pitches", "Offense_Notes", "Reflections", "GameChanger"];
 function today_() {
   try { return Utilities.formatDate(new Date(), Session.getScriptTimeZone() || "America/Denver", "yyyy-MM-dd"); }
