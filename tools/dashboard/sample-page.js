@@ -12,6 +12,8 @@
 const fs = require("fs");
 const path = require("path");
 const { makeRuntime } = require("../receiver/mock-gas");
+/* dashboard 2.0: the project is Code.gs + Model.gs + Comments.gs, loaded together as Apps Script does */
+function dashFiles(code) { const d = path.dirname(code); return [code, path.join(d, "Model.gs"), path.join(d, "Comments.gs")]; }
 
 const ROOT = path.join(__dirname, "..", "..");
 const VERSION = "dashboard sample 1 (Nov 2026)";
@@ -94,12 +96,12 @@ Object.keys(GAMES).forEach(level => {
   });
 });
 
-const rt = makeRuntime(path.join(ROOT, "dashboard", "Code.gs"));
+const rt = makeRuntime(dashFiles(path.join(ROOT, "dashboard", "Code.gs")));
 const b = rt.newBook("S");
 Object.keys(S).forEach(n => { b.insertSheet(n).data = S[n]; });
 rt.props.SEASON_SHEET_ID = "S";
 rt.session.active = "sample@example.com";
-let html = rt.sandbox.doGet({ parameter: {} }).getContent();
+let html = rt.sandbox.doGet({ parameter: {p: "summary"} }).getContent();
 
 const banner = '<div class="sample">Sample data &middot; a made-up 2027 season through Apr 17, every game on the real schedules &middot; built with the real dashboard code</div>';
 html = html
@@ -108,6 +110,7 @@ html = html
   .replace("<title>Titans Coaches Dashboard</title>", "<title>Titans Coaches Dashboard · sample</title>")
   .replace("<h1>Program overview</h1>", "<h1>Program overview</h1>" + banner)
   .replace(" &middot; signed in as Sample Coach", "")
+  .replace(/<p class="foot"><a href="https:\/\/script\.google\.com[^]*?<\/p>/, "")   /* the live page's links; the sample has nowhere to go */
   .replace("</style>", ".sample{display:inline-block;margin:6px 0 4px;background:#FDF3EC;color:#C85C1C;font-weight:700;font-size:13px;padding:5px 10px;border-radius:12px}</style>");
 if (/script\.google\.com|googleusercontent/.test(html)) throw new Error("sample page must not call Google");
 if (!/Sample data/.test(html)) throw new Error("no sample banner");

@@ -54,6 +54,7 @@ class Range {
     return this;
   }
   setFontWeight() { return this; }
+  setNumberFormat() { return this; }
   getRow() { return this.row; }
   createTextFinder(text) {
     const range = this;
@@ -80,11 +81,20 @@ class Sheet {
   getLastRow() { return this.data.length; }
   getLastColumn() { return this.data.reduce((m, r) => Math.max(m, r.length), 0); }
   getRange(row, col, nr, nc) {
+    if (typeof row === "string") return new Range(this, 1, 1, Math.max(1, this.data.length), 1);   /* "D:D": formatting only */
+    if (nc === undefined && nr === undefined && col !== undefined) { nr = 1; nc = 1; }
     if (row < 1 || col < 1 || !(nr >= 1) || !(nc >= 1)) throw new Error("bad range " + [row, col, nr, nc]);
     return new Range(this, row, col, nr, nc);
   }
   setFrozenRows() { return this; }
   deleteRows(start, n) { this.data.splice(start - 1, n); this.book.deletes.push([this.name, start, n]); }
+  deleteRow(r) { this.deleteRows(r, 1); }
+  appendRow(vals) { this.getRange(this.data.length + 1, 1, 1, vals.length).setValues([vals]); return this; }
+  /* sheet protection, as the comments spreadsheet uses it: editors are emails */
+  protect() { const p = this.prot = { eds: [], desc: "", domain: true, setDescription(d) { this.desc = d; return this; },
+    getEditors() { return this.eds.map(e => ({ getEmail: () => e })); }, addEditors(a) { a.forEach(e => { if (this.eds.indexOf(e) < 0) this.eds.push(e); }); return this; },
+    removeEditors(a) { this.eds = this.eds.filter(e => a.indexOf(e) < 0); return this; }, canDomainEdit() { return this.domain; }, setDomainEdit(b) { this.domain = b; return this; } }; return p; }
+  getProtections() { return this.prot ? [this.prot] : []; }
   /* test helpers */
   header() { return (this.data[0] || []).map(String); }
   rows() { return this.data.slice(1); }
@@ -100,10 +110,17 @@ class Book {
   getSheetByName(n) { return this.sheets[n] || null; }
   insertSheet(n) { if (this.sheets[n]) throw new Error("exists " + n); this.sheets[n] = new Sheet(this, n); this.order.push(n); return this.sheets[n]; }
   failNext(n) { this.failing[n] = true; }
+  getId() { return this.id; }
+  getUrl() { return "https://docs.google.com/spreadsheets/d/" + this.id; }
+  getSheets() { return this.order.map(n => this.sheets[n]); }
+  deleteSheet(sh) { delete this.sheets[sh.name]; this.order = this.order.filter(n => n !== sh.name); }
+  addEditors(a) { this.editors = (this.editors || []).concat(a.filter(e => (this.editors || []).indexOf(e) < 0)); return this; }
 }
 
 function makeRuntime(codePath, opts) {
   opts = opts || {};
+  const codePaths = Array.isArray(codePath) ? codePath : [codePath];
+  const cache = {};
   const books = {};
   const props = {};
   const logs = [];
@@ -118,7 +135,9 @@ function makeRuntime(codePath, opts) {
   const sandbox = {
     console,
     SpreadsheetApp: {
-      openById(id) { if (!books[id]) throw new Error("no spreadsheet " + id); return books[id]; },
+      openById(id) { if (!books[id]) throw new Error("no spreadsheet " + id); if (opts.canOpen && !opts.canOpen(id, session.active)) throw new Error("no access to " + id); return books[id]; },
+      create(name) { const id = "BOOK" + (Object.keys(books).length + 1); const b = books[id] = new Book(id); b.title = name; b.insertSheet("Sheet1"); return b; },
+      ProtectionType: { SHEET: "SHEET", RANGE: "RANGE" },
       flush() {}
     },
     PropertiesService: {
@@ -139,14 +158,26 @@ function makeRuntime(codePath, opts) {
       MimeType: { JSON: "application/json" },
       createTextOutput(s) { return { content: s, setMimeType() { return this; }, getContent() { return this.content; } }; }
     },
-    Utilities: { getUuid: () => crypto.randomUUID() },
+    Utilities: { getUuid: () => crypto.randomUUID(),
+      formatDate(d, tz, f) { const x = opts.now ? new Date(opts.now) : d; const iso = x.toISOString(); return f === "yyyy-MM-dd" ? iso.slice(0, 10) : iso.slice(0, 16).replace("T", " "); } },
+    CacheService: { getScriptCache() { return {
+      get: k => (k in cache ? cache[k] : null), getAll: ks => { const o = {}; ks.forEach(k => { if (k in cache) o[k] = cache[k]; }); return o; },
+      putAll: (o) => { Object.assign(cache, o); }, put: (k, v) => { cache[k] = v; } }; } },
     Logger: { log: m => logs.push(String(m)) },
     MailApp: {
       sendEmail(m) { if (quota <= 0) throw new Error("Service invoked too many times for one day: email."); mail.push(JSON.parse(JSON.stringify(m))); quota -= 1 + (m.cc ? String(m.cc).split(",").length : 0); },
       getRemainingDailyQuota() { return quota; }
     },
     HtmlService: {
-      createHtmlOutput(h) { return { content: h, title: "", setTitle(t) { this.title = t; return this; }, addMetaTag() { return this; }, getContent() { return this.content; } }; }
+      createHtmlOutput(h) { return { content: h, title: "", setTitle(t) { this.title = t; return this; }, addMetaTag() { return this; }, getContent() { return this.content; } }; },
+      /* a template: only <?!= name ?> (printed as is) is supported, which is all the dashboard uses; and like the
+         real thing, the file's HTML comments are gone by the time it is served */
+      createTemplateFromFile(name) {
+        const src = fs.readFileSync(require("path").join(require("path").dirname(codePaths[0]), name + ".html"), "utf8");
+        const t = { evaluate() { return sandbox.HtmlService.createHtmlOutput(src.replace(/<!--[^]*?-->/g, "").replace(/<\?!=\s*(\w+)\s*\?>/g, (m, k) => String(t[k]))); } };
+        return t;
+      },
+      createHtmlOutputFromFile(name) { return sandbox.HtmlService.createHtmlOutput(fs.readFileSync(require("path").join(require("path").dirname(codePaths[0]), name + ".html"), "utf8").replace(/<!--[^]*?-->/g, "")); }
     },
     ScriptApp: {
       getProjectTriggers() { return triggers.slice(); },
@@ -168,9 +199,9 @@ function makeRuntime(codePath, opts) {
     }
   };
   vm.createContext(sandbox);
-  vm.runInContext(fs.readFileSync(codePath, "utf8"), sandbox, { filename: codePath });
+  codePaths.forEach(f => vm.runInContext(fs.readFileSync(f, "utf8"), sandbox, { filename: f }));
   return {
-    sandbox, props, logs, mail, triggers, session,
+    sandbox, props, logs, mail, triggers, session, cache,
     setQuota(n) { quota = n; },
     get quota() { return quota; },
     newBook(id) { books[id] = new Book(id); return books[id]; },

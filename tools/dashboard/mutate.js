@@ -30,6 +30,7 @@ M.forEach(([name, a, b, a2, b2]) => {
   let src = SRC.replace(a, b);
   if (a2) src = src.replace(a2, b2);
   fs.writeFileSync(f, src);
+  ["Model.gs", "Comments.gs", "Dash.html"].forEach((n) => fs.copyFileSync(path.join(__dirname, "..", "..", "dashboard", n), path.join(tmp, n)));   /* 2.0: the rest of the project */
   const args = [path.join(__dirname, "dashboard.js")];
   if (name === "phone layout overflows") args.push(path.join(tmp, "shots"));
   const r = spawnSync(process.execPath, args, { env: Object.assign({}, process.env, { DASH_CODE: f }), encoding: "utf8" });

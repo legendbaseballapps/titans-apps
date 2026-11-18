@@ -17,14 +17,14 @@ old one — tap the amber stamp to fix it.
 
 | App | Source & folder | Live on GitHub Pages |
 |---|---|---|
-| **Bullpen Chart** | **v48** | **v46** (Jim pushed Nov 13: Mound on Setup; with v45, the middle snowman). **v48 (Nov 16) waiting:** push `bullpen/index.html`, `bullpen/sw.js` and `bullpen/guide.html`: Live ABs laid out like the Pitch Chart; includes v47 (the Live AB call pad). Before Jan 8, then open it online on each iPad | Real-iPad upload test **passed Oct 19** (practice pen stayed off the Sheet, real pen landed) |
-| **Pitch Chart** (game) | **v38** | **v37** (Jim pushed Nov 13: the opponent list, picked on Setup; with v35 and v36). **v38 (Nov 13) waiting:** push `game/index.html`, `game/sw.js` and `game/guide.html` (the dropdown always shows on Setup). `opponents.js` is unchanged |
-| **Offense Chart** | **v56** | **v55** (Jim pushed Nov 13: the opponent list, picked on Setup). **v56 (Nov 13) waiting:** push `offense/index.html`, `offense/sw.js` and `offense/guide.html` (the dropdown always shows on Setup). `opponents.js` is unchanged |
+| **Bullpen Chart** | **v48** | **v48 live Nov 16** (Jim pushed it: Live ABs laid out like the Pitch Chart; with v47, the Live AB call pad). Before Jan 8: open it online on each iPad and check the header says v48 | Real-iPad upload test **passed Oct 19** (practice pen stayed off the Sheet, real pen landed) |
+| **Pitch Chart** (game) | **v38** | **v38 live** (Jim pushed it after Nov 13: the opponent dropdown always shows on Setup; with v37, the opponent list picked on Setup) |
+| **Offense Chart** | **v56** | **v56 live** (Jim pushed it after Nov 13: the opponent dropdown always shows on Setup; with v55, the opponent list picked on Setup) |
 | **Receiver** | **receiver 4** | Redeploy as a new version of the same deployment (URL and key unchanged). Includes receiver 3 (game notes) |
 | **Player cards** | **cards 4.5**, **reflections 2** (`cards/`) | **cards 4.5 (Nov 13) waiting:** paste `cards/Code.gs` and deploy a New version (pen cards read the new location numbers; game cards keep glove and unknown calls apart). **cards 4.4 deployed Nov 13** as a New version (two-way games: 1 email, 2 reflections; includes 4.3, the hitter zone's contact vs swing and miss). Test files pushed. **cards 4.2 deployed Nov 6** as a New version (Jim: "works and looks great"); reflections 2 live. Test mode. Next: the test-mode run, player and parent emails, then `SEND_MODE` live (school / AD approval done Nov 6) |
 | **Demo page** | `demo/index.html` | **Live Nov 2** (adds Load the 7th inning; checked against the site). **Rebuilt Nov 11, waiting:** push `demo/index.html`, `demo/chart-this-inning.html`, `demo/Chart-This-Inning-Group-Card.pdf` and `demo/Players-Session-Run-of-Show.pdf`. Safe to push now: live offense v52 ignores the new inning fields (checked). Adds a Players' session card linking Chart This Inning, the group card and the run of show. Offense v53 must not go live BEFORE this demo page (the old demo opens v53 at inning 1). Rebuild with `tools/demo-build.js`, then `LIVE=1`, then `tools/demo-page.py` |
 | **Sample card page** | **sample 7** (`cards/sample.html`, `cards/sample-sw.js`) | **sample 7 (Nov 13) waiting:** push both files (the pen card's spot numbers, the middle snowman). **sample 6 (Nov 12):** push both files (hitter zone: colored marks, red X fixed for iPhone). **sample 3 live Nov 6. sample 4 (Nov 6) waiting:** push both files (bold markers). For the player meeting Nov 12 (QR code). Rebuild with `tools/cards/sample-page.js` |
-| **Coaches dashboard** | **dashboard 1.4** (`dashboard/Code.gs`): Program overview, GameChanger import | **dashboard 1.4 live Nov 13** (Jim deployed it and re-imported 2026: Landon Lythgoe's 2 Sophomore rows are one). dashboard 1.3 live Nov 13 (Jim deployed it and imported the 2026 workbook from `?p=import`; sign in from a private window if the login loops with 2 Google accounts open). dashboard 1 live Nov 6. The Coaches tab header must read exactly `Google account` |
+| **Coaches dashboard** | **dashboard 2.0** (`dashboard/Code.gs`, `Model.gs`, `Comments.gs`, `Dash.html`): the full dashboard (sandbox v36, real numbers), coach comments, GameChanger import | **dashboard 2.0.1 live Nov 16** (Jim deployed it; the /exec link shows the version in the footer and the coach's name). Comments spreadsheet set up. 2.0 was deployed first the same day and showed every page empty (see 2.0.1 below). To update later: paste the changed files, then Deploy > Manage deployments > edit > Version: **New version** (leaving the old number keeps the link on the old code) **dashboard 1.4 live Nov 13** (Jim deployed it and re-imported 2026). The Coaches tab header must read exactly `Google account` |
 | **Dashboard sample page** | **dashboard sample 1** (`dashboard/sample.html`) | **Waiting:** push it; the head coach opens legendbaseballapps.github.io/titans-apps/dashboard/sample.html. Rebuild with `tools/dashboard/sample-page.js` |
 
 **The site moved Oct 14, 2026** to the program-owned account: **legendbaseballapps.github.io/titans-apps** (repo transferred from vaughnzj, so the live files, including the real `roster.js`, moved as they were). Every iPad installs from the new link; History saved under the old address does not carry over. The Coach's Guides in the pending builds (bullpen v31, game v23, offense v42) carry the new address, so pushing those builds is what puts it on the iPads.
@@ -60,6 +60,28 @@ is only for app code.
 - Tests: `tools/demo-live-check.js` loads it, charts a 4-pitch strikeout in the Pitch Chart and a pitch in the Offense Chart; `tools/demo-check.js` still all ok.
 
 ## Coaches dashboard (Titans Coaches Dashboard)
+
+### dashboard 2.0.1 · Nov 16, 2026
+
+**Headline:** fixes 2.0 showing every page empty. The footer read only "Coaches dashboard · every number from the 2027 season Sheet" (no version, no time read) and the bar said "Signed in with Google".
+
+- **Cause:** 2.0 put the season's data into the page at a `<!--MODEL-->` marker. Apps Script removes HTML comments from a project's HTML file before it is served, so the marker was gone and the page drew with no data. The stand-in runtime kept comments, so the tests passed.
+- **Fix:** the page is now an Apps Script template (`<?!= model ?>`), the standard way to hand a page its data. The stand-in runtime now drops HTML comments the way Google does, and `tools/dashboard/pages.js` checks that the footer shows the version and the time the Sheet was read and the bar shows the coach's name: run against 2.0 it fails exactly as the live page did.
+- **Jim:** paste `dashboard/Code.gs` and `dashboard/Dash.html` over the same files in the project, Save, Deploy > Manage deployments > edit > New version. `Model.gs`, `Comments.gs` and the comments spreadsheet are unchanged; no need to run setupComments again.
+
+### dashboard 2.0 · Nov 16, 2026
+
+**Headline:** the full coaches' dashboard. Every screen from the design sandbox (v36), built as is, now drawing its numbers from the season Sheet: Pitching, Hitting and Defense; Winter (overview, staff, leaderboard, players) and Spring; Team, one page per player, Scouting with the pitch plans, combined exit reports, Who can pitch, and coach comments that save.
+
+- **Why:** Jim, Nov 16: "I got feedback that the first pass at the dashboard was very good. Let's go ahead and build it." All of it at once, no changes.
+- **Same project, same URL.** The default page is the new dashboard. `?p=summary` keeps the 1.x one-page Program summary (quick on a phone); `?p=import` is the GameChanger import, unchanged.
+- **Where the numbers come from:** Game_Innings and Game_Pitches (spring pitching, execution, misses, mix by count, their hitters); Bullpen_Pitches (winter, by routine, delivery and situation, the leaderboard, the pitch plans); Offense_Pitches (hitting, quality at-bats by the Offense Chart's own rules, their pitchers); GameChanger (defense, OBP, SLG, stolen bases, 2026 baselines); Reflections (cards); Game_Notes and Offense_Notes. Rates come from season totals, never averages of percents. Glove and "? Not known" calls stay out of every execution number. Practice rows and uploads with no Records row never count.
+- **Coach comments:** a separate spreadsheet, Titans Exit Comments 2027, one tab per level, each protected so only that level's coaches (Coaches tab) can write; every coach reads all of them. The page runs as the coach, so Google enforces it. A two-way player gets a Pitching and a Hitting comment.
+- **Settings on Config (optional):** `Bullpen execution goal` 55, `Live AB execution goal` 50, `Game execution goal` 45, `Hitting goals start at PA` 5, and the CHSAA charts: `Varsity daily max` 110, `Varsity rest` "86=3, 61=2, 36=1, 1=0", `Varsity back-to-back` "35, 60, 1", and the same 3 for `Sub-varsity`. Blank keeps the bulletin's numbers.
+- **Before any spring game** it opens on Winter; every page draws with an empty Sheet.
+- **Not in the data, so not shown:** jersey numbers and coach notes on their hitters (the Pitch Chart doesn't export them; reads are worked out from the pitches); chances and errors by position (GameChanger gives season totals per player).
+- **Jim, to put it live:** in the Titans Coaches Dashboard project, paste `dashboard/Code.gs` over Code.gs; File > New > Script file `Model` and paste `Model.gs`; File > New > Script file `Comments` and paste `Comments.gs`; File > New > HTML file `Dash` and paste `Dash.html`. Save. Select `setupComments` > Run (approve the prompt): it makes the comments spreadsheet, the 4 protected tabs, shares it with every coach, and saves `COMMENTS_SHEET_ID`. Run it again whenever the Coaches tab changes. Then Deploy > Manage deployments > edit > New version > Deploy (same URL).
+- **Tests:** new `tools/dashboard/season-gen.js` (a whole made-up season in the receiver's exact columns), `tools/dashboard/model.js` (88 checks against sums worked out separately; 16 of 18 deliberate breaks caught, the 2 left change nothing on real data), `tools/dashboard/pages.js` (39 checks: every side, season, level, page, player, exit report, scouting report and plan opened in a browser, over 600 views, no script errors or NaN; key numbers against the rows; comments saved through the real `saveComment` with the level rule; phone width; an empty Sheet; 7 of 7 deliberate breaks of the page caught). Dashboard 121, import 81, import page 24, sample, mutation (15 of 15), upload 218 and cards 285 suites green.
 
 ### dashboard 1.4 · Nov 13, 2026
 
@@ -107,6 +129,17 @@ is only for app code.
 - Tests: `tools/dashboard/dashboard.js` (120 checks, every number worked out separately from the rows, the cards and the dashboard agree on the counter, laptop and phone widths with no sideways scroll); `tools/dashboard/mutate.js` (15 of 15 bugs caught).
 
 ## Player cards
+
+### reflections 3 · Nov 17, 2026
+
+**Headline:** the coaches' Reflections page now shows Google's own reason when it can't open the season Sheet, and the coach guide covers the cause Jim hit.
+
+- **What happened:** Jim's Gmail got "No access: the season Sheet is not shared" although the Sheet was shared and the dashboard worked. Google's real message: "You do not have permission to call SpreadsheetApp.openById". When he first approved the page, Google's permission checkboxes were left unticked, and Google doesn't ask again on its own.
+- **Fix (done Nov 17):** myaccount.google.com/connections > Titans Reflections > remove access, then open the link again and tick **Select all**.
+- **Change:** the No access box adds "Google said: …" with the real message, and says "not shared" only when that's what Google said. Jim pasted it and deployed a New version Nov 17.
+- **Coach guide** (`Coaches Dashboard Setup.pdf`): Step 3 says to tick Select all; a troubleshooting row covers this message for both pages.
+- **Follow-up:** the dashboard's No access box should show Google's message the same way at its next update.
+
 
 ### cards 4.5 and sample 7 · Nov 13, 2026
 

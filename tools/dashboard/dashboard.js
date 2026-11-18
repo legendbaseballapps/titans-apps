@@ -12,6 +12,8 @@
 const fs = require("fs");
 const path = require("path");
 const { makeRuntime } = require("../receiver/mock-gas");
+/* dashboard 2.0: the project is Code.gs + Model.gs + Comments.gs, loaded together as Apps Script does */
+function dashFiles(code) { const d = path.dirname(code); return [code, path.join(d, "Model.gs"), path.join(d, "Comments.gs")]; }
 
 const ROOT = path.join(__dirname, "..", "..");
 const CODE = process.env.DASH_CODE || path.join(ROOT, "dashboard", "Code.gs");
@@ -61,13 +63,13 @@ function season(opts) {
   return S;
 }
 function world(S, me) {
-  const rt = makeRuntime(CODE);
+  const rt = makeRuntime(dashFiles(CODE));
   const b = rt.newBook("S");
   Object.keys(S).forEach(n => { b.insertSheet(n).data = JSON.parse(JSON.stringify(S[n])); });
   rt.props.SEASON_SHEET_ID = "S";
   rt.session.active = me || "jim@example.com";
   rt.b = b;
-  rt.page = () => rt.sandbox.doGet({ parameter: {} }).getContent();
+  rt.page = () => rt.sandbox.doGet({ parameter: {p: "summary"} }).getContent();
   return rt;
 }
 

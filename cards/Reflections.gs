@@ -18,7 +18,7 @@
      4. Put the /exec URL in the cards script's REFLECTIONS_URL property, so the
         heads-up emails link here. Each coach approves a one-time Google prompt. */
 
-var VERSION = "reflections 2 (Oct 2026)";
+var VERSION = "reflections 3 (Nov 2026)";
 
 function doGet(e) {
   var q = (e && e.parameter) || {};
@@ -26,8 +26,15 @@ function doGet(e) {
   try { me = String(Session.getActiveUser().getEmail() || "").toLowerCase().trim(); } catch (x) {}
   var ss;
   try { ss = SpreadsheetApp.openById(PropertiesService.getScriptProperties().getProperty("SEASON_SHEET_ID")); }
-  catch (x) { return page_("No access", '<div class="box"><h1>No access</h1><p>The season Sheet is not shared with ' +
-    e_(me || "this account") + ". Ask Jim to share it.</p></div>"); }
+  catch (x) {
+    /* reflections 3: say what Google actually said. "Not shared" was a guess, and the real cause can be
+       something else (Nov 17: the Sheet WAS shared and this still showed). */
+    var why = String(x && x.message || x || "");
+    var shared = /permission|access|not found|could not be found/i.test(why);
+    return page_("No access", '<div class="box"><h1>No access</h1><p>' + (shared ? "The season Sheet is not shared with " +
+      e_(me || "this account") + ". Ask Jim to share it." : "The season Sheet could not be opened as " + e_(me || "this account") + ".") +
+      '</p><p style="color:#5A6781;font-size:13px">Google said: ' + e_(why || "no reason given") + "</p></div>");
+  }
   var coaches = rows_(ss, "Coaches").filter(function (r) {
     return String(r["Google account"] || "").toLowerCase().trim() === me && me; });
   if (!coaches.length) return page_("No access", '<div class="box"><h1>No access</h1><p>' + e_(me || "This account") +

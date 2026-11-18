@@ -13,6 +13,8 @@
 const fs = require("fs");
 const path = require("path");
 const { makeRuntime } = require("../receiver/mock-gas");
+/* dashboard 2.0: the project is Code.gs + Model.gs + Comments.gs, loaded together as Apps Script does */
+function dashFiles(code) { const d = path.dirname(code); return [code, path.join(d, "Model.gs"), path.join(d, "Comments.gs")]; }
 
 const ROOT = path.join(__dirname, "..", "..");
 const CODE = process.env.DASH_CODE || path.join(ROOT, "dashboard", "Code.gs");
@@ -75,7 +77,7 @@ const ROSTER = [
   ["p-kerB", "Kerr", "Ty", "Jr"], ["p-lind", "Lindgren", "Max", "So"]
 ];
 function world() {
-  const rt = makeRuntime(CODE);
+  const rt = makeRuntime(dashFiles(CODE));
   const b = rt.newBook("S");
   b.insertSheet("Players").data = [["PlayerID", "Last", "First", "Class", "Level", "Player email", "Parent email", "Send"]].concat(ROSTER.map(r => r.concat(["", "", "", "Yes"])));
   b.insertSheet("Coaches").data = [["Name", "Google account", "Level(s)", "Notify"], ["Jim Vaughn", "jim@example.com", "All", "Both"]];
@@ -206,7 +208,7 @@ const tab = (rt, n) => (rt.b.getSheetByName(n) ? rt.b.getSheetByName(n).records(
 {
   const rt = world();
   rt.b.insertSheet("Records").data = [["RecordID", "App", "Build", "Schema", "Device", "Charter", "Date", "Opponent", "HomeAway", "Team", "ReceivedAt", "FiledAt", "Rows"]];
-  const page = rt.sandbox.doGet({parameter: {}}).getContent();
+  const page = rt.sandbox.doGet({parameter: {p: "summary"}}).getContent();
   ok(/\?p=import">Import GameChanger stats</.test(page), "the overview footer links to the import page");
 }
 
@@ -289,7 +291,7 @@ const soph = rt => tab(rt, "GameChanger").filter(r => r.Level === "Sophomore" &&
   const pv2 = S.importPreview(data), r2 = (lv, num) => pv2.rows.find(r => r.level === lv && String(r.number) === String(num));
   eq([r2("JV", 13).status, r2("Sophomore", 13).status], ["linked", "add"], "and they win over it next time");
   const page = S.doGet({parameter: {p: "import"}}).getContent();
-  ok(/Same player, listed twice in GameChanger/.test(page) && /select class="chg"/.test(page) && /dashboard 1\.4/.test(page), "the page offers Add to and Change, and says 1.4");
+  ok(/Same player, listed twice in GameChanger/.test(page) && /select class="chg"/.test(page) && /dashboard 2\.0/.test(page), "the page offers Add to and Change, and says the version");
 }
 
 /* one name, different players on 2 levels, in one import: each level remembers its own */

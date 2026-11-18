@@ -6,6 +6,8 @@
 const path = require("path");
 const { chromium } = require("playwright");
 const { makeRuntime } = require("../receiver/mock-gas");
+/* dashboard 2.0: the project is Code.gs + Model.gs + Comments.gs, loaded together as Apps Script does */
+function dashFiles(code) { const d = path.dirname(code); return [code, path.join(d, "Model.gs"), path.join(d, "Comments.gs")]; }
 const CODE = process.env.DASH_CODE || path.join(__dirname, "..", "..", "dashboard", "Code.gs");
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) pass++; else { fail++; console.log("FAIL " + m); } };
@@ -22,7 +24,7 @@ const BOOK = {season: "2026", sheets: [
     {n: 13, last: "Lythgoe", first: null, ab: 4, h: 2, ip: "3.2", bf: 16, tc: 2, po: 1, a: 1}])}
 ]};
 function world(oldLinks) {
-  const rt = makeRuntime(CODE), b = rt.newBook("S");
+  const rt = makeRuntime(dashFiles(CODE)), b = rt.newBook("S");
   b.insertSheet("Players").data = [["PlayerID", "Last", "First", "Class"], ["p-lyth", "Lythgoe", "Landon", "Jr"], ["p-other", "Archer", "Nolan", "Sr"]];
   b.insertSheet("Coaches").data = [["Name", "Google account", "Level(s)", "Notify"], ["Jim Vaughn", "jim@example.com", "All", "Both"]];
   if (oldLinks) b.insertSheet("GC_Links").data = [["Last", "First", "PlayerID", "Linked by", "Linked at"], ["Lythgoe", "", "SKIP", "jim@example.com", "2026-11-13"]];

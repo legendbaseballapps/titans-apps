@@ -22,7 +22,7 @@
    the program goals. Every number here comes from the Sheet; Config can change any goal,
    any 2026 rate, any team's share of 150 and each level's games on the schedule. */
 
-var VERSION = "dashboard 1.4 (Nov 2026)";
+var VERSION = "dashboard 2.0.1 (Nov 2026)";
 
 var LEVELS = ["Varsity", "JV", "Sophomore", "Freshman"];
 
@@ -62,8 +62,71 @@ function doGet(e) {
   catch (x) { return page_(box_("No access", "The season Sheet is not shared with " + e_(me || "this account") + ". Ask Jim to share it.")); }
   var coach = rows_(ss, "Coaches").filter(function (r) { return me && String(r["Google account"] || "").toLowerCase().trim() === me; })[0];
   if (!coach) return page_(box_("No access", e_(me || "This account") + " is not on the Coaches tab. Ask Jim to add it."));
-  if (e && e.parameter && e.parameter.p === "import") return page_(importPage_(ss));
-  return page_(overview_(compute_(ss), coach) + '<p class="foot"><a href="' + e_(selfUrl_()) + '?p=import">Import GameChanger stats</a></p>');
+  var p = e && e.parameter ? e.parameter.p : "";
+  if (p === "import") return page_(importPage_(ss));
+  /* dashboard 1.x's one-page Program summary, kept: quick to load on a phone at the field */
+  if (p === "summary") return page_(overview_(compute_(ss), coach) + '<p class="foot"><a href="' + e_(selfUrl_()) + '">The full dashboard</a> &middot; <a href="' + e_(selfUrl_()) + '?p=import">Import GameChanger stats</a></p>');
+  return dashPage_(ss, me);
+}
+
+/* =========================================================== dashboard 2.0: the full dashboard */
+/* The page is Dash.html (the design sandbox's screens) with the season's MODEL dropped in. The model is
+   cached for a few minutes, keyed on every tab's row count, so a coach clicking around doesn't re-read
+   the whole Sheet; a new upload or import changes a row count and the next load reads it fresh. */
+var CACHE_MIN = 5;
+var MODEL_TABS = ["Records", "Players", "Coaches", "Config", "Game_Innings", "Game_Pitches", "Game_Notes", "Bullpen_Pitches",
+                  "Offense_Pitches", "Offense_Notes", "Reflections", "GameChanger"];
+function today_() {
+  try { return Utilities.formatDate(new Date(), Session.getScriptTimeZone() || "America/Denver", "yyyy-MM-dd"); }
+  catch (x) { return new Date().toISOString().slice(0, 10); }
+}
+function stamp_() {
+  try { return Utilities.formatDate(new Date(), Session.getScriptTimeZone() || "America/Denver", "MMM d, h:mm a"); }
+  catch (x) { return ""; }
+}
+function modelFor_(ss, me) {
+  var key = "m2|" + MODEL_TABS.map(function (n) { var sh = ss.getSheetByName(n); return sh ? sh.getLastRow() : 0; }).join(".");
+  var M = cacheGet_(key);
+  if (!M) {
+    M = buildModel_(function (n) { return rows_(ss, n); }, {settings: settings_(ss), today: today_(), now: stamp_()});
+    cachePut_(key, M);
+  }
+  /* who is looking and the comments are never cached: they change with the coach and with every save */
+  var coaches = rows_(ss, "Coaches");
+  M.me = mCoach_(coaches, me);
+  M.comments = mComments_(commentsFor_(coaches), coaches);
+  M.today = today_();
+  M.version = VERSION;
+  M.importUrl = selfUrl_() ? selfUrl_() + "?p=import" : "";
+  return M;
+}
+function dashPage_(ss, me) {
+  var M = modelFor_(ss, me);
+  var json = JSON.stringify(M).replace(/</g, "\\u003c").replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
+  /* a template, not a placeholder: Apps Script drops HTML comments from a file, so a <!-- --> marker never arrives */
+  var t = HtmlService.createTemplateFromFile("Dash");
+  t.model = json;
+  return t.evaluate().setTitle("Titans Coaches Dashboard").addMetaTag("viewport", "width=device-width, initial-scale=1");
+}
+/* CacheService holds 100 KB a value, so the model goes in pieces */
+function cacheGet_(key) {
+  try {
+    var c = CacheService.getScriptCache(), n = Number(c.get(key + "|n") || 0);
+    if (!n) return null;
+    var keys = []; for (var i = 0; i < n; i++) keys.push(key + "|" + i);
+    var got = c.getAll(keys), parts = keys.map(function (k) { return got[k]; });
+    if (parts.some(function (x) { return x == null; })) return null;
+    return JSON.parse(parts.join(""));
+  } catch (x) { return null; }
+}
+function cachePut_(key, M) {
+  try {
+    var s = JSON.stringify(M), size = 90000, o = {}, n = Math.ceil(s.length / size);
+    if (n > 90) return;
+    for (var i = 0; i < n; i++) o[key + "|" + i] = s.slice(i * size, (i + 1) * size);
+    o[key + "|n"] = String(n);
+    CacheService.getScriptCache().putAll(o, CACHE_MIN * 60);
+  } catch (x) {}
 }
 
 /* =========================================================== the numbers */
@@ -78,6 +141,22 @@ function settings_(ss) {
     o.lv[l] = {rate: v("2026 free-base rate " + l, d.rate), share: v("Free bases share " + l, d.share),
                games: v("Games scheduled " + l, d.games)};
   });
+  /* dashboard 2.0: the execution ladder (Jim, Nov 13, option B), the hitting floor, and the CHSAA pitch-count
+     charts, so next season's bulletin is a Config change. */
+  o.ladder = {pen: v("Bullpen execution goal", 55), live: v("Live AB execution goal", 50), game: v("Game execution goal", 45)};
+  o.hmin = v("Hitting goals start at PA", 5);
+  o.rules = {Varsity: rule_(cfg, "Varsity", M_RULES_DEFAULT.Varsity), Sub: rule_(cfg, "Sub-varsity", M_RULES_DEFAULT.Sub)};
+  return o;
+}
+/* "Varsity daily max" 110 · "Varsity rest" "86=3, 61=2, 36=1, 1=0" · "Varsity back-to-back" "35, 60, 1"
+   (day 1 at most, the 2 days at most, then days of rest). Anything unreadable keeps the bulletin's numbers. */
+function rule_(cfg, name, d) {
+  var o = JSON.parse(JSON.stringify(d)), n = name.toLowerCase();
+  var mx = Number(cfg[n + " daily max"]); if (isFinite(mx) && mx > 0) o.max = mx;
+  var bands = String(cfg[n + " rest"] || "").split(",").map(function (x) { var m = x.match(/(\d+)\s*=\s*(\d+)/); return m ? [+m[1], +m[2]] : null; });
+  if (bands.length > 1 && bands.every(Boolean)) o.bands = bands.sort(function (a, b) { return b[0] - a[0]; });
+  var bb = String(cfg[n + " back-to-back"] || "").split(",").map(Number);
+  if (bb.length === 3 && bb.every(function (x) { return isFinite(x) && x >= 0; })) o.b2b = {day1: bb[0], total: bb[1], rest: bb[2]};
   return o;
 }
 

@@ -1,0 +1,1863 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><base target="_top">
+
+<title>Titans Coaches Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600&family=Public+Sans:wght@400;600;700&display=swap">
+<style>
+/* Layout: navy app bar + filter bar, then cards on a cool grey ground; one look (light), matching the live dashboard and the deck mockup. */
+:root {
+  --navy: #14213D; --navy-2: #22345A; --blue: #2B6CB0; --sky: #8FB8E8; --orange: #C85C1C; --orange-soft: #FDF0E7;
+  --green: #1F7A4A; --red: #C0392B; --ground: #ECEFF4; --card: #FFFFFF; --line: #D6DCE5; --soft: #F4F6F9; --ink: #16233A; --muted: #5A6781; --faint: #8A93A6;
+  --display: 'Oswald', 'Arial Narrow', Arial, sans-serif; --body: 'Public Sans', -apple-system, 'Helvetica Neue', Arial, sans-serif;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+body { background: var(--ground); color: var(--ink); font-family: var(--body); font-size: 14px; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--navy); }
+.gut { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.wrap { max-width: 1280px; margin: 0 auto; }
+button { font: inherit; cursor: pointer; }
+button:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--sky); outline-offset: 2px; }
+.num { font-variant-numeric: tabular-nums; }
+
+/* app bar */
+.bar { background: var(--navy); color: #fff; padding-block: 12px; }
+.bar .wrap { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+.brand { display: flex; align-items: center; gap: 12px; }
+.mark { width: 46px; height: 32px; border-radius: 7px; background: #fff; color: var(--navy); font-family: var(--display); font-weight: 600; font-size: 19px; display: grid; place-items: center; letter-spacing: -.5px; }
+.brand b { display: block; font-family: var(--display); font-weight: 600; font-size: 20px; letter-spacing: 1.5px; line-height: 1.05; text-transform: uppercase; }
+.brand span { display: block; font-size: 11px; letter-spacing: 2.2px; text-transform: uppercase; color: #C9D3E3; }
+.nav { display: flex; gap: 4px; background: var(--navy-2); border-radius: 9px; padding: 4px; flex-wrap: wrap; }
+.nav button { background: transparent; border: 0; color: #DCE4F0; font-family: var(--display); font-weight: 500; font-size: 15px; letter-spacing: 1.4px; text-transform: uppercase; padding: 7px 14px; border-radius: 6px; }
+.nav button[aria-selected="true"] { background: var(--orange); color: #fff; }
+.who { margin-left: auto; text-align: right; font-size: 12px; color: #C9D3E3; line-height: 1.3; }
+.who b { color: #fff; }
+
+/* filter bar */
+.filters { background: var(--card); border-bottom: 1px solid var(--line); padding-block: 10px; }
+.filters .wrap { display: flex; align-items: center; gap: 10px 22px; flex-wrap: wrap; }
+.fg { display: flex; align-items: center; gap: 10px; }
+.fg > span { font-size: 11px; font-weight: 700; letter-spacing: 1.6px; text-transform: uppercase; color: var(--muted); }
+.seg { display: flex; background: var(--soft); border: 1px solid var(--line); border-radius: 8px; padding: 3px; flex-wrap: wrap; }
+.seg button { border: 0; background: transparent; color: var(--ink); font-weight: 600; font-size: 13.5px; padding: 6px 12px; border-radius: 6px; }
+.seg button[aria-pressed="true"] { background: var(--navy); color: #fff; }
+.seg button:disabled { color: var(--faint); cursor: not-allowed; }
+.asof { margin-left: auto; font-size: 12.5px; color: var(--muted); }
+.subnav { display: flex; gap: 2px; margin-right: 8px; flex-wrap: wrap; }
+.subnav button { border: 0; background: transparent; color: var(--muted); font-family: var(--display); font-weight: 500; font-size: 16px; letter-spacing: 1.2px; text-transform: uppercase; padding: 6px 12px; border-bottom: 3px solid transparent; }
+.subnav button[aria-selected="true"] { color: var(--navy); border-bottom-color: var(--orange); }
+.subnav .crumb { font-family: var(--display); font-weight: 600; font-size: 16px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--orange); padding: 6px 10px 6px 0; border-right: 1px solid var(--line); margin-right: 6px; align-self: center; }
+.roster { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.pcard { text-align: left; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; color: var(--ink); }
+.pcard:hover { border-color: var(--navy); }
+.pcard b { display: block; font-size: 14px; }
+.pcard span { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; }
+.pcard.idle b { color: var(--muted); }
+.lvhead { font-family: var(--display); font-weight: 600; font-size: 18px; letter-spacing: 1px; text-transform: uppercase; color: var(--navy); margin: 6px 0 8px; }
+
+main { padding-block: 18px 40px; }
+.sample { display: inline-block; background: var(--orange-soft); color: var(--orange); font-weight: 700; font-size: 12px; padding: 4px 10px; border-radius: 12px; }
+h1 { font-family: var(--display); font-weight: 600; font-size: 32px; letter-spacing: .3px; margin: 0; text-wrap: balance; }
+.sub { color: var(--muted); margin: 4px 0 0; }
+.titlerow { display: flex; align-items: flex-end; gap: 10px 18px; flex-wrap: wrap; margin-bottom: 14px; }
+.titlerow .key { margin-left: auto; display: flex; gap: 14px; align-items: center; font-size: 12.5px; color: var(--muted); }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; min-width: 0; }
+.card h2 { font-size: 12px; font-weight: 700; letter-spacing: 1.6px; text-transform: uppercase; color: var(--navy); margin: 0 0 10px; display: flex; gap: 10px; align-items: baseline; }
+.card h2 small { margin-left: auto; font-size: 12px; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--muted); }
+.stack { display: grid; gap: 14px; }
+.cols { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 14px; align-items: start; }
+@media (max-width: 900px) { .cols { grid-template-columns: minmax(0, 1fr); } }
+.mbar.qbar { grid-template-columns: minmax(0, 230px) minmax(0, 1fr) 36px; }
+@media (max-width: 600px) { .mbar.qbar { grid-template-columns: minmax(0, 1fr) 36px; row-gap: 4px; } .mbar.qbar .btrack { grid-column: 1 / -1; grid-row: 2; } }
+
+/* markers: met = filled green check, not yet = heavy navy ring (same as the cards) */
+.ok, .ring { display: inline-block; width: 18px; height: 18px; border-radius: 50%; vertical-align: middle; flex: none; }
+.ok { background: var(--green); color: #fff; font-size: 12px; font-weight: 700; line-height: 18px; text-align: center; }
+.ok::before { content: "\2713"; }
+.ring { border: 3px solid var(--navy); }
+.sm .ok, .sm .ring, .ok.sm, .ring.sm { width: 14px; height: 14px; }
+.ok.sm { font-size: 9px; line-height: 14px; }
+.ring.sm { border-width: 2.5px; }
+
+/* 150 banner */
+.counter { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 14px 28px; align-items: center; background: var(--navy); color: #fff; border: 0; }
+.counter .lab { font-size: 11.5px; font-weight: 700; letter-spacing: 1.6px; text-transform: uppercase; color: #F2B33D; }
+.counter .big { font-family: var(--display); font-weight: 600; font-size: 64px; line-height: 1; color: #fff; }
+.counter .big.neg { color: #F5A47A; }
+.counter .of { font-size: 15px; color: #DCE4F0; }
+.counter .goalnum { font-family: var(--display); font-weight: 600; font-size: 44px; line-height: 1; color: #F2B33D; }
+.counter .status { font-size: 14px; color: #DCE4F0; margin-top: 8px; }
+.counter .status b { color: #fff; }
+.shares { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
+.share { background: var(--navy-2); border-radius: 8px; padding: 8px 10px; border: 2px solid transparent; text-align: left; color: #fff; }
+.share.on { border-color: #F2B33D; }
+.share b { font-size: 13px; }
+.share span { display: block; font-size: 12px; color: #C9D3E3; }
+@media (max-width: 700px) { .counter { grid-template-columns: minmax(0, 1fr); } .shares { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.track { position: relative; height: 16px; background: rgba(255,255,255,.14); border-radius: 8px; }
+.track .fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--sky); border-radius: 8px; }
+.track .pace { position: absolute; top: -5px; bottom: -5px; width: 3px; margin-left: -1px; background: #F2B33D; }
+.track.dark { background: var(--soft); height: 10px; }
+.track.dark .fill { background: var(--blue); }
+.track.dark .pace { background: var(--navy); top: -4px; bottom: -4px; }
+
+/* goal tiles */
+.tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 900px) { .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 520px) { .tiles { grid-template-columns: minmax(0, 1fr); } }
+.tile { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px 12px; display: grid; gap: 6px; min-width: 0; }
+.tile .top { display: flex; align-items: center; gap: 8px; }
+.tile .name { font-size: 11.5px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
+.tile .state { margin-left: auto; display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; }
+.tile .state.met { color: var(--green); }
+.tile .state.go { color: var(--red); }
+.tile .vrow { display: flex; align-items: flex-end; gap: 12px; }
+.tile .vnow, .tile .vgoal { display: grid; }
+.tile .vgoal { margin-left: auto; text-align: right; border-left: 2px solid var(--line); padding-left: 12px; }
+.tile .cap { font-size: 10.5px; font-weight: 700; letter-spacing: 1.3px; text-transform: uppercase; color: var(--muted); }
+.tile .gv { font-family: var(--display); font-weight: 600; font-size: 30px; line-height: 1.05; color: var(--navy); }
+.tile .v.short { color: var(--red); }
+.tile .v { font-family: var(--display); font-weight: 600; font-size: 38px; line-height: 1.05; color: var(--green); }
+.tile .g { font-size: 12.5px; color: var(--muted); }
+.scale { position: relative; height: 22px; }
+.scale .rail { position: absolute; left: 0; right: 0; top: 10px; height: 3px; background: var(--soft); border-radius: 2px; }
+.scale .span { position: absolute; top: 9px; height: 5px; background: var(--blue); border-radius: 3px; }
+.scale .then { position: absolute; top: 6px; width: 11px; height: 11px; margin-left: -5px; border-radius: 50%; border: 2px solid var(--faint); background: #fff; }
+.scale .now { position: absolute; top: 4px; width: 15px; height: 15px; margin-left: -7px; border-radius: 50%; background: var(--green); border: 2px solid #fff; box-shadow: 0 0 0 1px var(--green); }
+.scale .now.short { background: var(--red); box-shadow: 0 0 0 1px var(--red); }
+.scale .goal { position: absolute; top: 5px; width: 12px; height: 12px; margin-left: -6px; background: var(--navy); transform: rotate(45deg); }
+.scalekey { display: flex; gap: 14px; font-size: 11.5px; color: var(--muted); align-items: center; flex-wrap: wrap; }
+.scalekey i { display: inline-block; vertical-align: -1px; margin-right: 4px; }
+
+/* tables */
+.scroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+th { font-size: 10.5px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); text-align: right; padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+td { padding: 8px 8px; border-bottom: 1px solid var(--soft); text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+td .cell { display: inline-flex; align-items: center; gap: 5px; }
+tr.goalrow td { color: var(--muted); }
+tr.click { cursor: pointer; }
+tr.click:hover td { background: var(--soft); }
+tr.sel td { background: #EAF2FB; }
+tr.sel td:first-child { box-shadow: inset 4px 0 0 var(--orange); }
+td.name { font-weight: 700; }
+td .lad { color: var(--muted); }
+td .lad b { color: var(--navy); }
+
+/* charts */
+svg { display: block; width: 100%; height: auto; }
+.chartkey { display: flex; gap: 14px; font-size: 12px; color: var(--muted); flex-wrap: wrap; }
+.metric { display: flex; gap: 4px; flex-wrap: wrap; margin: -2px 0 8px; }
+.metric button { border: 1px solid var(--line); background: var(--card); color: var(--ink); border-radius: 14px; padding: 3px 10px; font-size: 12.5px; font-weight: 600; }
+.metric button[aria-pressed="true"] { background: var(--navy); border-color: var(--navy); color: #fff; }
+
+/* ladder */
+.ladder { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; align-items: center; text-align: center; }
+.ladder .rung b { display: block; font-size: 11.5px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
+.ladder .rung .pv { font-family: var(--display); font-weight: 600; font-size: 40px; line-height: 1.1; color: var(--navy); display: inline-flex; gap: 8px; align-items: center; }
+.ladder .rung span { display: block; font-size: 12px; color: var(--muted); }
+.ladder .arrow { color: var(--faint); font-size: 22px; }
+@media (max-width: 600px) { .ladder { grid-template-columns: minmax(0, 1fr); } .ladder .arrow { transform: rotate(90deg); } }
+
+.pitcher h3 { font-family: var(--display); font-weight: 600; font-size: 28px; margin: 0; }
+.pitcher .who2 { color: var(--muted); margin: 2px 0 10px; }
+.mini h4 { font-size: 11.5px; letter-spacing: 1.5px; text-transform: uppercase; margin: 10px 0 2px; color: var(--navy); }
+.mini p { margin: 0; font-size: 11.5px; color: var(--muted); }
+.pill { margin-left: auto; font-size: 11.5px; font-weight: 700; padding: 3px 9px; border-radius: 10px; }
+.pill.met { background: #E3F2EA; color: var(--green); }
+.pill.go { background: var(--orange-soft); color: var(--orange); }
+.pill.wait { background: var(--soft); color: var(--muted); }
+.avail-strip { display: flex; align-items: center; gap: 10px 16px; flex-wrap: wrap; padding: 12px 16px; }
+.avail-strip > div:first-child { font-size: 14px; }
+.avail-strip > div:nth-child(2) { display: flex; gap: 6px; flex-wrap: wrap; }
+.avail-strip .mini-btn { margin-left: auto; }
+tr.resting td.name { color: var(--muted); }
+.back { border: 0; background: transparent; color: var(--blue); font-weight: 600; padding: 0; margin: 0 0 6px; }
+.mini-btn { border: 1px solid var(--line); background: var(--card); color: var(--navy); font-weight: 600; font-size: 12.5px; border-radius: 8px; padding: 4px 10px; }
+.mini-btn:hover { border-color: var(--navy); }
+td.gnote { white-space: normal; min-width: 180px; text-align: left; color: var(--muted); font-size: 12.5px; }
+.bars { display: grid; gap: 8px; }
+.mbar { display: grid; grid-template-columns: 90px minmax(0, 1fr) 44px; gap: 10px; align-items: center; font-size: 13px; }
+.mbar b { text-align: right; font-variant-numeric: tabular-nums; }
+.btrack { height: 12px; background: var(--soft); border-radius: 6px; overflow: hidden; }
+.btrack div { height: 100%; background: var(--blue); border-radius: 6px; }
+.refl { border-top: 1px solid var(--soft); padding: 10px 0; }
+.refl:first-of-type { border-top: 0; padding-top: 0; }
+.refl .rh { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.refl .rh span { font-size: 12px; color: var(--muted); }
+.refl p { margin: 4px 0 0; line-height: 1.5; }
+.refl p.empty { color: var(--faint); font-style: italic; }
+.sheet { background: #fff; border: 2px solid var(--navy); border-radius: 12px; padding: 20px 22px; display: grid; gap: 12px; }
+.sheet .sh-top { display: flex; align-items: center; gap: 10px; border-bottom: 2px solid var(--navy); padding-bottom: 8px; }
+.sheet .sh-top b { display: block; font-family: var(--display); font-size: 18px; letter-spacing: 1px; text-transform: uppercase; color: var(--navy); }
+.sheet .sh-top span { font-size: 12px; color: var(--muted); }
+.sheet .sh-btns { margin-left: auto; display: flex; gap: 6px; }
+.linkbtn { border: 0; background: transparent; padding: 0; font: inherit; font-weight: 700; color: var(--blue); text-align: left; }
+.linkbtn:hover { text-decoration: underline; }
+.sheet h3 { font-family: var(--display); font-weight: 600; font-size: 28px; margin: 0; }
+.sheet .who2 { margin: 0; color: var(--muted); }
+.sheet .card { border-color: var(--soft); }
+.cols2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.cols2 h4 { margin: 0 0 4px; font-size: 12px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--navy); }
+.cols2 ul { margin: 0; padding-left: 18px; line-height: 1.6; }
+@media (max-width: 600px) { .cols2 { grid-template-columns: minmax(0, 1fr); } }
+.pg { font-family: var(--display); font-weight: 600; font-size: 18px; letter-spacing: .8px; text-transform: uppercase; color: var(--navy); margin: 6px 0 0; border-bottom: 2px solid var(--soft); padding-bottom: 4px; }
+.pg small { font-family: var(--body); font-size: 12px; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--muted); margin-left: 6px; }
+.scards { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
+.scard { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: grid; gap: 8px; min-width: 0; }
+.scard .sh { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.scard .sh b { font-size: 16px; } .scard .sh span { font-size: 12px; color: var(--muted); }
+.sstats { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12.5px; color: var(--muted); }
+.sstats b { color: var(--ink); }
+.mixbar { display: flex; height: 20px; border-radius: 5px; overflow: hidden; }
+.mixbar div { color: #fff; font-size: 11px; font-weight: 700; display: grid; place-items: center; white-space: nowrap; overflow: hidden; }
+table.sct td, table.sct th { padding: 4px 6px; font-size: 12.5px; }
+table.sct td:nth-child(2) { text-align: left; } table.sct th:nth-child(2) { text-align: left; }
+.lean { background: var(--orange-soft); color: var(--orange); font-weight: 700; font-size: 11.5px; border-radius: 8px; padding: 1px 7px; }
+.mixes { color: var(--faint); font-size: 11.5px; }
+.stags { display: flex; flex-wrap: wrap; gap: 4px; }
+.stag { font-size: 11px; font-weight: 600; border: 1.5px solid var(--navy); color: var(--navy); border-radius: 8px; padding: 1px 7px; margin-right: 3px; display: inline-block; }
+.snote { margin: 0; font-size: 13px; color: var(--orange); font-weight: 600; }
+.hnote { color: var(--orange); font-weight: 600; margin-top: 3px; }
+table.hit td { vertical-align: top; }
+table.hit td, table.hit th { text-align: left; }
+table.hit td:first-child { color: var(--muted); }
+.write b { font-size: 12px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--navy); }
+.write i { display: block; height: 26px; border-bottom: 1px solid var(--line); }
+.lines i { display: block; height: 28px; border-bottom: 1px solid var(--line); }
+@media print { .bar.gut, .filters, .foot, .titlerow, .stack > section:not(.sheet), .sh-top button { display: none !important; } body { background: #fff; } .sheet { border: 0; padding: 0; } }
+.board td.name, .board th:nth-child(3) { text-align: left; }
+.board td.rk { font-weight: 800; color: var(--navy); width: 28px; }
+.board td.sc { font-weight: 800; color: var(--navy); font-size: 15px; }
+.board th small { font-weight: 500; letter-spacing: 0; text-transform: none; }
+.mv { font-size: 11.5px; font-weight: 700; color: var(--muted); }
+.mv.up { color: var(--green); } .mv.dn { color: var(--red); } .mv.new { color: var(--blue); }
+.spick { background: #EAF2FB; border-radius: 10px; padding: 10px 12px; margin: 10px 0 4px; font-size: 13px; }
+.spick > span { color: var(--muted); }
+.spick div { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 8px; }
+.spick label { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; cursor: pointer; }
+.spick input { width: 17px; height: 17px; accent-color: var(--navy); margin: 0; }
+.pplan { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin: 10px 0; break-inside: avoid; }
+.pplan .sh { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; margin-bottom: 8px; }
+.pplan .sh b { font-size: 16px; color: var(--navy); }
+.pplan .sh span { font-size: 12.5px; color: var(--muted); }
+.pplan .scroll { width: 0; min-width: 100%; }   /* scrolls inside the card instead of widening the page */
+.pzones { display: grid; grid-template-columns: repeat(3, minmax(0, 260px)); gap: 18px; justify-content: start; }
+@media (max-width: 700px) { .pzones { grid-template-columns: minmax(0, 1fr); max-width: 300px; } }
+.pz { min-width: 0; }
+.pzh { font-weight: 700; font-size: 13px; color: var(--navy); margin-bottom: 4px; text-align: center; }
+.pzg { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); grid-template-rows: repeat(5, 1fr); aspect-ratio: 1; gap: 0; border: 1.5px solid #8C99AD; }
+.zc { position: relative; border-right: 1.5px solid #8C99AD; border-bottom: 1.5px solid #8C99AD; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.05; min-width: 0; }
+.zc.in { background: #F6F8FB; }
+.pzg { position: relative; }
+.zc:nth-child(5n) { border-right: 0; } .zc:nth-child(n+21) { border-bottom: 0; }
+.pzg::after { content: ""; position: absolute; left: calc(20% - 1.5px); top: calc(20% - 1.5px); width: calc(60% + 1.5px); height: calc(60% + 1.5px); border: 3px solid var(--navy); box-sizing: border-box; pointer-events: none; }
+.zc .zn { position: absolute; top: 1px; left: 3px; font-style: normal; font-size: 9.5px; font-weight: 700; color: var(--muted); }
+.zc b { font-size: 14px; } .zc small { font-size: 9.5px; color: var(--muted); }
+.zc.o3, .zsw.o3 { background: #E5793A; } .zc.o2, .zsw.o2 { background: #F5B183; } .zc.o1, .zsw.o1 { background: #FBE0CC; }
+.zc.n0, .zsw.n0 { background: #E3E5E9; }
+.zc.b1, .zsw.b1 { background: #D3E5F7; } .zc.b2, .zsw.b2 { background: #93C0EC; } .zc.b3, .zsw.b3 { background: #5A96D8; }
+.zc.o3 small, .zc.b3 small, .zc.o3 .zn, .zc.b3 .zn { color: var(--ink); }
+.zc.early { background: #FFFFFF; box-shadow: inset 0 0 0 1.5px #A9B3C3; } .zc.early b { color: var(--muted); font-style: italic; }
+.zsw.early { background: #FFFFFF; box-shadow: inset 0 0 0 1.5px #A9B3C3; }
+.pzleg { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 10px; font-size: 11.5px; color: var(--muted); }
+.pzleg span { display: inline-flex; align-items: center; gap: 5px; }
+.zsw { width: 14px; height: 14px; border-radius: 3px; display: inline-block; }
+.zc.thin small { color: var(--faint); }
+.zc.none { color: var(--faint); }
+.pzlr { display: flex; justify-content: space-between; font-size: 10.5px; font-weight: 700; color: var(--muted); margin-top: 3px; letter-spacing: .3px; }
+.pzkey { font-size: 11.5px; color: var(--muted); margin: 6px 0 0; }
+.pview { display: flex; gap: 6px; align-items: center; margin: 14px 0 0; font-size: 12.5px; color: var(--muted); }
+.pview button { border: 1px solid var(--line); background: var(--card); border-radius: 8px; padding: 4px 10px; font-weight: 600; font-size: 12.5px; color: var(--ink); }
+.pview button[aria-pressed="true"] { background: var(--navy); color: #fff; border-color: var(--navy); }
+.pgrid { width: 100%; border-collapse: separate; border-spacing: 3px; }
+.pgrid th { font-size: 10.5px; text-align: center; }
+.pgrid td.name { text-align: left; font-weight: 700; white-space: nowrap; padding-right: 8px; }
+.pgrid td.pc { text-align: center; background: var(--soft); border-radius: 6px; padding: 6px 4px; min-width: 64px; line-height: 1.15; }
+.pgrid td.pc b { display: block; font-size: 15px; }
+.pgrid td.pc small { font-size: 10.5px; color: var(--muted); }
+.pgrid td.pc.good { background: #E3F2E9; } .pgrid td.pc.good b { color: var(--green); }
+.pgrid td.pc.low { background: var(--orange-soft); } .pgrid td.pc.low b { color: var(--orange); }
+.pgrid td.pc.early b { color: var(--faint); font-style: italic; }
+.pgrid td.pc.thin { color: var(--faint); font-size: 11px; }
+.pgrid td.pc.none { background: transparent; color: var(--faint); }
+.callsheet { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 10px; font-size: 13px; }
+.callsheet b { display: block; font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase; margin-bottom: 4px; }
+.callsheet span { display: block; padding: 2px 0; }
+.callsheet em { font-style: normal; color: var(--muted); font-size: 12px; } .callsheet em.g { color: var(--blue); }
+.ok-t { color: var(--blue); } .lo-t { color: var(--orange); } .ea-t { color: var(--faint); }
+.matchups { margin-top: 10px; border-top: 1px dashed var(--line); padding-top: 8px; font-size: 13px; }
+.matchups > b { font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--navy); }
+.matchups p { margin: 4px 0; }
+@media print { .noprint { display: none !important; } }
+.jumps { display: flex; flex-wrap: wrap; gap: 6px; margin: -4px 0 12px; }
+.psec { scroll-margin-top: 12px; }
+.psech { font-family: var(--display); font-size: 20px; letter-spacing: 1px; text-transform: uppercase; color: var(--navy); border-bottom: 3px solid var(--orange); padding-bottom: 4px; margin: 10px 0 10px; }
+.psech small { font-family: var(--sans, inherit); font-size: 12px; letter-spacing: 0; text-transform: none; color: var(--muted); font-weight: 500; margin-left: 6px; }
+.seedbox { display: inline-flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 13.5px; font-weight: 600; color: var(--ink); cursor: pointer; }
+.seedbox input { width: 18px; height: 18px; accent-color: var(--navy); margin: 0; }
+.seeds { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; }
+.seeds div { background: var(--soft, #F4F6FA); border-radius: 10px; padding: 8px 10px; font-weight: 600; display: grid; grid-template-columns: 26px 1fr; row-gap: 2px; }
+.seeds b { color: var(--orange, #C85C1C); font-size: 16px; grid-row: span 2; }
+.seeds span { font-size: 11.5px; color: var(--muted); font-weight: 500; }
+@media print { .board { margin: 0 !important; } .stack { gap: 0 !important; margin: 0 !important; padding: 0 !important; } main, #view { padding: 0 !important; margin: 0 !important; } .board .scroll { overflow: visible; } .board table { font-size: 13px; } .board td, .board th { padding: 5px 8px; } .board tr.click { cursor: default; } }
+.tag { display: inline-block; margin-left: 6px; font-size: 11px; font-weight: 600; color: var(--blue); background: #EAF2FB; border-radius: 8px; padding: 1px 7px; vertical-align: 1px; }
+tr.idle td { color: var(--faint); }
+tr.idle td.name { color: var(--muted); font-weight: 600; }
+td.nyp { text-align: left; font-style: italic; }
+.swing { margin: -4px 0 8px; font-size: 12.5px; color: var(--ink); background: #EAF2FB; border-radius: 8px; padding: 7px 10px; }
+.mini p.empty { font-size: 12.5px; padding: 14px 0; }
+
+/* defense (GameChanger) */
+.dcols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.7fr); gap: 18px; align-items: start; }
+@media (max-width: 900px) { .dcols { grid-template-columns: minmax(0, 1fr); } }
+.posbars { display: grid; gap: 6px; }
+.posbars .mbar { grid-template-columns: 70px minmax(0, 1fr) 56px; }
+.dstats { display: grid; grid-template-columns: repeat(auto-fit, minmax(92px, 1fr)); gap: 8px; }
+.dstat { background: var(--soft); border-radius: 8px; padding: 8px 10px; }
+.dstat b { display: flex; align-items: center; gap: 6px; font-family: var(--display); font-weight: 600; font-size: 22px; color: var(--navy); }
+.dstat span { display: block; font-size: 10.5px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); }
+.dstat em { display: block; font-style: normal; font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+.dstat em.first { color: var(--blue); font-weight: 600; }
+.src { display: inline-block; font-size: 11px; font-weight: 600; color: var(--muted); background: var(--soft); border-radius: 8px; padding: 1px 8px; }
+.prop { display: inline-block; font-size: 11px; font-weight: 700; color: var(--orange); background: var(--orange-soft); border-radius: 8px; padding: 1px 8px; }
+tr.base td { color: var(--muted); background: #FAFBFC; }
+tr.base td.name { font-weight: 600; }
+td.first { text-align: left; color: var(--blue); font-weight: 600; }
+.coming { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.coming .card p { margin: 6px 0 0; color: var(--muted); line-height: 1.5; }
+.note { font-size: 12px; color: var(--muted); margin: 10px 0 0; line-height: 1.5; }
+.foot { font-size: 11.5px; color: var(--faint); text-align: right; margin-top: 16px; }
+@media (prefers-reduced-motion: no-preference) { .track .fill, .track.dark .fill { transition: width .4s ease; } }
+
+/* dashboard 2.0 */
+.cbox { width: 100%; font: inherit; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; margin-top: 6px; resize: vertical; }
+.cbtns { display: flex; gap: 8px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
+.cmsg { color: var(--muted); font-size: 12px; }
+.refl > .mini-btn { margin-top: 8px; }
+.conly { color: var(--muted); font-style: italic; }
+small.n { display: block; color: var(--faint); font-size: 10px; font-weight: 400; }
+.foot a { color: inherit; }
+@media print { .refl > .mini-btn, .cbtns { display: none !important; } }
+</style>
+</head><body>
+
+<header class="bar gut">
+  <div class="wrap">
+    <div class="brand"><div class="mark">LT</div><div><b>Legend Titans</b><span>Coaches dashboard</span></div></div>
+    <nav class="nav" role="tablist" aria-label="Levels" id="nav"></nav>
+    <div class="who" id="who"></div>
+  </div>
+</header>
+<div class="filters gut">
+  <div class="wrap">
+    <nav class="subnav" role="tablist" aria-label="Pages" id="sub"></nav>
+    <div class="fg"><span>Side</span><div class="seg" id="side"></div></div>
+    <div class="fg"><span>Season</span><div class="seg" id="season"></div></div>
+    <div class="asof" id="asof"></div>
+  </div>
+</div>
+<main class="gut"><div class="wrap" id="view"></div></main>
+
+<script>window.MODEL = <?!= model ?>;</script>
+<script>
+(function () {
+/* ======================================================= the season, from the Sheet
+   MODEL is built on the server (Model.gs) from the season Sheet and dropped into this page. This block
+   turns it into the objects the screens draw from, the same ones the design sandbox (v36) used. */
+var MODEL = window.MODEL || {};
+var LEVELS = ["Varsity", "JV", "Sophomore", "Freshman"];
+var CFG = MODEL.cfg || {};
+var DEF_LV = {Varsity: {rate: 17.9, share: 49, games: 23}, JV: {rate: 20.3, share: 43, games: 19}, Sophomore: {rate: 18.2, share: 34, games: 19}, Freshman: {rate: 17.7, share: 24, games: 19}};
+var RATE = {}, SHARE = {}, SCHED = {};
+LEVELS.forEach(function (l) { var c = (CFG.lv || {})[l] || DEF_LV[l]; RATE[l] = c.rate; SHARE[l] = c.share; SCHED[l] = c.games; });
+var SAVE_GOAL = CFG.saveGoal || 150, BUDGET = CFG.budget || 3, SEASON = String(CFG.season || "2027");
+/* The execution ladder (Jim, Nov 13, option B): stepped goals, set backwards from the game goal. Provisional for
+   year 1; reset in April once the typical pen-to-game drop is measured. Config can change them. */
+var LADDER = CFG.ladder || {pen: 55, live: 50, game: 45};
+var BASE = MODEL.base || {P: {}, H: {}, D: {}};
+var LAST26 = BASE.P.Program || {}, LAST26L = {};
+LEVELS.forEach(function (l) { LAST26L[l] = BASE.P[l] || {}; });
+var GOALS = [
+  {k: "free", name: "Free bases", unit: "%", goal: 13, more: false, sub: "walks + HBP, % of batters", lo: 8, hi: 22},
+  {k: "fps", name: "First-pitch strikes", unit: "%", goal: 60, more: true, sub: "% of batters", lo: 50, hi: 66},
+  {k: "strike", name: "Strike %", unit: "%", goal: 60, more: true, sub: "% of pitches", lo: 54, hi: 64},
+  {k: "k", name: "Strikeouts", unit: "%", goal: 22, more: true, sub: "% of batters", lo: 14, hi: 32},
+  {k: "kbb", name: "Strikeouts per walk", unit: "", goal: 2.0, more: true, sub: "K ÷ BB", lo: 1, hi: 3.5, dec: 1},
+  {k: "uer", name: "Unearned runs", unit: "%", goal: 15, more: false, sub: "% of runs", lo: 0, hi: 35},
+  {k: "hard", name: "Hard contact", unit: "%", goal: 20, more: false, sub: "% of balls in play", lo: 10, hi: 32},
+  {k: "whip", name: "WHIP", unit: "", goal: 1.5, more: false, sub: "walks + hits per inning", lo: 1, hi: 2.3, dec: 2},
+  {k: "era", name: "ERA", unit: "", goal: 3.5, more: false, sub: "7 innings", lo: 2, hi: 7, dec: 2}
+];
+GOALS.forEach(function (g) { var v = (CFG.goals || {})[g.k]; if (v != null && isFinite(v)) g.goal = +v; });
+/* Defense goals (set Nov 13): fielding % and caught stealing from the high school ranges, plus passed balls.
+   Season totals come from the GameChanger import, so these update whenever a coach imports. */
+var DGOALS = [
+  {k: "fpct", name: "Fielding %", unit: "", goal: 0.950, more: true, sub: "(putouts + assists) ÷ chances", lo: 0.88, hi: 0.98, dec: 3},
+  {k: "cs", name: "Caught stealing", unit: "%", goal: 30, more: true, sub: "% of steal attempts thrown out", lo: 10, hi: 45, dec: 1},
+  {k: "pb", name: "Passed balls", unit: "", goal: 0.4, more: false, sub: "per 7 innings caught", lo: 0, hi: 1.2, dec: 2}
+];
+var DEF26 = {}, DEF27 = {};
+["Program"].concat(LEVELS).forEach(function (l) { DEF26[l] = BASE.D[l] || {}; });
+var MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+function sd(d) { var m = String(d || "").split("-"); return m.length < 3 ? String(d || "") : MON[+m[1] - 1] + " " + (+m[2]); }
+var GC_AT = MODEL.gcAt ? sd(String(MODEL.gcAt).slice(0, 10)) : "";
+function gcWhen() { return GC_AT ? "last imported " + GC_AT : "not imported yet"; }
+
+/* people: one unique display name each, so a name can stand for the person everywhere on the page */
+var NAME = {}, PID = {}, PEOPLE = MODEL.people || {};
+(function () {
+  var used = {};
+  Object.keys(PEOPLE).sort().forEach(function (id) {
+    var p = PEOPLE[id], n = p.name || id;
+    if (used[n]) n = n + " (" + (p.cl || id) + ")";
+    used[n] = 1; NAME[id] = n; PID[n] = id;
+  });
+})();
+function clOf(id) { return (PEOPLE[id] || {}).cl || ""; }
+
+function pool(list, key) {   /* add up [on or next to, graded] pairs, then the percent */
+  var ok = 0, n = 0;
+  list.forEach(function (x) { var a = key ? x[key] : [x.ok, x.g]; if (a) { ok += a[0]; n += a[1]; } });
+  return n ? ok * 100 / n : null;
+}
+function pooln(list, key) { var n = 0; list.forEach(function (x) { var a = key ? x[key] : [x.ok, x.g]; if (a) n += a[1]; }); return n; }
+
+function blank() { return {g: {}, pitches: 0, strikes: 0, fp: 0, fps: 0, bf: 0, outs: 0, free: 0, k: 0, bb: 0, hits: 0, runs: 0, er: 0, bip: 0, hard: 0, xok: 0, xn: 0, apps: 0}; }
+var SUMK = ["pitches","strikes","fp","fps","bf","outs","free","k","bb","hits","runs","er","bip","hard","xok","xn"];
+var D = {lv: {}, prog: blank(), games: (MODEL.games || []).slice(), pitchers: {}};
+var WINTER = {};   /* winter work belongs to the person, so a swing arm's pens show on both his level lines */
+LEVELS.forEach(function (lv) { D.lv[lv] = blank(); });
+Object.keys(MODEL.pens || {}).forEach(function (id) {
+  var all = MODEL.pens[id];
+  WINTER[id] = {pens: all.filter(function (s) { return s.mode === "Script"; }), live: all.filter(function (s) { return s.mode === "Live"; })};
+});
+/* which level is his: the Players tab, else where he pitched most */
+var BFBY = {};
+(MODEL.pit || []).forEach(function (L) { var a = BFBY[L.id] || (BFBY[L.id] = {}); a[L.lv] = (a[L.lv] || 0) + L.bf + 0.001; });
+function homeOf(id) {
+  var h = (PEOPLE[id] || {}).home; if (h) return h;
+  var a = BFBY[id] || {}, best = ""; Object.keys(a).forEach(function (l) { if (!best || a[l] > a[best]) best = l; });
+  return best;
+}
+function pline(id, lv) {
+  var k = lv + "|" + id, o = D.pitchers[k];
+  if (o) return o;
+  o = D.pitchers[k] = blank();
+  var W = WINTER[id] || {pens: [], live: []}, home = homeOf(id);
+  o.id = k; o.pid = id; o.lv = lv; o.name = NAME[id] || id; o.person = o.name; o.cl = clOf(id) || "–"; o.t = (PEOPLE[id] || {}).t || "–";
+  o.home = home && home !== lv ? home : null; o.pens = W.pens; o.live = W.live; o.gameEx = []; o.logm = {};
+  return o;
+}
+(MODEL.pit || []).forEach(function (L) {
+  var p = pline(L.id, L.lv);
+  [p, D.lv[L.lv], D.prog].forEach(function (o) { SUMK.forEach(function (k) { o[k] += L[k] || 0; }); o.g[L.rid] = L.date; });
+  var GL = p.logm[L.rid] = Object.assign(blank(), L);
+  GL.lv = L.lv;
+  p.apps++;
+  if (L.xn) p.gameEx.push({rid: L.rid, date: L.date, lv: L.lv, ok: L.xok, g: L.xn, v: Math.round(L.xok * 100 / L.xn)});
+});
+/* every arm with winter work or a game has a line on his own level, even before he pitches there */
+Object.keys(WINTER).concat(Object.keys(BFBY)).forEach(function (id) { var h = homeOf(id); if (h) pline(id, h); });
+function metrics(o) {
+  var ip = o.outs / 3;
+  return {free: o.bf ? o.free * 100 / o.bf : null, fps: o.fp ? o.fps * 100 / o.fp : null, strike: o.pitches ? o.strikes * 100 / o.pitches : null,
+          k: o.bf ? o.k * 100 / o.bf : null, kbb: o.bb ? o.k / o.bb : null, uer: o.runs ? (o.runs - o.er) * 100 / o.runs : (o.bf ? 0 : null),
+          hard: o.bip ? o.hard * 100 / o.bip : null, whip: ip ? (o.bb + o.hits) / ip : null, era: ip ? o.er * 7 / ip : null};
+}
+LEVELS.forEach(function (lv) {
+  var o = D.lv[lv]; o.m = metrics(o); o.n = Object.keys(o.g).length;
+  o.saved = o.bf * RATE[lv] / 100 - o.free; o.pace = SHARE[lv] * Math.min(1, o.n / SCHED[lv]);
+});
+D.prog.m = metrics(D.prog); D.prog.n = D.games.length;
+D.prog.saved = LEVELS.reduce(function (a, l) { return a + D.lv[l].saved; }, 0);
+D.prog.pace = LEVELS.reduce(function (a, l) { return a + D.lv[l].pace; }, 0);
+Object.keys(D.pitchers).forEach(function (id) { var p = D.pitchers[id]; p.m = metrics(p); });
+var LASTGAME = D.games.length ? D.games[D.games.length - 1].date : "";
+var HASSPRING = D.games.length > 0 || (MODEL.hit || []).length > 0;
+
+/* weeks, Monday to Sunday, from the first spring game to the last */
+function addDays(d, n) { var t = new Date(d + "T12:00:00Z"); t.setUTCDate(t.getUTCDate() + n); return t.toISOString().slice(0, 10); }
+function monday(d) { var t = new Date(d + "T12:00:00Z"), w = (t.getUTCDay() + 6) % 7; return addDays(d, -w); }
+var WEEKS = (function () {
+  var ds = D.games.map(function (g) { return g.date; }).concat((MODEL.hit || []).map(function (h) { return h.date; })).filter(Boolean).sort();
+  if (!ds.length) return [];
+  var out = [], w = monday(ds[0]), end = monday(ds[ds.length - 1]);
+  while (w <= end) { out.push(w); w = addDays(w, 7); }
+  return out;
+})();
+function weekOf(d) { var w = 0; WEEKS.forEach(function (x, i) { if (d >= x) w = i; }); return w; }
+/* ======================================================= helpers */
+function $(s) { return document.querySelector(s); }
+function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return {"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]; }); }
+function fmt(g, x) { if (x == null) return "–"; if (g.dec === 3) return x.toFixed(3).replace(/^0/, ""); return (g.dec ? x.toFixed(g.dec) : x.toFixed(1)) + g.unit; }
+function gtxt(g) { return g.dec === 3 ? g.goal.toFixed(3).replace(/^0/, "") : (g.dec && !(g.unit === "%" && g.goal % 1 === 0) ? g.goal.toFixed(g.dec) : g.goal) + g.unit; }
+/* graded on the number shown, so 59.97% never reads "60.0%" and "not yet" */
+function met(g, x) { if (x == null) return false; var d = g.dec || 1, r = Math.round(x * Math.pow(10, d)) / Math.pow(10, d); return g.more ? r >= g.goal - 1e-9 : r <= g.goal + 1e-9; }
+function mark(g, x, small) { if (x == null) return ""; return '<i class="' + (met(g, x) ? "ok" : "ring") + (small ? " sm" : "") + '" aria-label="' + (met(g, x) ? "met" : "not yet") + '"></i>'; }
+function toGo(g, x) {
+  var d = Math.abs(x - g.goal);
+  if (g.dec === 3) { var pt = Math.round(d * 1000); return pt + (pt === 1 ? " pt" : " pts") + " to go"; }
+  return g.unit === "%" ? d.toFixed(1) + (d.toFixed(1) === "1.0" ? " pt" : " pts") + " to go" : d.toFixed(g.dec) + " to go";
+}
+/* ======================================================= state */
+var TODAY = MODEL.today || new Date().toISOString().slice(0, 10);
+var S = {sp: {}, seeds: false, cls: "All", hmetric: "qab", side: "Pitching", tab: "overview", level: "Program", season: HASSPRING ? "Spring" : "Winter", metric: "free", pitcher: null, player: null, report: null, asof: TODAY};
+/* Level is the top level; the pages sit under it. Program has no Team page, since every level is a team. */
+/* Nov 13 (Jim): game-day scouting gets one home that doesn't change with the Pitching / Hitting / Defense switch;
+   Reports keeps the exit reports, and any other reports we add later. */
+var TABS = [["overview","Overview"],["teams","Team"],["players","Players"],["scout","Scouting"],["reports","Reports"]];
+/* Winter is by class year, not by level (Jim, Nov 13: "We just track them by class"), and has no Reports. */
+var WCL = [["All", "All classes"], ["Sr", "Seniors"], ["Jr", "Juniors"], ["So", "Sophomores"], ["Fr", "Freshmen"]];
+function WIN() { return S.side === "Pitching" && S.season === "Winter"; }
+function clsName(g) { return (WCL.filter(function (c) { return c[0] === g; })[0] || WCL[0])[1]; }
+function tabsFor(lv) {
+  if (WIN()) return [["overview", "Overview"], ["teams", "Staff"], ["board", "Leaderboard"], ["players", "Players"]];
+  return TABS.filter(function (t) { return !(lv === "Program" && t[0] === "teams"); });
+}
+function readHash() {
+  try {
+    var h = decodeURIComponent((location.hash || "").replace("#", "")).split("/");
+    if (["Program"].concat(LEVELS).indexOf(h[0]) >= 0) S.level = h[0];
+    if (h[1] && TABS.some(function (t) { return t[0] === h[1]; })) S.tab = h[1];
+  } catch (e) {}
+}
+function writeHash() { try { history.replaceState(null, "", "#" + S.level + "/" + S.tab); } catch (e) {} }
+
+function drawBars() {
+  $("#nav").innerHTML = WIN()
+    ? WCL.map(function (c) { return '<button role="tab" aria-selected="' + (S.cls === c[0]) + '" data-cls="' + c[0] + '">' + c[1] + "</button>"; }).join("")
+    : ["Program"].concat(LEVELS).map(function (l) { return '<button role="tab" aria-selected="' + (S.level === l) + '" data-level="' + l + '">' + l + "</button>"; }).join("");
+  $("#sub").innerHTML = '<span class="crumb">' + (WIN() ? clsName(S.cls) : S.level) + "</span>" + tabsFor(S.level).map(function (t) { return '<button role="tab" aria-selected="' + (S.tab === t[0]) + '" data-tab="' + t[0] + '">' + t[1] + "</button>"; }).join("");
+  $("#season").parentNode.style.display = S.side === "Pitching" ? "" : "none";   /* winter is pitching only: no hitter or defense work is tracked */
+  $("#side").innerHTML = ["Pitching", "Hitting", "Defense"].map(function (x) { return '<button aria-pressed="' + (S.side === x) + '" data-side="' + x + '">' + x + "</button>"; }).join("");
+  $("#season").innerHTML = ["Winter","Spring"].map(function (s) { return '<button aria-pressed="' + (S.season === s) + '" data-season="' + s + '">' + s + " " + SEASON + "</button>"; }).join("");
+  $("#asof").innerHTML = LASTGAME ? "Spring games through " + sd(LASTGAME) : "No spring games yet";
+  var me = MODEL.me || {};
+  $("#who").innerHTML = esc(me.name || me.email || "Signed in with Google") + "<br><b>" + (me.levels && me.levels.length ? (me.levels.length === 4 ? "Every level" : me.levels.join(", ")) + " coach" : "Coaches only") + "</b>";
+}
+/* ======================================================= pieces */
+function schedAll() { return LEVELS.reduce(function (a, l) { return a + SCHED[l]; }, 0); }
+function counter(lv) {
+  var o = lv === "Program" ? D.prog : D.lv[lv], goal = lv === "Program" ? SAVE_GOAL : SHARE[lv];
+  var n = Math.round(o.saved), p = Math.round(o.pace), d = n - p;
+  var status = d > 0 ? "<b>" + d + " ahead</b> of pace" : d < 0 ? "<b>" + (-d) + " behind</b> pace" : "<b>Right on</b> pace";
+  var w = Math.max(0, Math.min(100, n * 100 / goal)), pw = Math.max(0, Math.min(100, p * 100 / goal));
+  var big = n >= 0 ? '<span class="big num">' + n + '</span><span class="goalnum num"> / ' + goal + '</span><div class="of">free bases saved</div>'
+                   : '<span class="big neg num">' + (-n) + '</span> <span class="of">more free bases than 2026\'s rate</span>';
+  var shares = LEVELS.map(function (l) {
+    var x = D.lv[l], s = Math.round(x.saved);
+    return '<button class="share' + (l === lv ? " on" : "") + '" data-level="' + l + '"><b>' + l + "</b><span>" + (s >= 0 ? s + " of " + SHARE[l] : (-s) + " over the rate") + " · pace " + Math.round(x.pace) + "</span></button>";
+  }).join("");
+  return '<section class="card counter"><div><div class="lab">' + (lv === "Program" ? "Program goal · " + SAVE_GOAL + " fewer free bases than 2026" : lv + "'s share of " + SAVE_GOAL) + "</div>" +
+    '<div style="margin-top:6px">' + big + "</div></div><div>" +
+    '<div class="track"><div class="fill" style="width:' + w.toFixed(1) + '%"></div><div class="pace" style="left:' + pw.toFixed(1) + '%"></div></div>' +
+    '<div class="status">' + status + " (pace: " + p + " by now) · " + o.n + " of " + (lv === "Program" ? schedAll() : SCHED[lv]) + " games</div>" +
+    (lv === "Program" ? '<div class="shares">' + shares + "</div>" : "") + "</div></section>";
+}
+function tiles(lv, list, now, last) {
+  var o = lv === "Program" ? D.prog : D.lv[lv];
+  list = list || GOALS; now = now || o.m; last = last || (lv === "Program" ? LAST26 : LAST26L[lv]) || {};
+  return '<div class="tiles">' + list.map(function (g) {
+    var x = now[g.k], ok = met(g, x), then = last[g.k];
+    var pos = function (v) { return Math.max(0, Math.min(100, (g.more ? (v - g.lo) : (g.hi - v)) * 100 / (g.hi - g.lo))); };
+    var a = then != null ? pos(then) : null, b = x != null ? pos(x) : null, gp = pos(g.goal);
+    var span = a != null && b != null ? '<div class="span" style="left:' + Math.min(a, b) + "%;width:" + Math.abs(b - a) + '%"></div>' : "";
+    span += a != null ? '<div class="then" style="left:' + a + '%"></div>' : "";
+    return '<div class="tile"><div class="top"><span class="name">' + g.name + '</span><span class="state ' + (ok ? "met" : "go") + '">' +
+      (x == null ? "Nothing yet" : ok ? '<i class="ok sm"></i>Met' : '<i class="ring sm"></i>' + toGo(g, x)) + "</span></div>" +
+      '<div class="vrow"><div class="vnow"><span class="cap">' + SEASON + ' so far</span><span class="v num' + (ok || x == null ? "" : " short") + '">' + fmt(g, x) + "</span></div>" +
+      '<div class="vgoal"><span class="cap">Goal</span><span class="gv num">' + (g.more ? "≥" : "≤") + gtxt(g) + "</span></div></div>" +
+      '<div class="scale" aria-hidden="true"><div class="rail"></div>' + span + '<div class="goal" style="left:' + gp + '%"></div>' + (b != null ? '<div class="now' + (ok ? "" : " short") + '" style="left:' + b + '%"></div>' : "") + "</div>" +
+      '<div class="g">' + (g.sub ? g.sub + " · " : "") + "2026: " + (then == null ? "not charted" : fmt(g, then)) + "</div></div>";
+  }).join("") + "</div>" +
+  '<div class="scalekey"><span><i class="ring sm"></i>2026</span><span><i style="width:12px;height:12px;border-radius:50%;background:var(--blue)"></i>' + SEASON + ' so far</span><span><i style="width:10px;height:10px;background:var(--navy);transform:rotate(45deg)"></i>goal</span><span>Right is always better</span></div>';
+}
+function defenseTiles(lv) {
+  return '<section class="card"><h2>Defense vs goals <small>team totals from GameChanger · ' + gcWhen() + '</small></h2>' +
+    tiles(lv, DGOALS, DEF27[lv] || {}, DEF26[lv] || {}).replace('<div class="tiles">', '<div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr))">') +
+    '<p class="note">Fielding % for the whole team; caught stealing and passed balls for our catchers. Season totals, so they move when a coach imports from GameChanger, not after every game. Goals set from the high school range: team fielding usually runs about .920 to .950, and stealing stops paying off for the offense below about 70% success (30% thrown out).</p></section>';
+}
+function levelTable(sel) {
+  var head = "<tr><th>Level</th>" + GOALS.map(function (g) { return "<th>" + g.name.replace("Strikeouts per walk", "K / BB").replace("First-pitch strikes", "1st pitch").replace("Unearned runs", "Unearned").replace("Hard contact", "Hard-hit") + "</th>"; }).join("") + "</tr>";
+  var rows = LEVELS.concat(["Program"]).map(function (l) {
+    var o = l === "Program" ? D.prog : D.lv[l];
+    return '<tr class="click' + (l === sel ? " sel" : "") + '" data-level="' + l + '" tabindex="0"><td class="name">' + l + "</td>" +
+      GOALS.map(function (g) { var x = o.m[g.k]; return '<td><span class="cell">' + fmt(g, x) + mark(g, x, true) + "</span></td>"; }).join("") + "</tr>";
+  }).join("");
+  var goal = '<tr class="goalrow"><td>Goal</td>' + GOALS.map(function (g) { return "<td>" + (g.more ? "≥" : "≤") + (g.dec ? g.goal.toFixed(g.dec) : g.goal) + g.unit + "</td>"; }).join("") + "</tr>";
+  return '<section class="card"><h2>By level <small>tap a level to open it</small></h2><div class="scroll"><table>' + head + rows + goal + "</table></div></section>";
+}
+/* charts */
+function lineChart(opt) {
+  var W = opt.w || 640, H = opt.h || 230, L = 44, R = 14, T = 14, B = 30, w = W - L - R, h = H - T - B;
+  var x = function (i) { return opt.n > 1 ? L + i * w / (opt.n - 1) : L + w / 2; }, y = function (v) { return T + (opt.hi - v) * h / (opt.hi - opt.lo); };
+  var s = '<svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="' + esc(opt.label) + '">';
+  opt.ticks.forEach(function (t) { s += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(t) + '" y2="' + y(t) + '" stroke="#EEF1F5"/><text x="' + (L - 6) + '" y="' + (y(t) + 4) + '" text-anchor="end" font-size="11" fill="#5A6781">' + t + opt.unit + "</text>"; });
+  opt.xl.forEach(function (t, i) { s += '<text x="' + x(i) + '" y="' + (H - 8) + '" text-anchor="' + (i === opt.xl.length - 1 && opt.xl.length > 1 ? "end" : i === 0 && opt.xl.length > 1 ? "start" : "middle") + '" font-size="11" fill="#5A6781">' + t + "</text>"; });
+  if (opt.goal != null) s += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(opt.goal) + '" y2="' + y(opt.goal) + '" stroke="#14213D" stroke-width="1.5" stroke-dasharray="5 4"/><text x="' + (L + 6) + '" y="' + (y(opt.goal) - 6) + '" font-size="11" font-weight="700" fill="#14213D">Goal ' + opt.goal + opt.unit + "</text>";
+  opt.lines.forEach(function (ln) {
+    var pts = ln.v.map(function (v, i) { return v == null ? null : [x(i), y(Math.max(opt.lo, Math.min(opt.hi, v)))]; }).filter(Boolean);
+    if (!pts.length) return;
+    s += '<polyline fill="none" stroke="' + ln.c + '" stroke-width="' + (ln.w || 2) + '" points="' + pts.map(function (p) { return p.join(","); }).join(" ") + '"/>';
+    if (ln.dots) ln.v.forEach(function (v, i) { if (v == null) return; var good = opt.more ? v >= opt.goal : v <= opt.goal;
+      s += '<circle cx="' + x(i) + '" cy="' + y(Math.max(opt.lo, Math.min(opt.hi, v))) + '" r="4.5" fill="' + (good ? "#2B6CB0" : "#C85C1C") + '" stroke="#fff" stroke-width="1.5"/>'; });
+    if (ln.tag) { var lp = pts[pts.length - 1]; s += '<text x="' + (lp[0] - 4) + '" y="' + (lp[1] - 8) + '" text-anchor="end" font-size="11" fill="' + ln.c + '">' + ln.tag + "</text>"; }
+  });
+  return s + "</svg>";
+}
+function noChart(what) { return '<p class="note" style="margin:0">' + what + "</p>"; }
+/* each level's pitching by the week it happened, then season to date at each week's end */
+var PWK = {};
+LEVELS.forEach(function (lv) { PWK[lv] = WEEKS.map(function () { return blank(); }); });
+(MODEL.pit || []).forEach(function (L) { var a = PWK[L.lv] && PWK[L.lv][weekOf(L.date)]; if (a) SUMK.forEach(function (k) { a[k] += L[k] || 0; }); });
+function weekly(lv, key) {
+  var lvs = lv === "Program" ? LEVELS : [lv], cum = blank();
+  return WEEKS.map(function (w, i) {
+    lvs.forEach(function (l) { SUMK.forEach(function (k) { cum[k] += PWK[l][i][k]; }); });
+    return cum.bf ? metrics(cum)[key] : null;
+  });
+}
+function byWeek(lv, wide) {
+  wide = wide && window.innerWidth > 900;   /* on a phone the wide shape gets too short to read */
+  var g = GOALS.filter(function (x) { return x.k === S.metric; })[0] || GOALS[0];
+  var head = '<section class="card"><h2>' + (lv === "Program" ? "Program" : lv + " team") + " · " + g.name.toLowerCase() + ' by week <small>whole staff, season to date at each week\'s end' + (lv === "Program" ? " · program navy, levels grey" : "") + "</small></h2>";
+  var lines = [];
+  if (lv === "Program") LEVELS.forEach(function (l) { lines.push({v: weekly(l, g.k), c: "#B9C3D3", w: 1.5, tag: l}); });
+  lines.push({v: weekly(lv, g.k), c: "#14213D", w: 2.5, dots: true});
+  var all = [].concat.apply([], lines.map(function (l) { return l.v; })).filter(function (v) { return v != null; });
+  var btns = GOALS.map(function (x) { return '<button aria-pressed="' + (x.k === g.k) + '" data-metric="' + x.k + '">' + x.name.replace("Strikeouts per walk", "K / BB").replace("First-pitch strikes", "1st pitch") + "</button>"; }).join("");
+  if (!all.length) return head + '<div class="metric">' + btns + "</div>" + noChart("The chart starts with the first spring game.") + "</section>";
+  all = all.concat([g.goal]);
+  var lo = Math.max(0, Math.floor(Math.min.apply(null, all) - (g.dec === 2 ? 0.1 : 1))), hi = Math.ceil(Math.max.apply(null, all) + (g.dec === 2 ? 0.1 : 1));
+  if (g.dec === 2) { lo = Math.floor((Math.min.apply(null, all) - 0.1) * 10) / 10; hi = Math.ceil((Math.max.apply(null, all) + 0.1) * 10) / 10; }
+  var step = (hi - lo) / 4, ticks = [0, 1, 2, 3, 4].map(function (i) { return +(lo + step * i).toFixed(g.dec === 2 ? 2 : g.dec === 1 ? 1 : 0); });
+  return head + '<div class="metric">' + btns + "</div>" +
+    lineChart({w: wide ? 1280 : 640, h: wide ? 250 : 230, n: WEEKS.length, lo: lo, hi: hi, ticks: ticks, unit: g.unit, goal: g.goal, more: g.more, label: g.name + " by week",
+               xl: WEEKS.map(function (w) { return sd(w); }), lines: lines}) + "</section>";
+}
+/* the 3 rungs, pitches added up (never an average of percents) */
+function ladderAvg(list) {
+  var pens = [], live = [], games = [];
+  list.forEach(function (p) { pens = pens.concat(p.pens.slice(-3)); live = live.concat(p.live); games = games.concat(p.gameEx); });
+  var days = {}; live.forEach(function (s) { days[s.d] = 1; });
+  return {pen: pool(pens), live: pool(live), game: pool(games), nPen: pens.length, nLive: Object.keys(days).length, nGame: games.length};
+}
+function r0(v) { return v == null ? "–" : Math.round(v); }
+function ladder(lv, list) {
+  var seen = {};
+  list = list || Object.keys(D.pitchers).map(function (k) { return D.pitchers[k]; }).filter(function (p) { return lv === "Program" || p.lv === lv; });
+  list = list.filter(function (p) { if (seen[p.pid]) return false; seen[p.pid] = 1; return true; });
+  var a = ladderAvg(list), GO = LADDER;
+  var gx = []; list.forEach(function (p) { gx = gx.concat(p.gameEx.filter(function (e) { return lv === "Program" || e.lv === lv; })); });
+  a.game = pool(gx);
+  var rung = function (t, v, goal, s) {
+    var ok = v != null && Math.round(v) >= goal;
+    return '<div class="rung"><b>' + t + '</b><div class="pv num">' + (v == null ? "–" : Math.round(v) + '%<i class="' + (ok ? "ok" : "ring") + '"></i>') + "</div><span>goal " + goal + "% · " + s + "</span></div>";
+  };
+  return '<section class="card"><h2>Execution ladder · on or next to the called spot <small>same grade in the bullpen and in games · never graded against the program goals</small></h2><div class="ladder">' +
+    rung("Late-winter bullpens", a.pen, GO.pen, "last 3 scripted pens") + '<div class="arrow">→</div>' +
+    rung("Live ABs", a.live, GO.live, a.nLive + (a.nLive === 1 ? " session day" : " session days")) + '<div class="arrow">→</div>' +
+    rung("Games", a.game, GO.game, "called pitches") + '</div><p class="note">Year-1 goals are provisional and reset once April shows the real drop from pen to game. Glove calls and "? Not known" calls are left out of every rung.</p></section>';
+}
+
+/* team page */
+function lines(lv) { return Object.keys(D.pitchers).map(function (k) { return D.pitchers[k]; }).filter(function (p) { return p.lv === lv; }); }
+/* where else this person pitched: a swing arm shows on each level with only that level's games */
+function alsoFor(p) {
+  return Object.keys(D.pitchers).map(function (k) { return D.pitchers[k]; })
+    .filter(function (q) { return q.person === p.person && q.lv !== p.lv && q.bf; }).map(function (q) { return q.lv; });
+}
+function nameCell(p) {
+  var also = alsoFor(p);
+  return '<td class="name">' + esc(p.name) + (also.length ? ' <span class="tag">also ' + also.join(", ") + "</span>" : "") + "</td>";
+}
+function teamTable(lv) {
+  var all = lines(lv), active = all.filter(function (p) { return p.bf; }).sort(function (a, b) { return b.outs - a.outs; });
+  var idle = all.filter(function (p) { return !p.bf && !p.home; });
+  var G = {}; GOALS.forEach(function (g) { G[g.k] = g; });
+  var head = "<tr><th>Pitcher</th><th>Cl</th><th>T</th><th>IP</th><th>BF</th><th>Free bases</th><th>1st pitch</th><th>Strike %</th><th>K %</th><th>K / BB</th><th>ERA</th><th>WHIP</th><th>Pen › Live › Game</th></tr>";
+  var rows = active.map(function (p) {
+    var lad = ladderAvg([p]);
+    var c = function (k) { var x = p.m[k]; return '<td><span class="cell">' + fmt(G[k], x) + mark(G[k], x, true) + "</span></td>"; };
+    return '<tr class="click" data-open="' + esc(p.id) + '" tabindex="0">' + nameCell(p) + "<td>" + p.cl + "</td><td>" + p.t + "</td><td>" +
+      Math.floor(p.outs / 3) + "." + (p.outs % 3) + "</td><td>" + p.bf + "</td>" + c("free") + c("fps") + c("strike") + c("k") + c("kbb") + c("era") + c("whip") +
+      '<td class="lad">' + r0(lad.pen) + " › " + r0(lad.live) + " › <b>" + r0(lad.game) + "</b></td></tr>";
+  }).join("") + idle.map(function (p) {
+    var lad = ladderAvg([p]);
+    return '<tr class="click idle" data-open="' + esc(p.id) + '" tabindex="0">' + nameCell(p) + "<td>" + p.cl + "</td><td>" + p.t +
+      '</td><td colspan="9" class="nyp">Not yet pitched in a game</td><td class="lad">' + r0(lad.pen) + " › " + r0(lad.live) + " › –</td></tr>";
+  }).join("");
+  if (!rows) rows = '<tr><td colspan="13" class="nyp" style="text-align:left">No pitchers yet. Pitchers show up here after their first bullpen or game.</td></tr>';
+  return '<section class="card"><h2>Pitchers vs ' + SEASON + ' goals <small>' + lv + ' games only · tap a pitcher to open his Players page</small></h2><div class="scroll"><table>' + head + rows + "</table></div></section>";
+}
+/* winter: the same arms, graded on the called spot in pens and live ABs */
+function pct0(v) { return v == null ? "–" : Math.round(v) + "%"; }
+function winterTable(lv, list) {
+  list = (list || lines(lv).filter(function (p) { return !p.home; }))
+    .sort(function (a, b) { return (pool(b.pens.slice(-3)) || -1) - (pool(a.pens.slice(-3)) || -1); });
+  var head = "<tr><th>Pitcher</th><th>Cl</th><th>T</th><th>Pens</th><th>First 3 pens</th><th>Last 3 pens</th><th>Change</th><th>Live ABs</th><th>Live exec</th></tr>";
+  var rows = list.map(function (p) {
+    var f = pool(p.pens.slice(0, 3)), l = pool(p.pens.slice(-3)), lv2 = pool(p.live), d = f == null || l == null ? null : Math.round(l) - Math.round(f);
+    var m = function (v, goal) { return v == null ? "<td>–</td>" : '<td><span class="cell">' + Math.round(v) + '%<i class="' + (Math.round(v) >= goal ? "ok" : "ring") + ' sm"></i></span></td>'; };
+    return '<tr class="click" data-open="' + esc(p.id) + '" tabindex="0">' + nameCell(p) + "<td>" + p.cl + "</td><td>" + p.t + "</td><td>" + p.pens.length +
+      "</td><td>" + pct0(f) + "</td>" + m(l, LADDER.pen) + "<td>" + (d == null || p.pens.length < 4 ? "–" : (d > 0 ? "+" : "") + d + " pts") + "</td><td>" + p.live.length + "</td>" + m(lv2, LADDER.live) + "</tr>";
+  }).join("");
+  if (!rows) rows = '<tr><td colspan="9" class="nyp" style="text-align:left">No bullpens yet.</td></tr>';
+  return '<section class="card"><h2>Pitchers in the bullpen <small>on or next to the called spot · goals ' + LADDER.pen + '% pens, ' + LADDER.live + '% live ABs · tap a pitcher to open his Players page</small></h2><div class="scroll"><table>' + head + rows + "</table></div></section>";
+}
+function pensByWeek(lv, list, title) {
+  list = list || lines(lv).filter(function (p) { return !p.home; });
+  var most = Math.max.apply(null, [0].concat(list.map(function (p) { return p.pens.length; }))), vals = [];
+  for (var s2 = 0; s2 < most; s2++) vals.push(pool(list.map(function (p) { return p.pens[s2]; }).filter(Boolean)));
+  var head = '<section class="card"><h2>' + (title || lv + " team") + ' · pens by session <small>staff, on or next to the called spot, each pitcher\'s 1st pen, 2nd pen and so on</small></h2>';
+  if (!vals.length) return head + noChart("The chart starts with the first bullpen.") + "</section>";
+  var lo = Math.min(40, Math.floor(Math.min.apply(null, vals.filter(function (v) { return v != null; }).concat([LADDER.pen])) / 10) * 10);
+  return head + lineChart({n: vals.length, lo: lo, hi: 80, ticks: [0, 1, 2, 3, 4].map(function (i) { return Math.round(lo + (80 - lo) * i / 4); }), unit: "%", goal: LADDER.pen, more: true, label: "Staff pens by session",
+               xl: vals.map(function (v, i) { return vals.length > 12 && i % 2 ? "" : "Pen " + (i + 1); }), lines: [{v: vals, c: "#14213D", w: 2.5, dots: true}]}) + "</section>";
+}
+/* ======================================================= views */
+var KEY = '<div class="key"><span><i class="ok sm"></i> met</span><span><i class="ring sm"></i> not yet</span></div>';
+function winterSpan(list) {
+  var ds = [], lv = 0;
+  list.forEach(function (p) { p.pens.forEach(function (s) { ds.push(s.d); }); p.live.forEach(function (s) { ds.push(s.d); lv++; }); });
+  ds.sort();
+  var sess = {}; list.forEach(function (p) { p.pens.forEach(function (s) { sess[s.d] = 1; }); });
+  var n = Object.keys(sess).length, liveDays = {};
+  list.forEach(function (p) { p.live.forEach(function (s) { liveDays[s.d] = 1; }); });
+  var nl = Object.keys(liveDays).length;
+  if (!ds.length) return "no bullpens yet";
+  return n + (n === 1 ? " scripted pen day" : " scripted pen days") + (nl ? " and " + nl + (nl === 1 ? " live AB day" : " live AB days") : "") + ", " + sd(ds[0]) + (ds.length > 1 && ds[ds.length - 1] !== ds[0] ? " to " + sd(ds[ds.length - 1]) : "");
+}
+function overview() {
+  if (S.side === "Hitting") return hitOverview(S.level);
+  if (S.side === "Defense") return defOverview(S.level);
+  var lv = S.level, o = lv === "Program" ? D.prog : D.lv[lv];
+  if (WIN()) return winterView(S.cls);
+  return '<div class="titlerow"><div><h1>' + (lv === "Program" ? "Program" : lv) + ' Pitching vs ' + SEASON + ' Goals</h1><p class="sub">' +
+    (lv === "Program" ? "All 4 levels · " : "") + o.n + (o.n === 1 ? " game · " : " games · ") + o.bf.toLocaleString() + " batters faced" + (o.n ? "" : " · the numbers start with the first spring game") + "</p></div>" + KEY + "</div>" +
+    '<div class="stack">' + counter(lv) + (lv === "Program" ? "" : availCard(lv, true)) + tiles(lv) + (lv === "Program" ? '<div class="cols">' + levelTable(lv) + byWeek(lv) + "</div>" : byWeek(lv, true)) + ladder(lv) + "</div>";
+}
+function teams() {
+  if (WIN()) return winterTeam(S.cls);
+  if (S.level === "Program") S.level = "Varsity";
+  var lv = S.level, o = D.lv[lv];
+  if (S.side === "Hitting") return hitTeam(lv);
+  if (S.side === "Defense") return defTeam(lv);
+  var all = lines(lv), n = all.filter(function (p) { return p.bf; }).length, wait = all.filter(function (p) { return !p.bf && !p.home; }).length;
+  return '<div class="titlerow"><div><h1>' + lv + ' Pitching</h1><p class="sub">' + o.n + " of " + SCHED[lv] + " games · " + n + (n === 1 ? " pitcher" : " pitchers") + (wait ? " · " + wait + " yet to pitch" : "") + "</p></div>" + KEY + "</div>" +
+    '<div class="stack">' + availCard(lv) + teamTable(lv) + byWeek(lv, true) + "</div>";
+}
+function playersPage() {
+  if (WIN()) return winterPlayers(S.cls);
+  return allPlayersPage();
+}
+/* ======================================================= one player: the Players page and the exit report */
+var SUMS = SUMK;
+function personLines(name) { return Object.keys(D.pitchers).map(function (k) { return D.pitchers[k]; }).filter(function (p) { return p.person === name; }); }
+function personOf(name) {
+  var ls = personLines(name), o = blank();
+  ls.forEach(function (p) { SUMS.forEach(function (k) { o[k] += p[k]; }); });
+  o.m = metrics(o); o.lines = ls; o.first = ls.filter(function (p) { return !p.home; })[0] || ls[0]; o.pid = PID[name];
+  o.log = [].concat.apply([], ls.map(function (p) { return Object.keys(p.logm).map(function (r) { var g = p.logm[r]; g.m = metrics(g); return g; }); }))
+    .sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : a.rid < b.rid ? -1 : 1; });
+  o.ex = [].concat.apply([], ls.map(function (p) { return p.gameEx; }));
+  return o;
+}
+function avgOf(a) { return a.length ? a.reduce(function (x, y) { return x + y; }, 0) / a.length : null; }
+/* ---- GameChanger: his 2026 line (the baseline) and his defense */
+var POS = ["P", "C", "1B", "2B", "3B", "SS", "LF", "CF", "RF"];
+var GCP = MODEL.gcp || {}, HAS26 = !!BASE.P.Program;
+function base26(o) { var g = GCP[PID[o.first ? o.first.name : o.name]]; return g && g.p26 ? g.p26 : null; }
+function defenseOf(o) {
+  var pid = PID[o.first ? o.first.name : o.name], g = GCP[pid] || {}, x = g.d27;
+  if (!x) { x = {tc: 0, po: 0, a: 0, e: 0, dp: 0, inn: {}, outs: 0, c: null, fpct: null, none: true}; POS.forEach(function (k) { x.inn[k] = 0; }); }
+  x.b = g.d26 || null;
+  return x;
+}
+function firstSeasonOf(name) { var g = GCP[PID[name]] || {}; return HAS26 && !g.p26 && !g.h26 && !g.d26; }
+/* Nov 13 (Jim): no defensive goal is met or missed on a handful of plays: 10 chances for fielding %, 5 steal
+   attempts for caught stealing, 14 innings caught (2 games) for passed balls. The Team table always used these. */
+var DMIN = {fpct: 10, cs: 5, pb: 14};
+function dEnough(k, x) { return k === "fpct" ? x.tc >= DMIN.fpct : !x.c ? false : k === "cs" ? x.c.att >= DMIN.cs : x.c.outs / 3 >= DMIN.pb; }
+function dstat(label, v, sub, mk) { return '<div class="dstat"><b>' + v + (mk || "") + "</b><span>" + label + "</span>" + (sub ? sub : "") + "</div>"; }
+var PNAME = {P: "Pitcher", C: "Catcher", "1B": "1st base", "2B": "2nd base", "3B": "3rd base", SS: "Shortstop", LF: "Left field", CF: "Center", RF: "Right field"};
+function defenseCard(o, you) {
+  var x = defenseOf(o), F = DGOALS[0], C = DGOALS[1], PB = DGOALS[2], name = o.first ? o.first.name : o.name, first = firstSeasonOf(name);
+  var then = function (v, g) { return first ? '<em class="first">2026: first season</em>' : v == null ? "" : "<em>2026: " + fmt(g, v) + "</em>"; };
+  var head = '<section class="card"><h2>' + (you ? "Your defense" : "Defense") + ' <span class="src">from GameChanger · ' + gcWhen() + "</span></h2>";
+  if (x.none) return head + '<p class="note" style="margin:0">No GameChanger fielding line for ' + (you ? "you" : "him") + " yet. It fills in when a coach imports the season stats.</p></section>";
+  if (!x.outs && !x.tc) return head + '<p class="note" style="margin:0">Designated hitter only so far, so no fielding line.</p></section>';
+  var bars = POS.filter(function (k) { return x.inn[k]; }).map(function (k) {
+    return '<div class="mbar"><span>' + PNAME[k] + '</span><div class="btrack"><div style="width:' + (x.inn[k] * 100 / Math.max(1, x.outs)).toFixed(0) + '%"></div></div><b>' + IPS(x.inn[k]) + "</b></div>";
+  }).join("");
+  var prim = POS.filter(function (k) { return x.inn[k]; }).sort(function (a, b) { return x.inn[b] - x.inn[a]; })[0];
+  var plays = '<div class="dstats">' + dstat("Chances", x.tc) + dstat("Putouts", x.po) + dstat("Assists", x.a) + dstat("Errors", x.e) + dstat("Double plays", x.dp) +
+    dstat("Fielding %", fmt(F, x.fpct), dEnough("fpct", x) ? '<em>goal ' + gtxt(F) + "</em>" + then(x.b && x.b.fpct, F) : "<em>" + x.tc + (x.tc === 1 ? " chance" : " chances") + ", not graded until " + DMIN.fpct + "</em>", dEnough("fpct", x) ? mark(F, x.fpct, true) : "") + "</div>";
+  var catching = x.c ? '<h2 style="margin-top:14px">Catching</h2><div class="dstats">' + dstat("Innings caught", IPS(x.c.outs)) +
+    dstat("Steals allowed", x.c.sb + " of " + x.c.att) + dstat("Caught stealing", fmt(C, x.c.csp), dEnough("cs", x) ? "<em>goal " + gtxt(C) + "</em>" + then(x.b && x.b.csp, C) : "<em>" + x.c.att + " attempts, not graded until " + DMIN.cs + "</em>", dEnough("cs", x) ? mark(C, x.c.csp, true) : "") +
+    dstat("Passed balls", x.c.pb, "<em>" + (x.c.pb7 == null ? "–" : x.c.pb7.toFixed(2)) + " per 7 inn" + (dEnough("pb", x) ? " · goal " + gtxt(PB) + "</em>" + then(x.b && x.b.pb7, PB) : ", not graded until " + DMIN.pb + " innings caught</em>"), dEnough("pb", x) ? mark(PB, x.c.pb7, true) : "") + dstat("Pickoffs", x.c.pik) + "</div>" : "";
+  return head + '<div class="dcols"><div><h2 style="font-size:11px">Where ' + (you ? "you" : "he") + ' played <small>innings at each spot</small></h2><div class="posbars">' + (bars || '<p class="note" style="margin:0">No innings by position in the import.</p>') + "</div>" +
+    (prim ? '<p class="note">Primary position: <b>' + PNAME[prim] + "</b>, " + IPS(x.inn[prim]) + " of " + IPS(x.outs) + " innings.</p>" : "") +
+    "</div><div>" + plays + catching + "</div></div></section>";
+}
+function staffDrop() {   /* the staff's typical drop: late-winter pens minus games, the middle value */
+  var d = Object.keys(D.pitchers).map(function (k) { return D.pitchers[k]; }).filter(function (p) { return p.gameEx.length && !p.home && p.pens.length; })
+    .map(function (p) { return pool(p.pens.slice(-3)) - pool(personLines(p.person).reduce(function (a, l) { return a.concat(l.gameEx); }, [])); }).sort(function (a, b) { return a - b; });
+  return d.length ? d[Math.floor(d.length / 2)] : null;
+}
+var IPS = function (outs) { return Math.floor(outs / 3) + "." + (outs % 3); };
+/* coach comments, from the comments spreadsheet: one per level (and per side for a two-way player) */
+var COMMENTS = MODEL.comments || [];
+function commentFor(name, lv, role) {
+  var id = PID[name], c = COMMENTS.filter(function (x) { return x.id === id && x.lv === lv && (role ? x.role === role || !x.role : !x.role || x.role === "Pitching" || x.role === "Hitting"); });
+  return c.length ? c[c.length - 1] : null;
+}
+function commentDone(name, lv, role) { return !!commentFor(name, lv, role); }
+function canWrite(lv) { return ((MODEL.me || {}).levels || []).indexOf(lv) >= 0; }
+function backBtn(what) {
+  if (WIN()) return '<button class="back" data-back="1">‹ ' + (S.from ? clsName(S.cls) + " " + ({teams: "Staff", board: "Leaderboard"}[S.from] || "Overview") : "All " + (S.cls === "All" ? "pitchers" : clsName(S.cls).toLowerCase())) + "</button>";
+  return '<button class="back" data-back="1">‹ ' + (S.from ? S.level + " " + ({teams: "Team", overview: "Overview", reports: "Reports", scout: "Scouting"}[S.from] || "") : "All " + S.level + " " + what) + "</button>"; }
+function seasonTable(o, you) {
+  var rows = [["Combined", o]].concat(o.lines.length > 1 ? o.lines.filter(function (l) { return l.bf; }).map(function (l) { return [l.lv + " only", l]; }) : []);
+  var head = "<tr><th></th><th>IP</th><th>BF</th>" + GOALS.map(function (g) { return "<th>" + g.name.replace("Strikeouts per walk", "K / BB").replace("First-pitch strikes", "1st pitch").replace("Unearned runs", "Unearned").replace("Hard contact", "Hard-hit") + "</th>"; }).join("") + "</tr>";
+  return '<section class="card"><h2>' + (you ? "Your" : "His") + ' season vs ' + SEASON + ' goals <small>' + (o.lines.filter(function (l) { return l.bf; }).length > 1 ? "every level combined, then each level" : "spring games") + "</small></h2>" +
+    (o.bf ? '<div class="scroll"><table>' + head + rows.map(function (r) {
+      return "<tr" + (r[0] === "Combined" ? ' class="sel"' : "") + '><td class="name">' + r[0] + "</td><td>" + IPS(r[1].outs) + "</td><td>" + r[1].bf + "</td>" +
+        GOALS.map(function (g) { var x = r[1].m[g.k]; return '<td><span class="cell">' + fmt(g, x) + mark(g, x, true) + "</span></td>"; }).join("") + "</tr>";
+    }).join("") + baseRow(o) + "</table></div>" + baseNote(o) : '<p class="note" style="margin:0">No games yet.</p>' + baseNote(o)) + "</section>";
+}
+function baseRow(o) {
+  var b = base26(o);
+  if (!b) return '<tr class="base"><td class="name">2026</td><td colspan="' + (GOALS.length + 2) + '" class="first">' + (HAS26 ? "First season" : "Not imported") + "</td></tr>";
+  return '<tr class="base"><td class="name">2026 · ' + b.lv + "</td><td>" + IPS(b.outs) + "</td><td>" + b.bf + "</td>" +
+    GOALS.map(function (g) { var x = b.m[g.k]; return "<td>" + (x == null ? "–" : '<span class="cell">' + fmt(g, x) + mark(g, x, true) + "</span>") + "</td>"; }).join("") + "</tr>";
+}
+function baseNote(o) {
+  if (!HAS26) return '<p class="note">2026 comes from the GameChanger import once a coach brings last season in.</p>';
+  return base26(o) ? '<p class="note">2026 is from GameChanger. Unearned runs and hard contact weren\'t charted the same way in 2026, so they start in ' + SEASON + ".</p>"
+                   : '<p class="note">No 2026 pitching line, so this season becomes his baseline for next year.</p>';
+}
+var NOTES = MODEL.notes || {};
+function noteCell(rid, name) {
+  var n = NOTES[rid + "|" + PID[name]]; if (!n) return "";
+  return esc(n.to) + (n.coach ? (n.to ? "<br>" : "") + '<span class="conly">Coach only: ' + esc(n.coach) + "</span>" : "");
+}
+function gameLog(o) {
+  if (!o.log.length) return "";
+  var exBy = {}; o.ex.forEach(function (e) { exBy[e.rid] = e.v; });
+  var G = {}; GOALS.forEach(function (g) { G[g.k] = g; });
+  return '<section class="card"><h2>Game by game <small>execution = on or next to the called spot · notes from the Pitch Chart\'s Report tab</small></h2><div class="scroll"><table>' +
+    "<tr><th>Date</th><th>Level</th><th>Opponent</th><th>IP</th><th>BF</th><th>Pitches</th><th>Free bases</th><th>K</th><th>1st pitch</th><th>Execution</th><th>Note</th></tr>" +
+    o.log.map(function (g) {
+      var ex = exBy[g.rid];
+      return "<tr><td>" + sd(g.date) + "</td><td>" + g.lv + "</td><td>" + esc(g.opp) + "</td><td>" + IPS(g.outs) + "</td><td>" + g.bf + "</td><td>" + g.pitches + "</td><td>" + g.free +
+        (g.free <= BUDGET ? ' <i class="ok sm"></i>' : ' <i class="ring sm"></i>') + "</td><td>" + g.k + "</td><td>" + fmt(G.fps, g.m.fps) + "</td><td>" + (ex != null ? '<span class="cell">' + ex + '%<i class="' + (ex >= LADDER.game ? "ok" : "ring") + ' sm"></i></span>' : "–") +
+        '</td><td class="gnote">' + noteCell(g.rid, o.first.name) + "</td></tr>";
+    }).join("") + '</table></div><p class="note">The free-bases marker is the game budget: ' + BUDGET + " or fewer.</p></section>";
+}
+function playerLadder(o, forReport) {
+  var p = o.first, pen = pool(p.pens.slice(-3)), live = pool(p.live), game = o.ex.length ? pool(o.ex) : null;
+  var rung = function (t, v, goal, s) {
+    return '<div class="rung"><b>' + t + '</b><div class="pv num">' + (v == null ? "–" : Math.round(v) + '%<i class="' + (Math.round(v) >= goal ? "ok" : "ring") + '"></i>') + "</div><span>goal " + goal + "% · " + s + "</span></div>";
+  };
+  var drop = game != null && pen != null ? Math.round(pen - game) : null, typ = staffDrop();
+  return '<section class="card"><h2>Winter to spring <small>on or next to the called spot</small></h2><div class="ladder">' +
+    rung("Late-winter pens", pen, LADDER.pen, Math.min(3, p.pens.length) === 1 ? "last pen" : "last " + Math.min(3, p.pens.length) + " pens") + '<div class="arrow">→</div>' + rung("Live ABs", live, LADDER.live, p.live.length + (p.live.length === 1 ? " session" : " sessions")) + '<div class="arrow">→</div>' +
+    rung("Games", game, LADDER.game, o.ex.length + (o.ex.length === 1 ? " game" : " games")) + "</div>" +
+    (drop == null ? "" : forReport ? '<p class="note">From the bullpen to games you dropped ' + drop + " points. Shrinking that gap is the work.</p>"
+      : '<p class="note"><b>His drop, pens to games: ' + drop + " pts.</b>" + (typ == null ? "" : " The staff's typical drop is " + Math.round(typ) + " pts" + (drop <= Math.round(typ) ? ", so his command is holding up better than most." : ", so the work is carrying over less than most. Worth more live ABs.")) + " Coaches only; never on his report.</p>") + "</section>";
+}
+var CNT = [["FP", "First pitch"], ["AH", "Ahead"], ["EV", "Even"], ["BH", "Behind"], ["K2", "2 strikes"]];
+function missPattern(o) {
+  var X = (MODEL.pitx || {})[o.pid], m = X ? X.miss : null;
+  var head = '<section class="card"><h2>When he misses the call</h2>';
+  if (!m || !m.n) return head + '<p class="note" style="margin:0">No missed calls charted in games yet.</p></section>';
+  var parts = [["Up", m.up], ["Down", m.down], ["Arm side", m.arm], ["Glove side", m.glove]].map(function (q) { return [q[0], Math.round(q[1] * 100 / m.n)]; });
+  var top = parts.slice().sort(function (a, b) { return b[1] - a[1]; })[0];
+  var counts = CNT.map(function (c) { var a = X.cnt[c[0]]; return [c[1], a && a[1] ? Math.round(a[0] * 100 / a[1]) : null, a ? a[1] : 0]; });
+  return head + '<div class="bars">' + parts.map(function (q) { return '<div class="mbar"><span>' + q[0] + '</span><div class="btrack"><div style="width:' + q[1] + '%"></div></div><b>' + q[1] + "%</b></div>"; }).join("") + "</div>" +
+    '<p class="note">Most misses go <b>' + top[0].toLowerCase() + "</b>. Share of his " + m.n + " misses (pitches more than one box off the call) that went each way; a miss up and in counts as both. Spring games.</p>" +
+    '<h2 style="margin-top:14px">Execution by count <small>the count the pitch was thrown in</small></h2><div class="scroll"><table><tr>' + counts.map(function (c) { return "<th>" + c[0] + "</th>"; }).join("") + "</tr><tr>" +
+    counts.map(function (c) { return c[1] == null ? "<td>–</td>" : '<td><span class="cell">' + c[1] + '%<i class="' + (c[1] >= LADDER.game ? "ok" : "ring") + ' sm"></i></span><small class="n">' + c[2] + "</small></td>"; }).join("") + "</tr></table></div></section>";
+}
+function pitchMix(o) {
+  var X = (MODEL.pitx || {})[o.pid];
+  var head = '<section class="card"><h2>Pitch mix by count <small>share of pitches, spring games</small></h2>';
+  if (!X || !Object.keys(X.mix).length) return head + '<p class="note" style="margin:0">No game pitches charted yet.</p></section>';
+  var rows = CNT.map(function (c) { var x = X.mix[c[0]]; return x && x.n ? [c[0] === "FP" ? "0-0" : c[1], Math.round(x.FB * 100 / x.n), Math.round(x.CB * 100 / x.n), Math.round(x.CH * 100 / x.n), x.n] : null; }).filter(Boolean);
+  var behind = X.mix.BH, lean = behind && behind.n >= 8 && behind.FB / behind.n >= 0.7;
+  return head + '<div class="scroll"><table><tr><th>Count</th><th>FB</th><th>Breaking</th><th>CH</th><th>Pitches</th></tr>' +
+    rows.map(function (q) { return "<tr><td>" + q[0] + "</td><td>" + q[1] + "%</td><td>" + q[2] + "%</td><td>" + q[3] + "%</td><td>" + q[4] + "</td></tr>"; }).join("") +
+    '</table></div><p class="note">' + (lean ? "Behind in the count he leans on the fastball. A breaking ball for a strike there is the next step." : "FB counts the cutter, Breaking the curve and slider, CH the splitter.") + "</p></section>";
+}
+function winterLog(o) {
+  var p = o.first, all = p.pens.concat(p.live).sort(function (a, b) { return a.d < b.d ? -1 : a.d > b.d ? 1 : 0; });
+  if (!all.length) return '<section class="card"><h2>Winter work</h2><p class="note" style="margin:0">No bullpens charted.</p></section>';
+  var k = 0;
+  return '<section class="card"><h2>Winter work <small>' + p.pens.length + (p.pens.length === 1 ? " scripted pen" : " scripted pens") + (p.live.length ? " and " + p.live.length + (p.live.length === 1 ? " live AB session" : " live AB sessions") : "") + "</small></h2><div class=\"scroll\"><table><tr><th>Pen</th><th>Date</th><th>Routine</th><th>Execution</th><th>Reflection</th></tr>" +
+    all.map(function (s) {
+      var v = s.g ? Math.round(s.ok * 100 / s.g) : null, goal = s.mode === "Live" ? LADDER.live : LADDER.pen;
+      return "<tr><td>" + (s.mode === "Live" ? "Live" : ++k) + "</td><td>" + sd(s.d) + "</td><td>" + (s.mode === "Live" ? "Live ABs" : esc(s.tpl || "Freeform")) + "</td><td>" +
+        (v == null ? "–" : '<span class="cell">' + v + '%<i class="' + (v >= goal ? "ok" : "ring") + ' sm"></i></span>') + "</td><td>" + (s.flag ? '<span class="pill go">Arm flag</span>' : s.refl ? "Written" : "–") + "</td></tr>";
+    }).join("") + "</table></div></section>";
+}
+var REFL = MODEL.refl || [];
+function reflBox(r) {
+  var bits = [["Start", r.start], ["Stop", r.stop], ["Continue", r.cont]].filter(function (x) { return x[1]; });
+  return '<div class="refl"><div class="rh"><b>' + esc(r.ev || "Reflection") + "</b><span>" + sd(r.date) + (r.feel ? " · feel " + esc(r.feel) + " of 5" : "") + (r.flag ? ' · <span class="pill go">Arm flag</span>' : "") + "</span></div><p>" +
+    (bits.length ? bits.map(function (x) { return "<b>" + x[0] + ":</b> " + esc(x[1]); }).join("<br>") : "No written answers.") + (r.bother ? "<br><b>Bothering him:</b> " + esc(r.bother) : "") + "</p></div>";
+}
+function reflList(name, kind) { var id = PID[name]; return REFL.filter(function (r) { return r.id === id && r.kind === kind; }); }
+function reflections(o, n, you, role) {
+  var rl = role ? role + " " : "", list = reflList(o.first.name, "pitch").slice(0, n);
+  if (!list.length) return '<section class="card"><h2>' + (you ? "Your " : "His ") + rl + 'reflections</h2><p class="note" style="margin:0">None yet. Reflections come with ' + (you ? "your" : "his") + ' player card after each game.</p></section>';
+  return '<section class="card"><h2>' + (you ? "Your " + rl + "reflections <small>from your player cards" : "His " + rl + "reflections <small>from his player cards") + ', newest first</small></h2>' + list.map(reflBox).join("") + "</section>";
+}
+function commentBox(name, lv, role, forReport) {
+  var c = commentFor(name, lv, role), edit = !forReport && canWrite(lv), key = PID[name] + "|" + lv + "|" + (role || "");
+  var who2 = lv + (role ? " " + role.toLowerCase() : "") + " coaches";
+  if (edit && S.editing === key) {
+    return '<div class="refl"><div class="rh"><b>' + who2 + '</b><span>you can write this one</span></div><textarea class="cbox" id="cbox" rows="4" maxlength="1500">' + esc(c ? c.text : "") + "</textarea>" +
+      '<div class="cbtns"><button class="mini-btn" data-csave="' + esc(key) + '">Save</button><button class="mini-btn" data-cedit="">Cancel</button><span class="cmsg" id="cmsg"></span></div></div>';
+  }
+  return '<div class="refl"><div class="rh"><b>' + who2 + "</b><span>" + (c ? "written" + (c.by && !forReport ? " by " + esc(c.by) : "") : "not written yet") + "</span></div><p" + (c ? "" : ' class="empty"') + ">" +
+    (c ? esc(c.text) : "Waiting on the " + lv + " coaches.") + "</p>" + (edit ? '<button class="mini-btn noprint" data-cedit="' + esc(key) + '">' + (c ? "Edit" : "Write") + " comment</button>" : "") + "</div>";
+}
+function coachComments(o, forReport, role) {
+  var lvs = o.lines.filter(function (l) { return l.bf || !l.home; }).map(function (l) { return l.lv; });
+  return '<section class="card"><h2>' + (role ? role + " coach comments" : "Coach comments") + " <small>written by the " + (role ? role.toLowerCase() + " " : "") + "coaches of each level he " + (role ? "pitched" : "played") + " for" + (forReport ? "" : " · every coach can read") + "</small></h2>" +
+    lvs.map(function (lv) { return commentBox(o.first.name, lv, role, forReport); }).join("") + "</section>";
+}
+function playerPage(name) { return personPage(name); }
+function met_(g, x) { return met(g, x); }
+/* ======================================================= scouting reports (E-013) */
+/* Their pitchers come from the Offense Chart, their hitters from the Pitch Chart, matched on the opponent
+   list's id (E-012) or, for a typed team, its name. */
+var RESW = {GO: "ground out", FO: "fly out", LO: "line out", PO: "pop out", K: "K swinging", Kc: "K looking", BB: "walk", IBB: "intentional walk", HBP: "hit by pitch",
+            "1B": "single", "2B": "double", "3B": "triple", HR: "home run", E: "reached on error", FC: "fielder's choice", DP: "double play", SAC: "sacrifice", SF: "sac fly", CI: "catcher's interference"};
+var HITS = {"1B": 1, "2B": 1, "3B": 1, HR: 1};
+var PTAGL = {POUNDS: "Pounds the zone", WILD: "Wild", FPS: "First-pitch strikes", BBSTR: "Lands the breaking ball", NOGIVE: "No give with 2 strikes", RUNNABLE: "Runnable", QUICK: "Quick to the plate"};
+var SCOUT = MODEL.scout || {};
+function scoutOpps(lv) {
+  return Object.keys(SCOUT).filter(function (k) { return SCOUT[k].lv === lv; })
+    .sort(function (a, b) { var x = SCOUT[a].dates, y = SCOUT[b].dates; return x[x.length - 1] < y[y.length - 1] ? 1 : -1; })
+    .map(function (k) { return k.slice(lv.length + 1); });
+}
+var CNTP = [["FP", "First pitch"], ["AH", "Ahead"], ["EV", "Even"], ["BH", "Behind"], ["K2", "2 strikes"]];
+function scoutData(lv, key) {
+  var o = SCOUT[lv + "|" + key];
+  if (!o) return {lv: lv, opp: key, games: [], pitchers: [], hitters: []};
+  var pitchers = o.pit.filter(function (p) { return p.n; }).map(function (p) {
+    var types = Object.keys(p.types).sort(function (a, b) { return p.types[b] - p.types[a]; });
+    var counts = CNTP.map(function (c) { var x = p.cnt[c[0]] || {}, tot = 0; types.forEach(function (t) { tot += x[t] || 0; }); return {c: c[1], tot: tot, m: types.map(function (t) { return [t, x[t] || 0]; })}; })
+      .filter(function (c) { return c.tot; });
+    var tags = Object.keys(p.tags).map(function (t) { return [PTAGL[t] || t, p.tags[t]]; });
+    return {name: p.name, no: "", t: p.t || "?", role: p.started ? "Started" + (p.games > 1 ? " " + p.started + " of " + p.games : "") + ", " + p.innings + (p.innings === 1 ? " inning" : " innings") : "Relieved, " + p.innings + (p.innings === 1 ? " inning" : " innings"),
+            n: p.n, str: p.str, fp: p.fp, fps: p.fps, sw: p.sw, wh: p.wh, oz: p.oz, ozsw: p.ozsw, types: types, counts: counts, tags: tags, note: p.note};
+  });
+  var hitters = o.hit.map(function (h) {
+    var tags = [];
+    if (h.oz >= 6 && h.ch / h.oz >= 0.4) tags.push("Chases");
+    if (h.f1 >= 3 && h.f1sw / h.f1 >= 0.5) tags.push("First-pitch swinger");
+    if (h.brk >= 3 && h.brkwh / h.brk >= 0.4) tags.push("Bad on breaking balls");
+    var inPlay = h.sp[0] + h.sp[1] + h.sp[2];
+    var read = h.ch ? "Chased " + h.ch + " of " + h.oz + " out of the zone." : h.oz ? "Didn't chase (" + h.oz + " out of the zone)." : "";
+    return {no: "", name: h.name, pos: h.pos || "–", b: h.b || "?", abs: h.abs.map(function (a) { return a.r; }), hard: h.abs.map(function (a) { return a.h; }),
+            where: inPlay ? (h.sp[0] >= inPlay * 0.6 ? "Pull, " + h.sp[0] + " of " + inPlay : "Pull " + h.sp[0] + ", middle " + h.sp[1] + ", opposite " + h.sp[2]) : "No balls in play", tags: tags, read: read, note: ""};
+  });
+  return {lv: lv, opp: o.opp, games: o.dates.map(function (d) { return {date: d}; }), pitchers: pitchers, hitters: hitters};
+}
+function pct(a, b) { return b ? Math.round(a * 100 / b) + "%" : "–"; }
+function scoutReport(lv, key) {
+  var S2 = scoutData(lv, key), opp = S2.opp, dates = S2.games.map(function (g) { return sd(g.date); }).join(" and ");
+  var pcard = function (p) {
+    var tot = p.counts.reduce(function (a, c) { return a + c.tot; }, 0), mix = p.types.map(function (t, i) { return [t, p.counts.reduce(function (a, c) { return a + c.m[i][1]; }, 0)]; });
+    var cols = {FB: "#14213D", CT: "#14213D", CB: "#2B6CB0", SL: "#2B6CB0", CH: "#8FB8E8", SP: "#8FB8E8"};
+    return '<div class="scard"><div class="sh"><b>' + esc(p.name) + "</b><span>" + esc(p.t) + "HP · " + p.role + "</span></div>" +
+      '<div class="sstats"><span><b>' + p.n + "</b> pitches</span><span><b>" + pct(p.str, p.n) + "</b> strikes</span><span><b>" + p.fps + " of " + p.fp + "</b> first-pitch strikes</span><span><b>" + p.ozsw + " of " + p.oz + "</b> we chased</span><span><b>" + p.wh + " of " + p.sw + "</b> we missed</span></div>" +
+      '<div class="mixbar">' + mix.map(function (m) { return tot ? '<div style="width:' + (m[1] * 100 / tot) + "%;background:" + (cols[m[0]] || "#5A6781") + '">' + (m[1] * 100 / tot >= 12 ? m[0] + " " + Math.round(m[1] * 100 / tot) + "%" : "") + "</div>" : ""; }).join("") + "</div>" +
+      '<table class="sct"><tr><th>Count</th><th>What he threw</th><th></th></tr>' + p.counts.map(function (c) {
+        var top = c.m.slice().sort(function (a, b) { return b[1] - a[1]; })[0], lean = top[1] / c.tot >= 0.6 && c.tot >= 4;
+        return "<tr><td>" + c.c + "</td><td>" + c.m.filter(function (m) { return m[1]; }).map(function (m) { return m[0] + " " + m[1]; }).join(" · ") + "</td><td>" + (lean ? '<span class="lean">Sit on ' + top[0] + "</span>" : '<span class="mixes">Mixes</span>') + "</td></tr>";
+      }).join("") + "</table>" +
+      (p.tags.length ? '<div class="stags">' + p.tags.map(function (t) { return '<span class="stag' + (t[1] ? " auto" : "") + '">' + esc(t[0]) + "</span>"; }).join("") + "</div>" : "") +
+      (p.note ? '<p class="snote">' + esc(p.note) + "</p>" : "") + "</div>";
+  };
+  var hrow = function (h, i) {
+    var ab = h.abs.map(function (a, k) { var t = (RESW[a] || a) + (h.hard[k] ? " (hard)" : ""); return HITS[a] ? "<b>" + t + "</b>" : t; }).join(", ");
+    return "<tr><td>" + (i + 1) + '</td><td class="name">' + esc(h.name) + "</td><td>" + esc(h.pos) + "</td><td>" + esc(h.b) + '</td><td class="gnote">' + ab + "</td><td>" + h.where +
+      '</td><td class="gnote">' + h.tags.map(function (t) { return '<span class="stag auto">' + t + "</span>"; }).join("") + " " + h.read + "</td></tr>";
+  };
+  return '<section class="sheet" id="sheet"><div class="sh-top"><div><b>Scouting report · ' + esc(opp) + "</b><span>" + lv + " · from " + S2.games.length + (S2.games.length === 1 ? " game" : " games") + " we charted (" + dates + ")</span></div>" +
+    '<div class="sh-btns"><button class="mini-btn" data-print="1">Print</button><button class="mini-btn" data-close="1">Close ✕</button></div></div>' +
+    planPick(lv, key) +
+    '<h4 class="pg">Page 1 · Their pitchers, for our hitters <small>from the Offense Chart</small></h4>' +
+    (S2.pitchers.length ? '<div class="scards">' + S2.pitchers.map(pcard).join("") + "</div>" : '<p class="note">No Offense Chart game against them yet.</p>') +
+    '<p class="note">Counts are pitches. "Sit on" means 60% or more of his pitches in that count were one pitch, with at least 4 seen. Dashed tags were worked out by the app; solid ones a coach set.</p>' +
+    '<div class="write"><b>Notes for today</b><i></i><i></i></div>' +
+    '<h4 class="pg">Page 2 · Their hitters, for our pitchers and catcher <small>from the Pitch Chart · last game\'s order</small></h4>' +
+    (S2.hitters.length ? '<div class="scroll"><table class="hit"><tr><th></th><th>Hitter</th><th>Pos</th><th>Bats</th><th>Every at-bat against us</th><th>Where he hits it</th><th>Reads</th></tr>' + S2.hitters.map(hrow).join("") + "</table></div>" : '<p class="note">No Pitch Chart game against them yet.</p>') +
+    '<p class="note">Hits in bold. Hard contact marked. Reads are worked out from every pitch we charted to him.</p>' + planPage(lv, key, S2) + "</section>";
+}
+function scoutTable(lv) {
+  var list = scoutOpps(lv);
+  return '<section class="card"><h2>' + (S.level === "Program" ? lv + " · " : "") + "Scouting reports <small>one per opponent, from every game we've charted against them · tap an opponent to open it</small></h2>" +
+    (list.length ? '<div class="scroll"><table><tr><th>Opponent</th><th>Games charted</th><th>Their pitchers seen</th><th>Their hitters seen</th></tr>' +
+    list.map(function (o) {
+      var d = scoutData(lv, o), key = lv + "|" + o;
+      return "<tr" + (S.scout === key ? ' class="sel"' : "") + '><td class="name"><button class="linkbtn" data-scout="' + esc(key) + '">' + esc(d.opp) + (S.scout === key ? " ▾" : " ›") + "</button></td><td>" + d.games.map(function (g) { return sd(g.date); }).join(", ") + "</td><td>" + d.pitchers.length + "</td><td>" + d.hitters.length + "</td></tr>";
+    }).join("") + "</table></div>" : '<p class="note" style="margin:0">No games charted yet. A report shows up after the first game against a team.</p>') + "</section>";
+}
+
+function reportsPage() {
+  var lvs = S.level === "Program" ? LEVELS : [S.level];
+  var table = function (lv) {
+    var rows = personReportRows(lv);
+    return '<section class="card"><h2>' + (S.level === "Program" ? lv + " · " : "") + "Exit reports <small>one page per player for the exit interview · tap a name to open it</small></h2>" +
+      (rows ? '<div class="scroll"><table><tr><th>Player</th><th>Role</th><th>IP</th><th>PA</th><th>Status</th></tr>' + rows + "</table></div>" : '<p class="note" style="margin:0">Nobody has played for ' + lv + " yet.</p>") + "</section>";
+  };
+  return '<div class="titlerow"><div><h1>' + S.level + ' Reports</h1><p class="sub">One exit report per player, pitching, hitting and defense together, for the end-of-season interviews. Other reports go here as we add them; game-day scouting is on the Scouting tab.</p></div></div>' +
+    '<div class="stack">' + lvs.map(table).join("") + (S.report ? personExit(S.report) : "") + "</div>";
+}
+function scoutPage() {
+  var lvs = S.level === "Program" ? LEVELS : [S.level];
+  var i = S.scout ? S.scout.indexOf("|") : -1;
+  return '<div class="titlerow"><div><h1>' + S.level + ' Scouting</h1><p class="sub">One report per opponent, from every game we have charted against them: their pitchers for our hitters, their hitters for our pitchers and catcher, and the plan for each of our pitchers you tick. The same whichever side you are on.</p></div></div>' +
+    '<div class="stack">' + lvs.map(scoutTable).join("") + (i > 0 ? scoutReport(S.scout.slice(0, i), S.scout.slice(i + 1)) : "") + "</div>";
+}
+/* ======================================================= hitting (Nov 13) */
+/* Goals approved by Jim Nov 13 ("I am good with building out those"). One set for every level, like pitching.
+   Quality at-bats, strikeouts, free bases earned, chase and hard contact come from the Offense Chart, charted
+   every pitch, our QAB definition. OBP, SLG and stolen-base success come from the GameChanger import. */
+var HGOALS = [
+  {k: "qab", name: "Quality at-bats", unit: "%", goal: 55, more: true, sub: "% of PA, our definition", lo: 35, hi: 70},
+  {k: "k", name: "Strikeouts", unit: "%", goal: 17, more: false, sub: "% of PA", lo: 8, hi: 30},
+  {k: "free", name: "Free bases earned", unit: "%", goal: 18, more: true, sub: "walks + HBP, % of PA", lo: 8, hi: 28},
+  {k: "chase", name: "Chase", unit: "%", goal: 25, more: false, sub: "% of pitches off the plate swung at", lo: 12, hi: 40},
+  {k: "hard", name: "Hard contact", unit: "%", goal: 30, more: true, sub: "% of balls in play", lo: 12, hi: 48},
+  {k: "obp", name: "OBP", unit: "", goal: 0.420, more: true, sub: "from GameChanger", lo: 0.28, hi: 0.56, dec: 3},
+  {k: "slg", name: "SLG", unit: "", goal: 0.450, more: true, sub: "from GameChanger", lo: 0.28, hi: 0.62, dec: 3},
+  {k: "sb", name: "Stolen base success", unit: "%", goal: 80, more: true, sub: "from GameChanger", lo: 55, hi: 100}
+];
+/* 2026 from the GameChanger import (team totals). QAB, chase and hard contact weren't charted our way. */
+var H26 = {};
+["Program"].concat(LEVELS).forEach(function (l) { H26[l] = BASE.H[l] || {}; });
+var QABK = [["H", "Hit"], ["LD", "Line drive"], ["BB", "Walk"], ["HBP", "Hit by pitch"], ["SAC", "Sacrifice"], ["RUN", "Run scored on his ball in play"],
+            ["P7", "7+ pitches"], ["ADV", "Moved a runner into scoring position, under 2 outs"], ["K2", "Ball in play with 2 strikes"]];
+var HMIN = CFG.hmin || 5;   /* Jim, Nov 13: "Let's go with 5 plate appearances" before hitting goals, a Hitting section or the two-way tag */
+function hblank() { return {pa: 0, ab: 0, h: 0, tb: 0, bb: 0, hbp: 0, k: 0, sac: 0, sf: 0, qab: 0, why: {}, pitches: 0, ooz: 0, ch: 0, bip: 0, hard: 0, sw: 0, wh: 0, f1: 0, f1sw: 0, endc: {}, g: 0, games: {}}; }
+var HSUM = ["pa","ab","h","tb","bb","hbp","k","sac","sf","qab","pitches","ooz","ch","bip","hard","sw","wh","f1","f1sw"];
+function hadd(o, x) {
+  HSUM.forEach(function (k) { o[k] += x[k] || 0; });
+  Object.keys(x.why || {}).forEach(function (w) { o.why[w] = (o.why[w] || 0) + x.why[w]; });
+  Object.keys(x.endc || {}).forEach(function (c) { var a = o.endc[c] || (o.endc[c] = [0, 0]); a[0] += x.endc[c][0]; a[1] += x.endc[c][1]; });
+  if (x.rid) o.games[x.rid] = 1;
+}
+function hmetrics(o, gc) {
+  var m = {qab: o.pa ? o.qab * 100 / o.pa : null, k: o.pa ? o.k * 100 / o.pa : null, free: o.pa ? (o.bb + o.hbp) * 100 / o.pa : null,
+           chase: o.ooz ? o.ch * 100 / o.ooz : null, hard: o.bip ? o.hard * 100 / o.bip : null,
+           obp: (o.ab + o.bb + o.hbp + o.sf) ? (o.h + o.bb + o.hbp) / (o.ab + o.bb + o.hbp + o.sf) : null, slg: o.ab ? o.tb / o.ab : null, sb: null, avg: o.ab ? o.h / o.ab : null};
+  /* OBP, SLG and stolen bases are GameChanger's when it has them; the charted games fill in until then */
+  if (gc) { if (gc.obp != null) m.obp = gc.obp; if (gc.slg != null) m.slg = gc.slg; m.sb = gc.sb; }
+  return m;
+}
+var HD = {lv: {}, prog: hblank(), people: {}, wk: {}};   /* wk: each level's plate appearances by the week they happened */
+var GCT = {};   /* 2027 team batting from GameChanger, when imported */
+LEVELS.forEach(function (lv) { HD.lv[lv] = hblank(); HD.wk[lv] = WEEKS.map(function () { return hblank(); }); });
+(MODEL.hit || []).forEach(function (x) {
+  var name = NAME[x.id] || x.id, o = HD.people[name];
+  if (!o) { o = HD.people[name] = hblank(); o.name = name; o.pid = x.id; o.cl = clOf(x.id) || "–"; o.b = (PEOPLE[x.id] || {}).b || "?"; o.byLv = {}; }
+  hadd(o, x); o.byLv[x.lv] = (o.byLv[x.lv] || 0) + x.pa;
+  hadd(HD.lv[x.lv], x); hadd(HD.prog, x);
+  var w = HD.wk[x.lv][weekOf(x.date)]; if (w) hadd(w, x);
+});
+Object.keys(HD.people).forEach(function (n) {
+  var o = HD.people[n], best = "";
+  Object.keys(o.byLv).forEach(function (l) { if (!best || o.byLv[l] > o.byLv[best]) best = l; });
+  var home = (PEOPLE[o.pid] || {}).home;
+  o.lv = home && o.byLv[home] ? home : best; o.g = Object.keys(o.games).length;
+  var d = (GCP[o.pid] || {}).d27, prim = d ? POS.filter(function (k) { return d.inn[k]; }).sort(function (a, b) { return d.inn[b] - d.inn[a]; })[0] : "";
+  o.pos = prim || "DH";
+  o.m = hmetrics(o, (GCP[o.pid] || {}).h27);
+});
+LEVELS.forEach(function (lv) { HD.lv[lv].m = hmetrics(HD.lv[lv], BASE.H27 && BASE.H27[lv]); HD.lv[lv].n = Object.keys(HD.lv[lv].games).length; });
+HD.prog.m = hmetrics(HD.prog, BASE.H27 && BASE.H27.Program);
+/* season to date at each week's end, from the at-bats charted by then */
+function hweekly(lv, key) {
+  var lvs = lv === "Program" ? LEVELS : [lv], cum = hblank();
+  return WEEKS.map(function (w, i) {
+    lvs.forEach(function (l) { hadd(cum, HD.wk[l][i]); });
+    return cum.pa ? hmetrics(cum)[key] : null;
+  });
+}
+function hbyWeek(lv, wide) {
+  wide = wide && window.innerWidth > 900;
+  var list = HGOALS.slice(0, 5), g = list.filter(function (x) { return x.k === S.hmetric; })[0] || list[0];
+  var lines = [];
+  if (lv === "Program") LEVELS.forEach(function (l) { lines.push({v: hweekly(l, g.k), c: "#B9C3D3", w: 1.5, tag: l}); });
+  lines.push({v: hweekly(lv, g.k), c: "#14213D", w: 2.5, dots: true});
+  var all = [].concat.apply([], lines.map(function (l) { return l.v; })).filter(function (v) { return v != null; });
+  var btns = list.map(function (x) { return '<button aria-pressed="' + (x.k === g.k) + '" data-hmetric="' + x.k + '">' + hshort(x) + "</button>"; }).join("");
+  var head = '<section class="card"><h2>' + (lv === "Program" ? "Program" : lv + " team") + " · " + g.name.toLowerCase() + ' by week <small>every hitter, season to date at each week\'s end' + (lv === "Program" ? " · program navy, levels grey" : "") + '</small></h2><div class="metric">' + btns + "</div>";
+  if (!all.length) return head + noChart("The chart starts with the first game charted in the Offense Chart.") + "</section>";
+  all = all.concat([g.goal]);
+  var lo = Math.max(0, Math.floor(Math.min.apply(null, all) - 1)), hi = Math.ceil(Math.max.apply(null, all) + 1);
+  var step = (hi - lo) / 4, ticks = [0, 1, 2, 3, 4].map(function (i) { return +(lo + step * i).toFixed(0); });
+  return head + lineChart({w: wide ? 1280 : 640, h: wide ? 250 : 230, n: WEEKS.length, lo: lo, hi: hi, ticks: ticks, unit: g.unit, goal: g.goal, more: g.more, label: g.name + " by week",
+               xl: WEEKS.map(function (w) { return sd(w); }), lines: lines}) +
+    '<p class="note">The 5 goals charted in the Offense Chart. OBP, SLG and stolen-base success come from the GameChanger import, so they only move when a coach imports and aren\'t charted by week.</p></section>';
+}
+function hpeople(lv) { return Object.keys(HD.people).map(function (k) { return HD.people[k]; }).filter(function (o) { return o.lv === lv; }); }
+function hbase26(o) { var g = GCP[o.pid]; return g && g.h26 ? g.h26 : null; }
+/* the pieces */
+var F3 = function (x) { return x == null ? "–" : x.toFixed(3).replace(/^0/, ""); };
+function hcell(g, x, pa) { return '<td><span class="cell">' + fmt(g, x) + (pa != null && pa < HMIN ? "" : mark(g, x, true)) + "</span></td>"; }
+function hshort(g) { return g.name.replace("Quality at-bats", "QAB").replace("Free bases earned", "Free bases").replace("Stolen base success", "SB %").replace("Hard contact", "Hard-hit"); }
+function hlevelTable(sel) {
+  var head = "<tr><th>Level</th>" + HGOALS.map(function (g) { return "<th>" + hshort(g) + "</th>"; }).join("") + "</tr>";
+  var rows = LEVELS.concat(["Program"]).map(function (l) {
+    var o = l === "Program" ? HD.prog : HD.lv[l];
+    return '<tr class="click' + (l === sel ? " sel" : "") + '" data-level="' + l + '" tabindex="0"><td class="name">' + l + "</td>" + HGOALS.map(function (g) { return hcell(g, o.m[g.k]); }).join("") + "</tr>";
+  }).join("");
+  var goal = '<tr class="goalrow"><td>Goal</td>' + HGOALS.map(function (g) { return "<td>" + (g.more ? "≥" : "≤") + gtxt(g) + "</td>"; }).join("") + "</tr>";
+  return '<section class="card"><h2>By level <small>tap a level to open it</small></h2><div class="scroll"><table>' + head + rows + goal + "</table></div></section>";
+}
+function hitOverview(lv) {
+  var o = lv === "Program" ? HD.prog : HD.lv[lv];
+  return '<div class="titlerow"><div><h1>' + lv + ' Hitting vs ' + SEASON + ' Goals</h1><p class="sub">' + (lv === "Program" ? "All 4 levels · " : "") + o.pa.toLocaleString() +
+    " plate appearances" + (o.pa ? "" : " · the numbers start with the first game charted in the Offense Chart") + "</p></div>" + KEY + "</div>" +
+    '<div class="stack">' + tiles(lv, HGOALS, o.m, H26[lv]) +
+    '<p class="note" style="margin:-4px 0 0">Quality at-bats, strikeouts, free bases, chase and hard contact are charted on every pitch in the Offense Chart, with our quality at-bat definition. OBP, SLG and stolen-base success come from the GameChanger import (' + gcWhen() + '). 2026 is GameChanger; it never charted quality at-bats our way, chase or hard contact.</p>' +
+    (lv === "Program" ? '<div class="cols">' + hlevelTable(lv) + hbyWeek(lv) + "</div>" : hbyWeek(lv, true)) + "</div>";
+}
+function hitTeam(lv) {
+  var list = hpeople(lv).sort(function (a, b) { return b.pa - a.pa; });
+  var head = "<tr><th>Hitter</th><th>Pos</th><th>Cl</th><th>B</th><th>PA</th><th>AVG</th>" + HGOALS.map(function (g) { return "<th>" + hshort(g) + "</th>"; }).join("") + "</tr>";
+  var rows = list.map(function (p) {
+    return '<tr class="click" data-person="' + esc(p.name) + '" tabindex="0"><td class="name">' + esc(p.name) + "</td><td>" + p.pos + "</td><td>" + p.cl + "</td><td>" + esc(p.b) + "</td><td>" + p.pa +
+      "</td><td>" + F3(p.m.avg) + "</td>" + HGOALS.map(function (g) { return hcell(g, p.m[g.k], p.pa); }).join("") + "</tr>";
+  }).join("") || '<tr><td colspan="14" class="nyp" style="text-align:left">No hitters charted yet.</td></tr>';
+  return '<div class="titlerow"><div><h1>' + lv + ' Hitting</h1><p class="sub">' + list.length + (list.length === 1 ? " hitter · " : " hitters · ") + HD.lv[lv].pa + " plate appearances</p></div>" + KEY + "</div>" +
+    '<div class="stack"><section class="card"><h2>Hitters vs ' + SEASON + ' goals <small>tap a hitter to open his page · goal marks start at ' + HMIN + ' plate appearances</small></h2><div class="scroll"><table>' + head + rows + "</table></div></section>" + hbyWeek(lv, true) + "</div>";
+}
+function hseason(o, you) {
+  var b = hbase26(o), head = "<tr><th></th><th>PA</th><th>AVG</th>" + HGOALS.map(function (g) { return "<th>" + hshort(g) + "</th>"; }).join("") + "</tr>";
+  var now = '<tr class="sel"><td class="name">' + SEASON + "</td><td>" + o.pa + "</td><td>" + F3(o.m.avg) + "</td>" + HGOALS.map(function (g) { return hcell(g, o.m[g.k]); }).join("") + "</tr>";
+  var then = b ? '<tr class="base"><td class="name">2026 · ' + b.lv + "</td><td>" + b.pa + "</td><td>" + F3(b.m.avg) + "</td>" + HGOALS.map(function (g) { var x = b.m[g.k]; return "<td>" + (x == null ? "–" : '<span class="cell">' + fmt(g, x) + mark(g, x, true) + "</span>") + "</td>"; }).join("") + "</tr>"
+    : '<tr class="base"><td class="name">2026</td><td colspan="' + (HGOALS.length + 2) + '" class="first">' + (HAS26 ? "First season" : "Not imported") + "</td></tr>";
+  return '<section class="card"><h2>' + (you ? "Your" : "His") + ' season vs ' + SEASON + ' goals <small>spring games</small></h2><div class="scroll"><table>' + head + now + then + "</table></div>" +
+    '<p class="note">' + (b ? "2026 is from GameChanger. Quality at-bats (our way), chase and hard contact start in " + SEASON + "." : HAS26 ? "No 2026 batting line, so this season becomes his baseline for next year." : "2026 comes from the GameChanger import once a coach brings last season in.") +
+    ((GCP[o.pid] || {}).h27 ? "" : " OBP and SLG are from the games charted in the Offense Chart until GameChanger is imported.") + "</p></section>";
+}
+function hqab(o, you) {
+  var max = Math.max.apply(null, QABK.map(function (q) { return o.why[q[0]] || 0; }).concat([1]));
+  return '<section class="card"><h2>' + (you ? "Your" : "His") + " quality at-bats <small>" + o.qab + " of " + o.pa + " · " + fmt(HGOALS[0], o.m.qab) + " · goal " + gtxt(HGOALS[0]) + "</small></h2>" +
+    '<div class="bars">' + QABK.map(function (q) {
+      var n = o.why[q[0]] || 0;
+      return '<div class="mbar qbar"><span>' + q[1] + '</span><div class="btrack"><div style="width:' + (n * 100 / max).toFixed(0) + '%"></div></div><b>' + n + "</b></div>";
+    }).join("") + '</div><p class="note">Why ' + (you ? "your" : "his") + " at-bats counted. One at-bat can count for more than one reason, so these add up to more than " + o.qab + ". Our definition, charted in the Offense Chart.</p></section>";
+}
+function hswings(o) {
+  var whiff = o.sw ? Math.round(o.wh * 100 / o.sw) : null, fps = o.f1 ? Math.round(o.f1sw * 100 / o.f1) : null, pp = o.pa ? (o.pitches / o.pa).toFixed(2) : "–";
+  var counts = CNT.map(function (c) { var a = o.endc[c[0]]; return [c[1], a && a[1] ? Math.round(a[0] * 100 / a[1]) : null, a ? a[1] : 0]; });
+  return '<section class="card"><h2>At the plate</h2><div class="dstats">' + dstat("Pitches per PA", pp) + dstat("Swing and miss", whiff == null ? "–" : whiff + "%", "<em>% of swings</em>") + dstat("Swings at pitch 1", fps == null ? "–" : fps + "%") +
+    dstat("Chase", fmt(HGOALS[3], o.m.chase), "<em>goal ≤" + gtxt(HGOALS[3]) + "</em>", mark(HGOALS[3], o.m.chase, true)) + dstat("Hard contact", fmt(HGOALS[4], o.m.hard), "<em>goal ≥" + gtxt(HGOALS[4]) + "</em>", mark(HGOALS[4], o.m.hard, true)) + "</div>" +
+    '<h2 style="margin-top:14px">Quality at-bats by count <small>where the at-bat was when it ended · ahead means the hitter is ahead</small></h2><div class="scroll"><table><tr>' + counts.map(function (c) { return "<th>" + c[0] + "</th>"; }).join("") + "</tr><tr>" +
+    counts.map(function (c) { return c[1] == null ? "<td>–</td>" : '<td><span class="cell">' + c[1] + '%<i class="' + (c[1] >= HGOALS[0].goal ? "ok" : "ring") + ' sm"></i></span><small class="n">' + c[2] + "</small></td>"; }).join("") + "</tr></table></div></section>";
+}
+function hreflections(o, n, you, role) {
+  var rl = role ? role + " " : "", list = reflList(o.name, "hit").slice(0, n);
+  var head = '<section class="card"><h2>' + (you ? "Your " : "His ") + rl + "reflections";
+  if (!list.length) return head + '</h2><p class="note" style="margin:0">None yet. Reflections come with ' + (you ? "your" : "his") + " player card after each game.</p></section>";
+  return head + " <small>from " + (you ? "your" : "his") + " player cards, newest first</small></h2>" + list.map(reflBox).join("") + "</section>";
+}
+function hcomments(o, forReport, role) {
+  return '<section class="card"><h2>' + (role ? role + " coach comments" : "Coach comments") + " <small>" + o.lv + " " + (role ? role.toLowerCase() + " " : "") + "coaches" + (forReport ? "" : " · every coach can read") + "</small></h2>" +
+    commentBox(o.name, o.lv, role, forReport) + "</section>";
+}
+/* ======================================================= defense side (Nov 13) */
+/* Its own side because it comes from a different place (GameChanger season totals, imported, never charted)
+   and covers everyone who takes the field: hitters at their spots, pitchers fielding their position, both
+   catcher groups. The Defense card stays on every Players page and exit report. */
+var DF = {people: {}, lv: {}, prog: null};
+function dblank() { var t = {tc: 0, po: 0, a: 0, e: 0, dp: 0, outs: 0, catt: 0, ccs: 0, cpb: 0, couts: 0, pos: {}}; POS.forEach(function (k) { t.pos[k] = {outs: 0, n: 0}; }); return t; }
+function dsrc(o) {   /* what defenseOf and defenseCard need, for anyone */
+  if (o.kind === "pitcher") return personOf(o.name);
+  return {first: {name: o.name, cl: o.cl}, name: o.name, outs: 0, m: {}};
+}
+function dadd(t, x) {
+  POS.forEach(function (k) { if (x.inn[k]) { t.pos[k].outs += x.inn[k]; t.pos[k].n++; } });
+}
+function dm(t, teamOuts) {
+  return {fpct: t.tc ? (t.po + t.a) / t.tc : null, cs: t.catt ? t.ccs * 100 / t.catt : null, pb: t.couts ? t.cpb * 7 / (t.couts / 3) : null, e7: teamOuts ? t.e * 7 / (teamOuts / 3) : null};
+}
+LEVELS.forEach(function (lv) {
+  DF.lv[lv] = dblank();
+  hpeople(lv).forEach(function (h) { DF.people[h.name] = {name: h.name, lv: lv, cl: h.cl, kind: "hitter"}; });
+  lines(lv).forEach(function (p) { if (!p.home && !DF.people[p.name]) DF.people[p.name] = {name: p.name, lv: lv, cl: p.cl, kind: "pitcher"}; });
+});
+/* anyone with a GameChanger fielding line who isn't charted yet, on the level he played most for */
+Object.keys(GCP).forEach(function (id) {
+  var d = GCP[id].d27, n = NAME[id]; if (!d || !n || DF.people[n]) return;
+  var lv = (PEOPLE[id] || {}).home || (d.lvs || [])[0]; if (!lv) return;
+  DF.people[n] = {name: n, lv: lv, cl: clOf(id) || "–", kind: personLines(n).length ? "pitcher" : "hitter"};
+});
+DF.prog = dblank();
+Object.keys(DF.people).forEach(function (k) {
+  var o = DF.people[k]; o.x = defenseOf(dsrc(o));
+  o.prim = POS.filter(function (q) { return o.x.inn[q]; }).sort(function (a, b) { return o.x.inn[b] - o.x.inn[a]; })[0] || "DH";
+  dadd(DF.lv[o.lv], o.x); dadd(DF.prog, o.x);
+});
+var DEFT = MODEL.def27 || {};
+function dteam(l) { var t = DEFT[l] || {}, o = l === "Program" ? DF.prog : DF.lv[l]; ["tc", "po", "a", "e", "dp", "catt", "ccs", "cpb", "couts"].forEach(function (k) { o[k] = t[k] || 0; }); return o; }
+LEVELS.forEach(function (lv) { dteam(lv); DF.lv[lv].m = dm(DF.lv[lv], D.lv[lv].outs); DEF27[lv] = DEFT[lv] ? DF.lv[lv].m : {}; });
+dteam("Program"); DF.prog.m = dm(DF.prog, D.prog.outs); DEF27.Program = DEFT.Program ? DF.prog.m : {};
+function dpeople(lv) { return Object.keys(DF.people).map(function (k) { return DF.people[k]; }).filter(function (o) { return o.lv === lv; }); }
+var D3 = function (x) { return x == null ? "–" : x.toFixed(3).replace(/^0/, ""); };
+function dcell(g, x, n, min) { if (x == null || (n != null && n < (min || 10))) return "<td>" + fmt(g, x) + "</td>"; return '<td><span class="cell">' + fmt(g, x) + mark(g, x, true) + "</span></td>"; }
+function dlevelTable(sel) {
+  var F = DGOALS[0], C = DGOALS[1], PB = DGOALS[2];
+  var head = "<tr><th>Level</th><th>Innings</th><th>Chances</th><th>Errors</th><th>Errors per 7 inn</th><th>Double plays</th><th>Fielding %</th><th>Steal attempts</th><th>Caught stealing</th><th>Passed balls per 7</th></tr>";
+  var rows = LEVELS.concat(["Program"]).map(function (l) {
+    var t = l === "Program" ? DF.prog : DF.lv[l], outs = (l === "Program" ? D.prog : D.lv[l]).outs;
+    return '<tr class="click' + (l === sel ? " sel" : "") + '" data-level="' + l + '" tabindex="0"><td class="name">' + l + "</td><td>" + IPS(outs) + "</td><td>" + t.tc + "</td><td>" + t.e + "</td><td>" + (t.m.e7 == null ? "–" : t.m.e7.toFixed(2)) +
+      "</td><td>" + t.dp + "</td>" + dcell(F, t.m.fpct) + "<td>" + t.catt + "</td>" + dcell(C, t.m.cs) + dcell(PB, t.m.pb) + "</tr>";
+  }).join("");
+  var goal = '<tr class="goalrow"><td>Goal</td><td></td><td></td><td></td><td></td><td></td><td>≥' + gtxt(F) + "</td><td></td><td>≥" + gtxt(C) + "</td><td>≤" + gtxt(PB) + "</td></tr>";
+  var e = MODEL.e7_26 || {}, have = LEVELS.filter(function (l) { return e[l] != null; });
+  var e26 = have.length ? '<p class="note">2026 errors per 7 innings: ' + have.map(function (l) { return l + " " + e[l].toFixed(2); }).join(", ") + ". Not a goal, a way to see how often the ball gets kicked. Innings are the ones our pitchers charted.</p>" : "";
+  return '<section class="card"><h2>By level <small>tap a level to open it</small></h2><div class="scroll"><table>' + head + rows + goal + "</table></div>" + e26 + "</section>";
+}
+function dposTable(lv) {
+  var t = DF.lv[lv];
+  var rows = POS.filter(function (k) { return t.pos[k].outs; }).map(function (k) {
+    var q = t.pos[k];
+    return '<tr><td class="name">' + PNAME[k] + "</td><td>" + q.n + "</td><td>" + IPS(q.outs) + "</td></tr>";
+  }).join("");
+  return '<section class="card"><h2>By position <small>everyone who played there</small></h2>' +
+    (rows ? '<div class="scroll"><table><tr><th>Position</th><th>Players</th><th>Innings</th></tr>' + rows + "</table></div>" : '<p class="note" style="margin:0">No GameChanger import for ' + lv + " yet.</p>") +
+    '<p class="note">GameChanger gives each player\'s chances and errors for the season, not by position, so this shows who played where. The .950 goal is for the whole team.</p></section>';
+}
+function defOverview(lv) {
+  return '<div class="titlerow"><div><h1>' + lv + ' Defense vs ' + SEASON + ' Goals</h1><p class="sub">' + (lv === "Program" ? "All 4 levels · season" : "Season") + " totals from GameChanger · " + gcWhen() + "</p></div>" + KEY + "</div>" +
+    '<div class="stack">' + defenseTiles(lv) + (lv === "Program" ? dlevelTable(lv) : dposTable(lv)) + "</div>";
+}
+function defTeam(lv) {
+  var F = DGOALS[0], C = DGOALS[1], PB = DGOALS[2], all = dpeople(lv);
+  var order = function (o) { var i = POS.indexOf(o.prim); return i < 0 ? 99 : i; };
+  var fld = all.filter(function (o) { return o.x.outs || o.x.tc; }).sort(function (a, b) { return order(a) - order(b) || b.x.outs - a.x.outs; });
+  var dh = all.filter(function (o) { return !o.x.outs && !o.x.tc; });
+  var rows = fld.map(function (o) {
+    var x = o.x;
+    return '<tr class="click" data-person="' + esc(o.name) + '" tabindex="0"><td class="name">' + esc(o.name) + "</td><td>" + o.prim + "</td><td>" + o.cl + "</td><td>" + IPS(x.outs) + "</td><td>" + x.tc + "</td><td>" + x.po + "</td><td>" + x.a + "</td><td>" + x.e + "</td><td>" + x.dp + "</td>" + dcell(F, x.fpct, x.tc) + "</tr>";
+  }).join("") || '<tr><td colspan="10" class="nyp" style="text-align:left">No GameChanger import for ' + lv + " yet.</td></tr>";
+  var cats = all.filter(function (o) { return o.x.c; }).sort(function (a, b) { return b.x.c.outs - a.x.c.outs; }).map(function (o) {
+    var c = o.x.c;
+    return '<tr class="click" data-person="' + esc(o.name) + '" tabindex="0"><td class="name">' + esc(o.name) + "</td><td>" + o.cl + "</td><td>" + IPS(c.outs) + "</td><td>" + c.sb + " of " + c.att + "</td>" + dcell(C, c.csp, c.att, 5) + "<td>" + c.pb + "</td>" + dcell(PB, c.pb7, c.outs / 3, 14) + "<td>" + c.pik + "</td></tr>";
+  }).join("") || '<tr><td colspan="8" class="nyp" style="text-align:left">No catching lines yet.</td></tr>';
+  return '<div class="titlerow"><div><h1>' + lv + ' Defense</h1><p class="sub">' + fld.length + " players in the field · season totals from GameChanger · " + gcWhen() + "</p></div>" + KEY + "</div>" +
+    '<div class="stack"><section class="card"><h2>Fielders <small>by primary position · tap a player to open his page</small></h2><div class="scroll"><table>' +
+    "<tr><th>Player</th><th>Pos</th><th>Cl</th><th>Innings</th><th>Chances</th><th>PO</th><th>A</th><th>E</th><th>DP</th><th>Fielding %</th></tr>" + rows + "</table></div>" +
+    '<p class="note">Goal marks start at 10 chances; a pitcher with 3 clean chances isn\'t meeting a goal, he just hasn\'t had many balls hit to him.' + (dh.length ? " No fielding line yet: " + dh.map(function (o) { return esc(o.name); }).join(", ") + "." : "") + "</p></section>" +
+    '<section class="card"><h2>Catchers <small>goals: caught stealing ≥' + gtxt(C) + ", passed balls ≤" + gtxt(PB) + " per 7 innings caught</small></h2><div class=\"scroll\"><table>" +
+    "<tr><th>Catcher</th><th>Cl</th><th>Innings caught</th><th>Steals allowed</th><th>Caught stealing</th><th>Passed balls</th><th>Per 7 inn</th><th>Pickoffs</th></tr>" + cats + "</table></div>" +
+    '<p class="note">Marks start at 5 steal attempts and 14 innings caught (2 games).</p></section></div>';
+}
+/* ======================================================= winter overview (Nov 13) */
+/* Built from last winter's workbook (2026_Winter_Bullpen_Tracking.xlsm) and the 4 cumulative routines. Pitching
+   only: no hitter work is tracked in winter. Every routine keeps the same 25 wind-up pitches, so "wind-up" below is
+   the same test every week. The 2026 numbers are last winter's workbook averages. */
+var WROUT = {"Fastball Command": "FB and CH, wind-up only", "Breaking Ball & Stretch": "+ breaking ball, + stretch",
+             "Holding Runners": "+ slide step", "Hitter's Counts": "+ CH off the slide step, 2-0 breaking ball"};
+var W26 = {pen: 45.9, fb: 46.7, os: 46.1, strike: 47.6};   /* last winter's workbook, pitcher average; H = on or next to the spot */
+var WGOALS = [
+  {k: "pen", name: "Bullpen execution", unit: "%", goal: LADDER.pen, more: true, sub: "last 3 scripted pens · on or next to the called spot", lo: 35, hi: 85, dec: 1},
+  {k: "live", name: "Live AB execution", unit: "%", goal: LADDER.live, more: true, sub: "live AB sessions · same grade", lo: 30, hi: 80, dec: 1}
+];
+function wstaff(g) {   /* g is a class year (Sr, Jr, So, Fr) or All. Each arm once: a swing arm's second line is skipped */
+  return Object.keys(D.pitchers).map(function (k) { return D.pitchers[k]; }).filter(function (p) { return !p.home && (p.pens.length || p.live.length) && (g === "All" || p.cl === g); });
+}
+function wwho(g) { return g === "All" ? "staff" : clsName(g).toLowerCase(); }
+function wavg(a) { a = a.filter(function (v) { return v != null; }); return a.length ? a.reduce(function (x, y) { return x + y; }, 0) / a.length : null; }
+function wnum(lv) {
+  var st = wstaff(lv), pens = [], last3 = [], first3 = [], live = [];
+  st.forEach(function (p) { pens = pens.concat(p.pens); last3 = last3.concat(p.pens.slice(-3)); first3 = first3.concat(p.pens.slice(0, 3)); live = live.concat(p.live); });
+  var o = {n: st.length, pens: pens.length, live: live.length, pitches: 0, st: 0, sn: 0};
+  pens.concat(live).forEach(function (s) { o.pitches += s.n; });
+  pens.forEach(function (s) { o.st += s.st; o.sn += s.n; });
+  o.m = {pen: pool(last3), live: pool(live)};
+  o.first = pool(first3);
+  o.fb = pool(pens, "fb"); o.os = pool(pens, "os");
+  o.strike = o.sn ? o.st * 100 / o.sn : null;
+  o.refl = pens.filter(function (s) { return s.refl; }).length;
+  return o;
+}
+function wtiles(lv) {
+  var o = wnum(lv);
+  return tiles(lv, WGOALS, o.m, {pen: W26.pen, live: null}).replace('<div class="tiles">', '<div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(260px,1fr))">')
+    .replace(/2026: not charted/, "2026: not charted this way");
+}
+function wglance(lv) {
+  var o = wnum(lv), st = wstaff(lv);
+  var f = function (v) { return v == null ? "–" : v.toFixed(1) + "%"; }, d = o.m.pen != null && o.first != null ? o.m.pen - o.first : null;
+  return '<section class="card"><h2>Winter at a glance <small>' + (lv === "All" ? "every pitcher" : clsName(lv).toLowerCase()) + " · " + winterSpan(st) + "</small></h2>" +
+    '<div class="dstats">' + dstat("Pitchers", o.n) + dstat("Pens charted", o.pens) + dstat("Pitches charted", o.pitches.toLocaleString()) +
+    dstat("Live AB sessions", o.live) + dstat("Reflections written", o.pens ? Math.round(o.refl * 100 / o.pens) + "%" : "–", "<em>" + o.refl + " of " + o.pens + " pens</em>") +
+    dstat("First 3 pens", f(o.first), "<em>on or next to the spot</em>") + dstat("Last 3 pens", f(o.m.pen), d == null ? "" : "<em>" + (d >= 0 ? "+" : "") + d.toFixed(1) + " pts since the first 3</em>") +
+    dstat("Fastball", f(o.fb), "<em>2026: " + W26.fb + "%</em>") + dstat("Off-speed", f(o.os), "<em>2026: " + W26.os + "%</em>") +
+    dstat("Strikes", f(o.strike), "<em>information only, not graded</em>") + "</div>" +
+    '<p class="note">2026 is last winter\'s workbook: 50 pitchers, 6 pens, "H" meaning on or next to the spot. Strike % is shown and never graded; a pen is about executing the call. First and last 3 pens are each pitcher\'s own.</p></section>';
+}
+var WDATES = (function () { var s = {}; Object.keys(WINTER).forEach(function (id) { WINTER[id].pens.forEach(function (p) { s[p.d] = 1; }); }); return Object.keys(s).sort(); })();
+function wclass(lv, wide) {
+  wide = wide && window.innerWidth > 900;
+  var st = wstaff("All"), CL = [["Sr", "Seniors", "#7A4FB0"], ["Jr", "Juniors", "#2B6CB0"], ["So", "Sophomores", "#C85C1C"], ["Fr", "Freshmen", "#1B7043"]];
+  var head = '<section class="card"><h2>The same 25 pitches, every pen <small>on or next to the spot · ' + (lv === "All" ? "by class year" : "against the whole staff") + "</small></h2>";
+  if (!WDATES.length) return head + noChart("The chart starts with the first scripted pen.") + "</section>";
+  var line = function (g) { return WDATES.map(function (d) { var s = []; g.forEach(function (p) { p.pens.forEach(function (x) { if (x.d === d) s.push(x); }); }); return pool(s, "w"); }); };
+  var lines;
+  if (lv === "All") {
+    lines = CL.map(function (c) { var g = st.filter(function (p) { return p.cl === c[0]; }); return g.length ? {v: line(g), c: c[2], w: 1.8, key: c[1] + " (" + g.length + ")"} : null; }).filter(Boolean);
+    lines.push({v: line(st), c: "#14213D", w: 2.8, dots: true, key0: "Whole staff"});
+  } else {                                                     /* one class: its line, with the whole staff behind it for reference */
+    var mine = wstaff(lv);
+    lines = [{v: line(st), c: "#B9C3D3", w: 1.8, key: "Whole staff (" + st.length + ")"}, {v: line(mine), c: "#14213D", w: 2.8, dots: true, key0: clsName(lv) + " (" + mine.length + ")"}];
+  }
+  var all = [].concat.apply([], lines.map(function (l) { return l.v; })).filter(function (v) { return v != null; }).concat([LADDER.pen]);
+  var lo = Math.floor(Math.min.apply(null, all) / 5) * 5 - 5, hi = Math.ceil(Math.max.apply(null, all) / 5) * 5 + 5;
+  var ticks = [0, 1, 2, 3, 4].map(function (i) { return Math.round(lo + (hi - lo) * i / 4); });
+  var key = '<div class="scalekey" style="margin:0 0 6px"><span><i style="width:16px;height:3px;background:#14213D"></i>' + lines.filter(function (l) { return l.key0; })[0].key0 + "</span>" + lines.filter(function (l) { return l.key; }).map(function (l) { return '<span><i style="width:16px;height:3px;background:' + l.c + '"></i>' + l.key + "</span>"; }).join("") + "</div>";
+  return head + key +
+    lineChart({w: wide ? 1280 : 640, h: wide ? 260 : 240, n: WDATES.length, lo: lo, hi: hi, ticks: ticks, unit: "%", goal: LADDER.pen, more: true, label: "Execution on the 25 wind-up pitches by pen",
+               xl: WDATES.map(function (d, i) { return wide || i % 3 === 0 || i === WDATES.length - 1 ? sd(d) : ""; }), lines: lines}) +
+    '<p class="note">Every routine keeps the same 25 wind-up pitches and only adds to them, so this line is the same test each week: a rise is real improvement, not an easier script. Class years are compared with each other, never a kid with a kid.</p></section>';
+}
+function wroutines(lv) {
+  var st = wstaff(lv), by = {}, order = [];
+  st.forEach(function (p) { p.pens.forEach(function (s) { var k = s.tpl || "Freeform"; if (!by[k]) { by[k] = {name: k, list: [], first: s.d}; order.push(k); } by[k].list.push(s); if (s.d < by[k].first) by[k].first = s.d; }); });
+  order.sort(function (a, b) { return by[a].first < by[b].first ? -1 : 1; });
+  var c = function (v, goal) { return v == null ? "<td>–</td>" : '<td><span class="cell">' + Math.round(v) + '%<i class="' + (Math.round(v) >= goal ? "ok" : "ring") + ' sm"></i></span></td>'; };
+  var del = function (list, k) { var ok = 0, n = 0; list.forEach(function (s) { var a = s.del[k]; if (a) { ok += a[0]; n += a[1]; } }); return n ? ok * 100 / n : null; };
+  var rows = order.map(function (k, i) {
+    var R = by[k], ns = R.list.map(function (s) { return s.n; }).sort(function (a, b) { return a - b; });
+    return '<tr><td class="name">' + (i + 1) + ". " + esc(R.name) + (WROUT[R.name] ? '<br><span style="color:var(--muted);font-size:12px;font-weight:400">' + WROUT[R.name] + "</span>" : "") + "</td><td>" + ns[Math.floor(ns.length / 2)] + "</td><td>" + R.list.length + "</td>" +
+      c(pool(R.list), LADDER.pen) + c(del(R.list, "W"), LADDER.pen) + c(del(R.list, "S"), LADDER.pen) + c(del(R.list, "SS"), LADDER.pen) + "</tr>";
+  }).join("") || '<tr><td colspan="7" class="nyp" style="text-align:left">No scripted pens yet.</td></tr>';
+  return '<section class="card"><h2>By routine and delivery <small>' + wwho(lv) + ' · goal ' + LADDER.pen + '% on or next to the spot</small></h2><div class="scroll"><table>' +
+    "<tr><th>Routine</th><th>Pitches</th><th>Pens</th><th>All pitches</th><th>Wind-up</th><th>Stretch</th><th>Slide step</th></tr>" + rows + "</table></div>" +
+    '<p class="note">Last winter\'s workbook collected wind-up and stretch on every pitch and never reported on it. This is where a slide step costing command shows up.</p></section>';
+}
+function wsitu(lv) {
+  var st = wstaff(lv), all = [];
+  st.forEach(function (p) { all = all.concat(p.pens); });
+  var rows = [["20", "2-0 off-speed strike", "CH or breaking ball to the middle", "Strike"],
+              ["R1", "Runner on 1st", "FB down and away, from the stretch", "On or next to the spot"],
+              ["R2", "Runner on 2nd", "FB down and away, slide step", "On or next to the spot"],
+              ["2K", "2 strikes, chase", "CH or breaking ball below and away, FB above the zone", "Finished out of the zone"]];
+  return '<section class="card"><h2>The situations in the scripts <small>' + wwho(lv) + ', every routine that has them</small></h2><div class="scroll"><table><tr><th>Situation</th><th>The call</th><th>' + (lv === "All" ? "Staff" : clsName(lv)) + '</th></tr>' +
+    rows.map(function (x) {
+      var ok = 0, n = 0; all.forEach(function (s) { var a = s.sit[x[0]]; if (a) { ok += a[0]; n += a[1]; } });
+      var v = n ? ok * 100 / n : null;
+      return '<tr><td class="name" style="white-space:normal;min-width:90px">' + x[1] + '</td><td style="text-align:left;white-space:normal;min-width:150px">' + x[2] + '<br><span style="color:var(--muted);font-size:12px">graded on: ' + x[3].toLowerCase() + "</span></td><td>" +
+        (v == null ? "–" : '<span class="cell">' + Math.round(v) + '%<i class="' + (Math.round(v) >= LADDER.pen ? "ok" : "ring") + ' sm"></i></span><small class="n">' + n + "</small>") + "</td></tr>"; }).join("") +
+    "</table></div></section>";
+}
+function wmiss(lv) {
+  var st = wstaff(lv), T = [["FB", "Fastball"], ["CB", "Breaking ball"], ["CH", "Change-up"]];
+  var rows = T.map(function (t) {
+    var v = [0, 0, 0, 0], sum = 0;
+    st.forEach(function (p) { p.pens.forEach(function (s) { var m = s.miss[t[0]]; if (m) { for (var i = 0; i < 4; i++) v[i] += m[i]; sum += m[4]; } }); });
+    if (!sum) return '<tr><td class="name">' + t[1] + '</td><td colspan="4">–</td></tr>';
+    v = v.map(function (x) { return Math.round(x * 100 / sum); });
+    var top = v.indexOf(Math.max.apply(null, v));
+    return '<tr><td class="name">' + t[1] + "</td>" + v.map(function (x, i) { return "<td" + (i === top ? ' style="font-weight:700;color:var(--navy)"' : "") + ">" + x + "%</td>"; }).join("") + "</tr>";
+  }).join("");
+  return '<section class="card"><h2>Where the misses go <small>' + wwho(lv) + ', every pitch that missed the spot</small></h2><div class="scroll"><table>' +
+    "<tr><th>Pitch</th><th>Up</th><th>Down</th><th>Arm side</th><th>Glove side</th></tr>" + rows + "</table></div>" +
+    '<p class="note">Share of each pitch\'s misses that went each way; a miss up and in counts in both columns. Bold is the most common miss. "Misses up and arm side" is something to coach; a hit rate on its own is not.</p></section>';
+}
+function wwatch(lv) {
+  var st = wstaff(lv), out = [];
+  st.forEach(function (p) {
+    var P = p.pens, why = [];
+    if (P.length >= 6) { var f3 = pool(P.slice(0, 3)), l3 = pool(P.slice(-3)); if (l3 < f3) why.push("Last 3 pens below his first 3 (" + Math.round(f3) + "% to " + Math.round(l3) + "%)"); }
+    var l3b = P.length >= 3 ? pool(P.slice(-3)) : null;
+    if (l3b != null && l3b < LADDER.pen - 10) why.push("Under " + (LADDER.pen - 10) + "% in his last 3 pens");
+    var v = P.map(function (s) { return s.g ? s.ok * 100 / s.g : null; }), n = v.length;
+    if (n >= 3 && v[n - 1] != null && v[n - 2] != null && v[n - 3] != null && v[n - 1] < v[n - 2] - 6 && v[n - 2] < v[n - 3]) why.push("2 pens in a row down");
+    var fl = P.concat(p.live).filter(function (s) { return s.flag; });
+    if (fl.length) { var f = fl[fl.length - 1]; why.push('Arm flag in a reflection ("' + esc(f.flag) + '", ' + sd(f.d) + ")"); }
+    else if (n >= 3 && !P.slice(-3).some(function (s) { return s.refl; })) why.push("No reflection in his last 3 pens");
+    if (why.length) out.push([p, why]);
+  });
+  out.sort(function (a, b) { return b[1].length - a[1].length; });
+  var rows = out.slice(0, 8).map(function (x) {
+    return '<tr class="click" data-open="' + esc(x[0].id) + '" tabindex="0"><td class="name">' + esc(x[0].name) + "</td><td>" + x[0].cl + "</td><td>" + x[1].join(" · ") + "</td></tr>";
+  }).join("");
+  return '<section class="card"><h2>Worth a look <small>coaches only · tap a pitcher to open his page</small></h2>' +
+    (rows ? '<div class="scroll"><table><tr><th>Pitcher</th><th>Cl</th><th>Why</th></tr>' + rows + "</table></div>" : '<p class="note" style="margin:0">Nobody flagged.</p>') +
+    '<p class="note">Flags: last 3 pens below his first 3, under ' + (LADDER.pen - 10) + '% lately, 2 pens in a row down, an arm or body flag in a reflection, or no reflection in 3 pens. A list of who to talk to this week, never a ranking.</p></section>';
+}
+function wlevels() {
+  var rows = ["Sr", "Jr", "So", "Fr", "All"].map(function (l) {
+    var o = wnum(l), d = o.m.pen != null && o.first != null ? o.m.pen - o.first : null;
+    var c = function (g, v) { return v == null ? "<td>–</td>" : '<td><span class="cell">' + v.toFixed(1) + '%<i class="' + (met(g, v) ? "ok" : "ring") + ' sm"></i></span></td>'; };
+    return '<tr class="click' + (l === "All" ? " sel" : "") + '" data-cls="' + l + '" tabindex="0"><td class="name">' + (l === "All" ? "Whole staff" : clsName(l)) + "</td><td>" + o.n + "</td><td>" + o.pens + "</td><td>" + (o.first == null ? "–" : o.first.toFixed(1) + "%") + "</td>" +
+      c(WGOALS[0], o.m.pen) + "<td>" + (d == null ? "–" : (d >= 0 ? "+" : "") + d.toFixed(1) + " pts") + "</td>" + c(WGOALS[1], o.m.live) + "<td>" + (o.pens ? Math.round(o.refl * 100 / o.pens) + "%" : "–") + "</td></tr>";
+  }).join("");
+  return '<section class="card"><h2>By class <small>tap a class to open it</small></h2><div class="scroll"><table>' +
+    "<tr><th>Class</th><th>Pitchers</th><th>Pens</th><th>First 3 pens</th><th>Last 3 pens</th><th>Change</th><th>Live ABs</th><th>Reflections</th></tr>" + rows +
+    '<tr class="goalrow"><td>Goal</td><td></td><td></td><td></td><td>≥' + LADDER.pen + '%</td><td></td><td>≥' + LADDER.live + '%</td><td></td></tr></table></div></section>';
+}
+function winterView(lv) {
+  var st = wstaff(lv);
+  return '<div class="titlerow"><div><h1>' + (lv === "All" ? "Winter " + SEASON : clsName(lv) + " · Winter " + SEASON) + '</h1><p class="sub">' + st.length + (st.length === 1 ? " pitcher · " : " pitchers · ") +
+    winterSpan(st) + " · graded on the called spot, never against the spring goals</p></div>" + KEY + "</div>" +
+    '<div class="stack">' + wtiles(lv) + wglance(lv) + (lv === "All" ? wlevels() : "") + wclass(lv, true) +
+    wroutines(lv) + '<div class="cols">' + wsitu(lv) + wmiss(lv) + "</div>" + wwatch(lv) + ladder("Program", st) + "</div>";
+}
+function winterTeam(g) {
+  var list = wstaff(g);
+  return '<div class="titlerow"><div><h1>' + (g === "All" ? "Winter staff" : clsName(g) + " · Winter staff") + '</h1><p class="sub">' + list.length + (list.length === 1 ? " pitcher · " : " pitchers · ") + winterSpan(list) + "</p></div>" + KEY + "</div>" +
+    '<div class="stack">' + winterTable("", list) + pensByWeek("", list, g === "All" ? "Whole staff" : clsName(g)) + "</div>";
+}
+function winterPlayers(g) {
+  var groups = g === "All" ? ["Sr", "Jr", "So", "Fr"] : [g];
+  var body = groups.map(function (c) {
+    var list = wstaff(c).sort(function (a, b) { return a.name < b.name ? -1 : 1; });
+    if (!list.length) return "";
+    return (g === "All" ? '<div class="lvhead">' + clsName(c) + "</div>" : "") + '<div class="roster">' + list.map(function (p) {
+      return '<button class="pcard" data-open="' + esc(p.id) + '"><b>' + esc(p.name) + "</b><span>" + (CLS[p.cl] || p.cl) + " · " + p.t + "HP</span><span>Last 3 pens " +
+        pct0(pool(p.pens.slice(-3))) + " · live ABs " + pct0(pool(p.live)) + "</span></button>";
+    }).join("") + "</div>";
+  }).join("");
+  return '<div class="titlerow"><div><h1>' + (g === "All" ? "Winter pitchers" : clsName(g)) + '</h1><p class="sub">By class year. Tap a pitcher to open his page.</p></div></div><div class="stack">' +
+    (body || '<p class="note">No bullpens charted yet.</p>') + "</div>";
+}
+/* ======================================================= winter leaderboard (Nov 13) */
+/* Last winter's score, with the fixes Jim approved ("I'm good with the fixes above"):
+   - continuous points instead of bands: each piece is its percent / 6, so 60% = 10 points as before, with no
+     cliff at a band edge and no ceiling at 60%;
+   - execution is scored on the same 25 wind-up pitches every routine repeats, so a kid who missed the early,
+     easier pens isn't penalized; fastball on those pitches; off-speed on every called change-up and breaking ball;
+   - AO3+ points per batter faced (++ 2, +- 1, -+ 1, -- 0), x 5, so a full session of ++ is 10; counted from the
+     first live AB session on, never per session;
+   - ranked once he has 4 pens; ties go to the 25-pitch execution, then more pens.
+   One board for everyone; printed weekly for the bullpen area (Jim); seeds the 9-square at the end. */
+var WK = (function () {   /* the last pen day of each week */
+  var by = {}; WDATES.forEach(function (d) { by[monday(d)] = d; });
+  return Object.keys(by).sort().map(function (k) { return by[k]; });
+})();
+function bscore(p, upto) {
+  var pens = p.pens.filter(function (s) { return s.d <= upto; }), live = p.live.filter(function (s) { return s.d <= upto && s.ao3; });
+  var core = pool(pens, "w"), fb = pool(pens, "fb"), os = pool(pens, "os");
+  var pts = 0, bf = 0; live.forEach(function (s) { pts += s.ao3[0]; bf += s.ao3[1]; });
+  var ao3 = bf ? pts / bf : null;
+  var P = {core: core == null ? 0 : core / 6, fb: fb == null ? 0 : fb / 6, os: os == null ? 0 : os / 6, ao3: ao3 == null ? 0 : ao3 * 5};
+  return {p: p, pens: pens.length, core: core, fb: fb, os: os, ao3: ao3, live: live.length, pts: P,
+          score: P.core + P.fb + P.os + P.ao3, ranked: pens.length >= 4};
+}
+function board(upto) {
+  var rows = wstaff("All").map(function (p) { return bscore(p, upto); });
+  var ranked = rows.filter(function (x) { return x.ranked; }).sort(function (a, b) { return b.score - a.score || (b.core || 0) - (a.core || 0) || b.pens - a.pens; });
+  ranked.forEach(function (x, i) { x.rank = i + 1; });
+  return {ranked: ranked, waiting: rows.filter(function (x) { return !x.ranked; })};
+}
+function boardPage() {
+  if (!WK.length) return '<div class="titlerow"><div><h1>Winter Leaderboard</h1><p class="sub">One board for every pitcher.</p></div></div><div class="stack"><section class="card"><p class="note" style="margin:0">The board starts once pitchers have 4 scripted pens.</p></section></div>';
+  if (S.wk == null || WK.indexOf(S.wk) < 0) S.wk = WK[WK.length - 1];
+  var wi = WK.indexOf(S.wk), B = board(S.wk), prev = wi > 0 ? board(WK[wi - 1]) : null, was = {};
+  if (prev) prev.ranked.forEach(function (x) { was[x.p.name] = x.rank; });
+  var f = function (v) { return v == null ? "–" : Math.round(v) + "%"; };
+  var show = B.ranked.filter(function (x) { return S.cls === "All" || x.p.cl === S.cls; });
+  var move = function (x) {
+    if (!prev) return "";
+    var w = was[x.p.name];
+    if (!w) return '<span class="mv new">new</span>';
+    var d = w - x.rank;
+    return d > 0 ? '<span class="mv up">▲' + d + "</span>" : d < 0 ? '<span class="mv dn">▼' + (-d) + "</span>" : '<span class="mv">–</span>';
+  };
+  var rows = show.map(function (x) {
+    return '<tr class="click" data-open="' + esc(x.p.id) + '" tabindex="0"><td class="rk">' + x.rank + "</td><td>" + move(x) + '</td><td class="name">' + esc(x.p.name) + "</td><td>" + x.p.cl +
+      "</td><td>" + x.pens + "</td><td>" + f(x.core) + "</td><td>" + f(x.fb) + "</td><td>" + f(x.os) + "</td><td>" + (x.ao3 == null ? "–" : x.ao3.toFixed(2)) +
+      '</td><td class="sc">' + x.score.toFixed(1) + "</td></tr>";
+  }).join("");
+  var wait = B.waiting.filter(function (x) { return S.cls === "All" || x.p.cl === S.cls; });
+  var picker = '<section class="card"><h2>Week <small>the board as it stood after the last pen that week · print it for the bullpen</small></h2><div class="metric">' +
+    WK.map(function (s) { return '<button aria-pressed="' + (s === S.wk) + '" data-wk="' + s + '">' + sd(s) + "</button>"; }).join("") + "</div>" +
+    '<label class="seedbox"><input type="checkbox" data-seeds="1"' + (S.seeds ? " checked" : "") + "> Run the 9-square seedings from this week's board</label></section>";
+  var seeds = B.ranked.slice(0, 12);
+  var bracket = '<section class="card"><h2>9-square seeds <small>from this board · 12-player bracket like last year, seeds 1 to 4 get a bye</small></h2>' +
+    '<div class="seeds">' + seeds.map(function (x, i) { return "<div><b>" + (i + 1) + "</b>" + esc(x.p.name) + "<span>" + x.score.toFixed(1) + (i < 4 ? " · bye" : "") + "</span></div>"; }).join("") + "</div>" +
+    '<p class="note">Seeds follow the board on the week you pick. Coaches decide who plays; if someone sits out, everyone below him moves up a seed.</p></section>';
+  return '<div class="titlerow"><div><h1>Winter Leaderboard</h1><p class="sub">One board for every pitcher' + (S.cls === "All" ? "" : " · " + clsName(S.cls) + " shown, with their place on the whole board") + "</p></div></div>" +
+    '<div class="stack">' + picker +
+    '<section class="sheet board" id="sheet"><div class="sh-top"><div><b>Legend Titans Pitching · Winter Leaderboard</b><span>Through ' + sd(S.wk) + ", " + S.wk.slice(0, 4) +
+    (prev ? " · arrows show the move since " + sd(WK[wi - 1]) : "") + '</span></div><div class="sh-btns"><button class="mini-btn" data-print="1">Print</button></div></div>' +
+    '<div class="scroll"><table><tr><th>#</th><th></th><th>Pitcher</th><th>Cl</th><th>Pens</th><th>Execution<br><small>25 wind-up pitches</small></th><th>Fastball</th><th>Off-speed</th><th>AO3+<br><small>per batter</small></th><th>Score</th></tr>' +
+    (rows || '<tr><td colspan="10" style="text-align:left;color:var(--muted)">The board starts once pitchers have 4 pens.</td></tr>') + "</table></div>" +
+    (wait.length ? '<p class="note"><b>Not ranked yet</b> (4 pens to make the board): ' + wait.map(function (x) { return esc(x.p.name) + " (" + x.pens + (x.pens === 1 ? " pen" : " pens") + ")"; }).join(", ") + ".</p>" : "") +
+    '<p class="note score-how"><b>How the score works.</b> Execution, fastball and off-speed are each your percent on or next to the called spot, divided by 6 (60% = 10 points). ' +
+    "Execution counts the same 25 wind-up pitches that are in every routine, so every pen is the same test. AO3+ starts with live ABs: per batter, ++ is 2, +- or -+ is 1, -- is 0, times 5. " +
+    "Strikes are never scored: a pen is about hitting the call. 4 pens to make the board; a tie goes to execution.</p></section>" +
+    (S.seeds ? bracket : "") + "</div>";
+}
+/* ======================================================= game plan: our pitchers in the scouting report (Nov 13, E-022) */
+/* Jim: "go into the scouting report for the next game, flag who you are planning on pitching (as many as you know) and
+   you get one scouting report with everything." Each pitcher's plan grades pitch type x called spot only ("skip the
+   situations/windup vs stretch"), winter pens and live ABs weighted equally, then spring games added as they come.
+   Under 5 pitches: not enough yet. 5 to 9: an early read. 10 or more: a full number, and it can make the call sheet. */
+/* the bullpen v45 numbers (E-024, the middle snowman) */
+var PSPOT = [[7, "Above the zone"], [2, "Up & in"], [1, "Middle-up"], [0, "Middle"], [4, "Middle-down"], [3, "Down & in"], [5, "Down & away"], [6, "Below the zone"]];
+var PTYPE = [["FB", "Fastball"], ["CH", "Change-up"], ["CB", "Breaking ball"]];
+/* each pitch and spot he has been called on: scripted pens and live ABs weighted equally, spring games beside them */
+function plan(p) {
+  if (p._plan) return p._plan;
+  var cells = {}, add = function (list, f) { list.forEach(function (s) { Object.keys(s.cells).forEach(function (k) { var c = cells[k] || (cells[k] = {t: k.split("|")[0], s: +k.split("|")[1], pen: [0, 0], live: [0, 0]}); c[f][0] += s.cells[k][0]; c[f][1] += s.cells[k][1]; }); }); };
+  add(p.pens, "pen"); add(p.live, "live");
+  var gc = (MODEL.gcell || {})[p.pid] || {};
+  Object.keys(cells).forEach(function (k) {
+    var x = cells[k];
+    x.penPct = x.pen[1] ? x.pen[0] * 100 / x.pen[1] : null;
+    x.livePct = x.live[1] ? x.live[0] * 100 / x.live[1] : null;
+    x.n = x.pen[1] + x.live[1];
+    x.pct = x.livePct == null ? x.penPct : x.penPct == null ? x.livePct : (x.penPct + x.livePct) / 2;      /* pens and live ABs weighted equally */
+    var g = gc[k]; x.gn = g ? g[1] : 0; x.gpct = g && g[1] ? g[0] * 100 / g[1] : null;
+  });
+  return (p._plan = cells);
+}
+function pcell(x) {
+  if (!x) return '<td class="pc none">·</td>';
+  if (x.n < 5) return '<td class="pc thin">not enough<br><small>' + x.n + "</small></td>";
+  var v = Math.round(x.pct), early = x.n < 10, tone = early ? "early" : v >= LADDER.pen ? "good" : v < LADDER.pen - 15 ? "low" : "";
+  return '<td class="pc ' + tone + '"><b>' + v + "%</b><small>" + x.n + (early ? " · early read" : "") + "</small></td>";
+}
+/* Jim, Nov 13: "the grid seems more consistent". One zone per pitch type, catcher's view, In on the left: the same
+   5x5 the call pad and the bullpen chart use, so the snowman column reads top to bottom. */
+/* Jim, Nov 13: "a more color gradient approach". Diverging around the goal: orange below it, a neutral gray just
+   under it, blue at and above it; 3 steps each way, so the color says how far from 65% and which side. Text stays
+   ink on every step (5:1 or better). Orange and blue, not red and green, so it holds up for color-blind readers. */
+var PBINS = (function (g) {   /* diverging around the pen goal: orange below, gray just under it, blue at and above */
+  var e = [g - 20, g - 10, g - 5, g, g + 5, g + 13], lab = function (a, b) { return a + " to " + (b - 1) + "%"; };
+  return [[e[0], "o3", "under " + e[0] + "%"], [e[1], "o2", lab(e[0], e[1])], [e[2], "o1", lab(e[1], e[2])], [e[3], "n0", lab(e[2], e[3])],
+          [e[4], "b1", lab(e[3], e[4])], [e[5], "b2", lab(e[4], e[5])], [101, "b3", e[5] + "% and up"]];
+})(LADDER.pen);
+function ptone(v) { for (var i = 0; i < PBINS.length; i++) if (v < PBINS[i][0]) return PBINS[i][1]; return "b3"; }
+var PCELL = {0: [2, 2], 1: [1, 2], 2: [1, 1], 3: [3, 1], 4: [3, 2], 5: [3, 3], 6: [4, 2], 7: [0, 2]};
+function pzone(c, t) {
+  var at = {}; Object.keys(PCELL).forEach(function (k) { at[PCELL[k][0] + "," + PCELL[k][1]] = +k; });
+  var h = "";
+  for (var r = 0; r < 5; r++) for (var col = 0; col < 5; col++) {
+    var k = at[r + "," + col], x = k != null ? c[t[0] + "|" + k] : null, inz = r >= 1 && r <= 3 && col >= 1 && col <= 3;
+    var cls = "zc" + (inz ? " in" + (r === 1 ? " zt" : "") + (r === 3 ? " zb" : "") + (col === 1 ? " zl" : "") + (col === 3 ? " zr" : "") : "");
+    if (k == null) { h += '<div class="' + cls + '"></div>'; continue; }
+    var num = '<i class="zn">' + k + "</i>";
+    if (!x) { h += '<div class="' + cls + ' none">' + num + "</div>"; continue; }
+    if (x.n < 5) { h += '<div class="' + cls + ' thin">' + num + "<small>" + x.n + "</small></div>"; continue; }
+    var v = Math.round(x.pct), early = x.n < 10, tone = early ? " early" : " " + ptone(v);
+    var tip = t[1] + " " + k + " (" + PSPOT.filter(function (q) { return q[0] === k; })[0][1].toLowerCase() + "): " + v + "% on or next to the spot, " + x.n + " pitches" + (early ? ", an early read" : "");
+    h += '<div class="' + cls + tone + '" title="' + esc(tip) + '">' + num + "<b>" + v + "%</b><small>" + x.n + "</small></div>";
+  }
+  return '<div class="pz"><div class="pzh">' + t[1] + '</div><div class="pzg">' + h + '</div><div class="pzlr"><span>&larr; In &middot; RHH stands here</span><span>Away &rarr;</span></div></div>';
+}
+function pname(x) { return {FB: "fastball", CH: "change-up", CB: "breaking ball"}[x.t] + " " + PSPOT.filter(function (s) { return s[0] === x.s; })[0][1].toLowerCase(); }
+function planCard(p, S2) {
+  var c = plan(p), list = Object.keys(c).map(function (k) { return c[k]; });
+  var full = list.filter(function (x) { return x.n >= 10 && x.s !== 0; }).sort(function (a, b) { return b.pct - a.pct; });   /* Middle is the 2-0 strike call, never a target to trust */
+  var trust = full.slice(0, 3), avoid = full.filter(function (x) { return x.pct < LADDER.pen - 10; }).slice(-2).reverse(), early = list.filter(function (x) { return x.n >= 5 && x.n < 10; });
+  var grid = '<div class="pzones">' + PTYPE.map(function (t) { return pzone(c, t); }).join("") + "</div>" +
+      '<div class="pzleg">' + PBINS.map(function (b) { return '<span><i class="zsw ' + b[1] + '"></i>' + b[2] + "</span>"; }).join("") +
+      '<span><i class="zsw early"></i>5 to 9 pitches: early read</span></div>' +
+      '<p class="pzkey">Catcher&rsquo;s view, the same as the Bullpen Chart and the call pad: a right-handed hitter stands on the left, so In is on the left · strike zone outlined · small number = the location · big number = on or next to the spot, with the pitch count under it</p>';
+  var games = p.gameEx.length;
+  var sheet = '<div class="callsheet"><div><b class="ok-t">Trust</b>' + trust.map(function (x) {
+      return "<span>" + pname(x) + " <em>" + Math.round(x.pct) + "% · " + x.n + "</em>" + (x.gn >= 5 ? ' <em class="g">games ' + Math.round(x.gpct) + "% · " + x.gn + "</em>" : "") + "</span>"; }).join("") + "</div>" +
+    '<div><b class="lo-t">Stay away for now</b>' + (avoid.length ? avoid.map(function (x) { return "<span>" + pname(x) + " <em>" + Math.round(x.pct) + "% · " + x.n + "</em></span>"; }).join("") : "<span>Nothing under " + (LADDER.pen - 10) + "% with 10 or more pitches</span>") + "</div>" +
+    (early.length ? '<div><b class="ea-t">Early reads</b>' + early.map(function (x) { return "<span>" + pname(x) + " <em>" + Math.round(x.pct) + "% · " + x.n + "</em></span>"; }).join("") + "</div>" : "") + "</div>";
+  /* where his plan meets their hitters */
+  var best = function (filter) { return full.filter(filter)[0]; }, mu = [];
+  var who = function (f) { var a = S2.hitters.map(function (h, i) { return f(h) ? h.name.split(" ").slice(-1)[0] : null; }).filter(Boolean); return a.length > 4 ? a.slice(0, 4).concat(["and " + (a.length - 4) + " more"]) : a; };
+  var chase = who(function (h) { return h.tags.indexOf("Chases") >= 0; }), chasePitch = best(function (x) { return x.s === 6 || x.s === 7; });
+  if (chase.length && chasePitch) mu.push("<b>Chasers</b> (" + chase.join(", ") + "): his " + pname(chasePitch) + ", " + Math.round(chasePitch.pct) + "%.");
+  var bb = who(function (h) { return h.tags.indexOf("Bad on breaking balls") >= 0; }), cb = best(function (x) { return x.t === "CB"; });
+  if (bb.length && cb) mu.push("<b>Bad on breaking balls</b> (" + bb.join(", ") + "): his " + pname(cb) + ", " + Math.round(cb.pct) + "%.");
+  else if (bb.length) mu.push("<b>Bad on breaking balls</b> (" + bb.join(", ") + "): his breaking ball isn't a trusted call yet. Don't lean on it.");
+  var fps = who(function (h) { return h.tags.indexOf("First-pitch swinger") >= 0; }), edge = best(function (x) { return x.s !== 0; });
+  if (fps.length && edge) mu.push("<b>First-pitch swingers</b> (" + fps.join(", ") + "): start them on his best edge, the " + pname(edge) + " (" + Math.round(edge.pct) + "%), not the middle.");
+  var late = who(function (h) { return /Late on the fastball|Misses up/.test(h.read); }), up = best(function (x) { return x.t === "FB" && (x.s === 7 || x.s === 1 || x.s === 2); });
+  if (late.length && up) mu.push("<b>Late or missing up</b> (" + late.join(", ") + "): his " + pname(up) + ", " + Math.round(up.pct) + "%.");
+  return '<div class="pplan"><div class="sh"><b>' + esc(p.name) + "</b><span>" + {Fr: "Freshman", So: "Sophomore", Jr: "Junior", Sr: "Senior"}[p.cl] + " · " + p.t + "HP · winter: " +
+    p.pens.length + " pens and " + p.live.length + " live AB sessions" + (games ? " · spring: " + games + (games === 1 ? " game" : " games") : " · no spring games yet") + "</span></div>" +
+    grid + sheet +
+    (mu.length ? '<div class="matchups"><b>Against ' + esc(S2.opp) + "</b>" + mu.map(function (m) { return "<p>" + m + "</p>"; }).join("") + "</div>" : "") + "</div>";
+}
+function planPick(lv, opp) {
+  var key = lv + "|" + opp, staff = lines(lv).sort(function (a, b) { return b.outs - a.outs; });
+  if (!S.sp[key]) S.sp[key] = staff.filter(function (p) { return p.bf; }).slice(0, 2).map(function (p) { return p.id; });
+  return '<div class="spick noprint"><b>Who\'s pitching?</b> <span>Tick as many as you know. Their plans print on page 3.</span><div>' + staff.map(function (p) {
+    return '<label><input type="checkbox" data-sp="' + key + "~" + p.id + '"' + (S.sp[key].indexOf(p.id) >= 0 ? " checked" : "") + "> " + esc(p.name) + (p.home ? " <small>(" + p.home + " arm)</small>" : "") + "</label>";
+  }).join("") + "</div></div>";
+}
+function planPage(lv, opp, S2) {
+  var ids = S.sp[lv + "|" + opp] || [];
+  return '<h4 class="pg">Page 3 · Our pitchers today <small>pitch and spot only · winter pens and live ABs equal, spring games added as they come · on or next to the called spot</small></h4>' +
+    (ids.length ? ids.map(function (id) { return planCard(D.pitchers[id], S2); }).join("") : '<p class="note">Tick who\'s pitching above and each one\'s plan shows here.</p>') +
+    '<p class="note">Under 5 pitches at a spot: just the count, not enough yet. 5 to 9: an early read, no color, grey italics. 10 or more: a full number, colored by how far it is from the ' + LADDER.pen + '% goal, and only those make Trust or Stay away. A numbered box with nothing in it is a call that isn\'t in the winter scripts yet. Middle is the 2-0 strike call, so it never makes Trust. </p>';
+}
+/* ======================================================= one page per player (Nov 13) */
+/* Jim: "If I open a players box I want to see their entire picture." One Players tab whatever the side, one page per
+   kid with Pitching, Hitting and Defense sections, led by his main role ("if equal, go with pitching, hitting, then
+   defense"), and one combined exit report ("Exit reports should definitely be combined"). Winter stays both ways:
+   its own view by class, and his winter pens inside the Pitching section. */
+var CLS = {Fr: "Freshman", So: "Sophomore", Jr: "Junior", Sr: "Senior"};
+function who_(name) {
+  var pl = personLines(name), p = pl.length ? personOf(name) : null, hAll = HD.people[name] || null, d = DF.people[name] || null;
+  /* under 5 plate appearances he isn't a hitter yet: no Hitting section, no goals, no two-way tag, just a line */
+  var h = hAll && hAll.pa >= HMIN ? hAll : null, hLow = hAll && hAll.pa < HMIN ? hAll : null;
+  var first = p ? p.first : null;
+  var o = {name: name, p: p, h: h, hLow: hLow, d: d, cl: (first && first.cl) || (h && h.cl) || (d && d.cl),
+           lv: h ? h.lv : first ? (first.home || first.lv) : d ? d.lv : ""};
+  /* main role: whichever he did more of, batters faced against plate appearances; a tie goes to pitching */
+  var bf = p ? p.bf : 0, pa = h ? h.pa : 0;
+  var order = [];
+  if (p && (bf >= pa || !h)) order.push("pitching");
+  if (h) order.push("hitting");
+  if (p && order.indexOf("pitching") < 0) order.push("pitching");
+  if (d && d.x.outs) order.push("defense");
+  o.order = order; o.main = order[0];
+  return o;
+}
+function roleLine_(o) {
+  var bits = [];
+  if (o.p) bits.push(o.p.first.t + "HP");
+  if (o.h) bits.push(o.h.pos + " · bats " + o.h.b);
+  else if (o.d && o.d.prim !== "P" && o.d.x.outs) bits.push(o.d.prim);
+  return bits.join(" · ");
+}
+var SECNAME = {pitching: "Pitching", hitting: "Hitting", defense: "Defense"};
+function hLowNote_(o, you) {
+  var h = o.hLow; if (!h) return "";
+  return '<section class="card"><h2>' + (you ? "Your" : "His") + " at-bats</h2><p class=\"note\" style=\"margin:0\">Batted " + h.pa + (h.pa === 1 ? " time" : " times") + ": " + h.h + (h.h === 1 ? " hit, " : " hits, ") +
+    h.k + (h.k === 1 ? " strikeout, " : " strikeouts, ") + (h.bb + h.hbp) + " free " + ((h.bb + h.hbp) === 1 ? "base" : "bases") + ". Hitting goals start at " + HMIN + " plate appearances.</p></section>";
+}
+function secPitching_(o) {
+  var p = o.p;
+  return hLowNote_(o) + seasonTable(p) + gameLog(p) + playerLadder(p, false) + '<div class="cols">' + missPattern(p) + pitchMix(p) + "</div>" + reflections(p, 3, false, o.h ? "pitching" : "") + winterLog(p);
+}
+function secHitting_(o) { return hseason(o.h) + '<div class="cols">' + hqab(o.h) + hswings(o.h) + "</div>" + hreflections(o.h, 3, false, o.p ? "hitting" : ""); }
+function secDefense_(o, you) { return o.d ? defenseCard(dsrc(o.d), you) : ""; }
+function comments_(o, forReport) {
+  if (o.p && o.h) return coachComments(o.p, forReport, "Pitching") + hcomments(o.h, forReport, "Hitting");
+  return o.p ? coachComments(o.p, forReport) : o.h ? hcomments(o.h, forReport) : "";
+}
+function personPage(name) {
+  var o = who_(name);
+  var jump = o.order.length > 1 ? '<div class="jumps">' + o.order.map(function (k) { return '<button class="mini-btn" data-jump="' + k + '">' + SECNAME[k] + "</button>"; }).join("") +
+    '<button class="mini-btn" data-jump="comments">Coach comments</button></div>' : "";
+  var sec = function (k) {
+    return '<section class="psec" id="sec-' + k + '"><h2 class="psech">' + SECNAME[k] + (k === o.main && o.p && o.h ? " <small>his main role</small>" : "") + "</h2>" +
+      '<div class="stack">' + (k === "pitching" ? secPitching_(o) : k === "hitting" ? secHitting_(o) : secDefense_(o)) + "</div></section>";
+  };
+  return backBtn("players") +
+    '<div class="titlerow"><div><h1>' + esc(name) + '</h1><p class="sub">' + (CLS[o.cl] || "Class not set") + " · " + roleLine_(o) + " · " + o.lv + "</p></div>" +
+    '<div class="key"><span><i class="ok sm"></i> met</span><span><i class="ring sm"></i> not yet</span></div></div>' + jump +
+    '<div class="stack">' + o.order.map(sec).join("") + '<section class="psec" id="sec-comments">' + comments_(o, false) + "</section></div>";
+}
+/* everyone at a level, once: pitchers by their home level, hitters by theirs */
+function levelPeople_(lv, withSwing) {
+  var seen = {}, out = [], arm = {};
+  lines(lv).filter(function (p) { return withSwing || !p.home; }).forEach(function (p) { if (!seen[p.person]) { seen[p.person] = 1; out.push(p.person); if (p.home) arm[p.person] = p.home; } });
+  hpeople(lv).forEach(function (h) { if (!seen[h.name]) { seen[h.name] = 1; out.push(h.name); } });
+  return out.map(function (n) { var o = who_(n); o.armOf = arm[n] || ""; return o; });
+}
+function allPlayersPage() {
+  var lvs = S.level === "Program" ? LEVELS : [S.level], f = S.pfilter || "all";
+  var keep = function (o) { return f === "all" || (f === "p" && o.p) || (f === "h" && o.h); };
+  var filt = '<div class="metric">' + [["all", "Everyone"], ["p", "Pitchers"], ["h", "Hitters"]].map(function (x) {
+    return '<button aria-pressed="' + (f === x[0]) + '" data-pf="' + x[0] + '">' + x[1] + "</button>"; }).join("") + "</div>";
+  return '<div class="titlerow"><div><h1>' + S.level + ' Players</h1><p class="sub">Tap a player to open his page.</p></div></div>' +
+    '<div class="stack"><section class="card" style="padding-bottom:10px">' + filt + "</section>" + lvs.map(function (lv) {
+      var list = levelPeople_(lv, true).filter(keep).sort(function (a, b) { return a.name < b.name ? -1 : 1; });
+      return (S.level === "Program" ? '<div class="lvhead">' + lv + "</div>" : "") + '<div class="roster">' + list.map(function (o) {
+        var two = o.p && o.h, stat = [];
+        if (o.p) stat.push(o.p.bf ? IPS(o.p.outs) + " IP · " + o.p.log.length + (o.p.log.length === 1 ? " game" : " games") : "No pitching games yet");
+        if (o.h) stat.push(o.h.pa + " PA · " + F3(o.h.m.avg) + " / " + F3(o.h.m.obp) + " / " + F3(o.h.m.slg));
+        return '<button class="pcard" data-person="' + esc(o.name) + '"><b>' + esc(o.name) + (two ? ' <span class="tag">two-way</span>' : "") + (o.armOf ? ' <span class="tag">' + o.armOf + " arm</span>" : "") + "</b><span>" + roleLine_(o) + " · " + o.cl + "</span>" +
+          stat.map(function (x) { return "<span>" + x + "</span>"; }).join("") + "</button>";
+      }).join("") + "</div>";
+    }).join("") + "</div>";
+}
+/* the combined exit report */
+function personExit(name) {
+  var o = who_(name), p = o.p, h = o.h, all = [];
+  if (p && p.bf) all = all.concat(GOALS.map(function (g) { return [g, p.m[g.k]]; }));
+  if (h) all = all.concat(HGOALS.map(function (g) { return [g, h.m[g.k]]; }));
+  var thin = [];
+  if (o.d && o.d.x.outs) {
+    var x = o.d.x, dv = {fpct: x.fpct, cs: x.c ? x.c.csp : null, pb: x.c ? x.c.pb7 : null};
+    DGOALS.forEach(function (g) {
+      if (dv[g.k] == null) return;
+      if (dEnough(g.k, x)) all.push([g, dv[g.k]]);
+      else thin.push(g.name + " (" + (g.k === "fpct" ? x.tc + (x.tc === 1 ? " chance" : " chances") : g.k === "cs" ? x.c.att + " steal attempts" : IPS(x.c.outs) + " innings caught") + ")");
+    });
+  }
+  var met = all.filter(function (q) { return q[1] != null && met_(q[0], q[1]); }), short = all.filter(function (q) { return q[1] != null && !met_(q[0], q[1]); });
+  var lineP = p ? (p.bf ? p.log.length + (p.log.length === 1 ? " game" : " games") + ", " + IPS(p.outs) + " innings pitched" : "no pitching games yet") : "";
+  var lineH = h ? (h.pa + " plate appearances") : "";
+  var sec = function (k) {
+    return '<h4 class="pg">' + SECNAME[k] + "</h4>" + (k === "pitching" ? seasonTable(p, true) + playerLadder(p, true) + hLowNote_(o, true) : k === "hitting" ? hseason(h, true) + hqab(h, true) : secDefense_(o, true));
+  };
+  return '<section class="sheet" id="sheet"><div class="sh-top"><div><b>Legend Titans Baseball</b><span>2027 exit report</span></div><div class="sh-btns"><button class="mini-btn" data-print="1">Print</button><button class="mini-btn" data-close="1">Close ✕</button></div></div>' +
+    "<h3>" + esc(name) + '</h3><p class="who2">' + (CLS[o.cl] || "Class not set") + " · " + roleLine_(o) + " · " + o.lv + " · " + [lineP, lineH].filter(Boolean).join(" · ") + "</p>" +
+    o.order.map(sec).join("") +
+    '<section class="card"><h2>What the numbers say</h2><div class="cols2"><div><h4>Goals you met</h4><ul>' + (met.length ? met.map(function (q) { return "<li>" + q[0].name + ": " + fmt(q[0], q[1]) + "</li>"; }).join("") : "<li>None yet</li>") +
+    "</ul></div><div><h4>Where to grow</h4><ul>" + (short.length ? short.map(function (q) { return "<li>" + q[0].name + ": " + fmt(q[0], q[1]) + " (goal " + gtxt(q[0]) + ")</li>"; }).join("") : "<li>Every goal met</li>") + "</ul></div></div>" +
+    (thin.length ? '<p class="note">Not graded yet, too few plays: ' + thin.join(", ") + ".</p>" : "") + "</section>" +
+    (p ? reflections(p, 2, true, h ? "pitching" : "") : "") + (h ? hreflections(h, 2, true, p ? "hitting" : "") : "") + comments_(o, true) +
+    '<section class="card"><h2>Goals for next season <small>written together at the exit interview</small></h2><div class="lines"><i></i><i></i><i></i></div></section>' +
+    '<p class="note">Your own numbers only. No rankings and no comparison with other players.</p></section>';
+}
+function personReportRows(lv) {
+  return levelPeople_(lv).sort(function (a, b) { return a.name < b.name ? -1 : 1; }).map(function (o) {
+    /* ready when every coach who owes him a comment has written it: pitching coaches of each level he pitched for, and his hitting coaches */
+    var two = !!(o.p && o.h), ready = (o.p ? o.p.lines.filter(function (l) { return l.bf || !l.home; }).every(function (l) { return commentDone(o.name, l.lv, two ? "Pitching" : ""); }) : true) && (o.h ? commentDone(o.name, o.h.lv, two ? "Hitting" : "") : true);
+    return "<tr" + (S.report === o.name ? ' class="sel"' : "") + '><td class="name"><button class="linkbtn" data-report="' + esc(o.name) + '">' + esc(o.name) + (S.report === o.name ? " ▾" : " ›") + "</button></td><td>" + roleLine_(o) +
+      "</td><td>" + (o.p && o.p.bf ? IPS(o.p.outs) : "–") + "</td><td>" + (o.h ? o.h.pa : o.hLow ? o.hLow.pa : "–") + "</td><td>" + (ready ? '<span class="pill met">Ready</span>' : '<span class="pill go">Waiting on comments</span>') + "</td></tr>";
+  }).join("");
+}
+/* ======================================================= pitcher availability */
+/* CHSAA Baseball Bulletin 2025-2026, Pitch Counts (Jim, Nov 6). In the real build these live on the
+   Config tab so next season's bulletin is a settings change, not a code change. */
+var RULES = CFG.rules || {
+  Varsity: {max: 110, bands: [[86, 3], [61, 2], [36, 1], [1, 0]], b2b: {day1: 35, total: 60, rest: 1}},
+  Sub:     {max: 85,  bands: [[61, 3], [36, 2], [26, 1], [1, 0]], b2b: {day1: 25, total: 35, rest: 2}}
+};
+function chartFor(lv) { return lv === "Varsity" ? RULES.Varsity : RULES.Sub; }
+var ASOF_DAYS = [0, 1, 2, 3].map(function (i) { return addDays(TODAY, i); });
+function restFor(R, n) { for (var i = 0; i < R.bands.length; i++) if (n >= R.bands[i][0]) return R.bands[i][1]; return 0; }
+/* by person, across every level: a sophomore who threw for JV yesterday is resting for the sophomores too */
+function outings(person) {
+  var by = {};
+  personLines(person).forEach(function (p) { Object.keys(p.logm).forEach(function (r) { var g = p.logm[r]; var k = g.date; by[k] = by[k] || {date: k, n: 0, lv: []}; by[k].n += g.pitches; if (by[k].lv.indexOf(g.lv) < 0) by[k].lv.push(g.lv); }); });
+  return Object.keys(by).sort().map(function (k) { return by[k]; });
+}
+/* Which chart an outing uses: varsity for a varsity game. The bulletin also says a swing player who
+   pitches on back-to-back days at different levels combines his pitches on the VARSITY chart. */
+function availability(person, asof, forLv) {
+  var past = outings(person).filter(function (o) { return o.date < asof; }), last = past[past.length - 1] || null, until = null, why = "", limit = chartFor(forLv).max;
+  past.forEach(function (o, i) {
+    var prev = past[i - 1], b2b = prev && prev.date === addDays(o.date, -1);
+    var swing = b2b && prev.lv.concat(o.lv).filter(function (x, j, a) { return a.indexOf(x) === j; }).length > 1;
+    var R = (o.lv.indexOf("Varsity") >= 0 || swing) ? RULES.Varsity : RULES.Sub, rest = restFor(R, o.n), w = o.n + " pitches";
+    if (b2b && prev.n <= R.b2b.day1) { rest = Math.max(rest, R.b2b.rest); w = "back-to-back days, " + (prev.n + o.n) + " pitches"; }
+    var e = addDays(o.date, rest + 1);
+    if (e > asof && (!until || e > until)) { until = e; why = w + " on " + sd(o.date) + " · " + rest + (rest === 1 ? " day" : " days") + " rest"; }
+  });
+  /* pitched yesterday under the no-rest band: he can go again today, but only up to the 2-day total */
+  if (!until && last && last.date === addDays(asof, -1)) {
+    var Rl = last.lv.indexOf("Varsity") >= 0 ? RULES.Varsity : chartFor(forLv);
+    if (last.n <= Rl.b2b.day1) { limit = Rl.b2b.total - last.n; why = "threw " + last.n + " yesterday · " + Rl.b2b.total + " max over 2 days"; }
+  }
+  var three = past.filter(function (o) { return o.date >= addDays(asof, -3); }).reduce(function (a, o) { return a + o.n; }, 0);
+  return {last: last, until: until, why: why, limit: limit, three: three};
+}
+function ruleNote(lv) {
+  var R = chartFor(lv), name = lv === "Varsity" ? "Varsity" : "Sub-varsity";
+  return "<b>CHSAA 2025-26, " + name + " chart:</b> " + R.bands.map(function (b, i) { var hi = i ? R.bands[i - 1][0] - 1 : R.max; return b[0] + "-" + hi + " pitches, " + b[1] + (b[1] === 1 ? " day" : " days") + " rest"; }).join("; ") +
+    ". Up to " + R.max + " a day (he may finish the batter). Back-to-back days only if day 1 is " + R.b2b.day1 + " or fewer, " + R.b2b.total + " max over the 2 days, then " + R.b2b.rest + (R.b2b.rest === 1 ? " day" : " days") +
+    " rest. A swing arm's pitches combine across levels, on the varsity chart.";
+}
+function availCard(lv, compact) {
+  var asof = S.asof, seen = {};
+  var list = lines(lv).filter(function (p) { if (seen[p.person]) return false; seen[p.person] = 1; return true; });
+  var rows = list.map(function (p) { return {p: p, a: availability(p.person, asof, lv)}; })
+    .sort(function (x, y) { return (x.a.until ? 1 : 0) - (y.a.until ? 1 : 0) || (x.a.three - y.a.three); });
+  var ok = rows.filter(function (r) { return !r.a.until; }).length;
+  var chips = ASOF_DAYS.map(function (d) { return '<button aria-pressed="' + (d === asof) + '" data-asof="' + d + '">' + sd(d) + "</button>"; }).join("");
+  if (compact) {
+    return '<section class="card avail-strip"><div><b>' + ok + " of " + rows.length + "</b> arms available " + sd(asof) + "</div><div>" +
+      rows.filter(function (r) { return r.a.until; }).map(function (r) { return '<span class="pill go">' + esc(r.p.name) + " · rest, back " + sd(r.a.until) + "</span>"; }).join(" ") +
+      '</div><button class="mini-btn" data-tab="teams">Staff availability ›</button></section>';
+  }
+  var body = rows.map(function (r) {
+    var a = r.a, o = a.last, other = o && o.lv.filter(function (x) { return x !== lv; });
+    return "<tr" + (a.until ? ' class="resting"' : "") + '><td class="name">' + esc(r.p.name) + (r.p.home ? ' <span class="tag">' + r.p.home + " arm</span>" : "") + "</td><td>" + r.p.t + "</td><td>" +
+      (o ? sd(o.date) + " · " + o.n + " pitches" + (other && other.length ? ' <span class="tag">for ' + other.join(", ") + "</span>" : "") : "–") + "</td><td>" + (a.three || "–") + "</td><td>" +
+      (a.until ? '<span class="pill go">Rest · back ' + sd(a.until) + "</span>" : '<span class="pill met">Available · up to ' + a.limit + "</span>") + '</td><td class="gnote">' + a.why + "</td></tr>";
+  }).join("");
+  return '<section class="card"><h2>Who can pitch <small>' + ok + " of " + rows.length + ' available on the day you pick · counts every level he pitched for</small></h2><div class="metric">' + chips + "</div>" +
+    '<div class="scroll"><table><tr><th>Pitcher</th><th>T</th><th>Last outing</th><th>Last 3 days</th><th>Status</th><th>Why</th></tr>' + body + "</table></div>" +
+    '<p class="note">' + ruleNote(lv) + "</p></section>";
+}
+/* ======================================================= coach comments: saved to the comments spreadsheet, as the coach */
+function saveComment(key) {
+  var box = $("#cbox"), msg = $("#cmsg"), k = key.split("|"), text = box ? box.value.trim() : "";
+  var say = function (t) { if (msg) msg.textContent = t; };
+  if (!(window.google && google.script && google.script.run)) { say("Saving works on the live dashboard only."); return; }
+  say("Saving…");
+  google.script.run.withSuccessHandler(function (r) {
+    COMMENTS = COMMENTS.filter(function (c) { return !(c.id === k[0] && c.lv === k[1] && c.role === (k[2] || "")); });
+    if (r && r.text) COMMENTS.push(r);
+    S.editing = null; var y = window.scrollY; render(); window.scrollTo(0, y);
+  }).withFailureHandler(function (e) { say("Not saved: " + (e && e.message ? e.message : e)); })
+    .saveComment({id: k[0], lv: k[1], role: k[2] || "", text: text, player: NAME[k[0]] || ""});
+}
+
+function render() {
+  if (!tabsFor(S.level).some(function (t) { return t[0] === S.tab; })) S.tab = "overview";
+  drawBars(); writeHash();
+  var v = S.tab === "board" ? boardPage() : S.tab === "scout" ? scoutPage() : S.tab === "overview" ? overview() : S.tab === "teams" ? teams() : S.tab === "players" ? (S.player ? playerPage(S.player) : playersPage()) : reportsPage();
+  $("#view").innerHTML = v + '<p class="foot">' + esc(MODEL.version || "Coaches dashboard") + " · every number from the " + SEASON + " season Sheet" + (MODEL.built ? ", read " + esc(MODEL.built) : "") +
+    (MODEL.importUrl ? ' · <a href="' + esc(MODEL.importUrl) + '" target="_top">Import GameChanger stats</a>' : "") + "</p>";
+  /* opened from the Hitting side: land on his hitting, even when pitching leads the page */
+  if (S.player && S.jumpTo) { var sj = document.getElementById("sec-" + S.jumpTo); if (sj && sj.previousElementSibling) sj.scrollIntoView({block: "start"}); }
+  S.jumpTo = null;
+  try { localStorage.setItem("tcd-2", JSON.stringify({side: S.side, level: S.level, tab: S.tab, season: S.season, metric: S.metric, hmetric: S.hmetric, cls: S.cls})); } catch (e) {}
+}
+try { var saved = JSON.parse(localStorage.getItem("tcd-2") || "null"); if (saved) { S.side = saved.side || S.side; S.level = saved.level || S.level; S.tab = saved.tab || S.tab; S.season = saved.season || S.season; S.metric = saved.metric || S.metric; S.hmetric = saved.hmetric || S.hmetric; S.cls = saved.cls || S.cls; } } catch (e) {}
+
+document.addEventListener("click", function (e) {
+  var b = e.target.closest("button, tr[data-level], tr[data-pitcher], tr[data-person], tr[data-open], tr[data-cls]");
+  if (!b) return;
+  if (b.dataset.cedit != null) { S.editing = b.dataset.cedit || null; var y0 = window.scrollY; render(); window.scrollTo(0, y0); var cb = $("#cbox"); if (cb) cb.focus(); return; }
+  if (b.dataset.csave) { saveComment(b.dataset.csave); return; }
+  if (b.dataset.tab) { S.tab = b.dataset.tab; S.player = null; S.from = null; }
+  else if (b.dataset.open) { var po = D.pitchers[b.dataset.open]; if (!po) return; S.from = S.tab === "players" ? null : S.tab; S.player = po.person; S.tab = "players"; S.jumpTo = WIN() ? "pitching" : S.side.toLowerCase(); window.scrollTo(0, 0); }
+  else if (b.dataset.person) { S.from = S.tab === "players" ? null : S.tab; S.player = b.dataset.person; S.tab = "players"; S.jumpTo = WIN() ? "pitching" : S.side.toLowerCase(); window.scrollTo(0, 0); }
+  else if (b.dataset.pf) S.pfilter = b.dataset.pf;
+  else if (b.dataset.jump) { var js = document.getElementById("sec-" + b.dataset.jump); if (js) js.scrollIntoView({block: "start", behavior: "smooth"}); return; }
+  else if (b.dataset.back) { S.player = null; if (S.from) { S.tab = S.from; S.from = null; } }
+  else if (b.dataset.close) { var list = S.scout ? "scout" : "report"; S.scout = null; S.report = null; render(); var top = document.querySelector(list === "scout" ? "[data-scout]" : "[data-report]"); if (top) top.closest("section").scrollIntoView({block: "start"}); return; }
+  else if (b.dataset.scout) { S.scout = S.scout === b.dataset.scout ? null : b.dataset.scout; S.report = null; render(); var sc = document.getElementById("sheet"); if (sc) sc.scrollIntoView({block: "start"}); return; }
+  else if (b.dataset.report) { S.scout = null; S.report = S.report === b.dataset.report ? null : b.dataset.report; render(); var sh = document.getElementById("sheet"); if (sh) sh.scrollIntoView({block: "start"}); return; }
+  else if (b.dataset.print) { window.print(); return; }
+  else if (b.dataset.level) { S.level = b.dataset.level; S.player = null; S.report = null; S.scout = null; if (b.closest("main")) S.tab = "overview"; }   /* a level picked from inside a page opens its Overview */
+  else if (b.dataset.goside) { S.from = null; S.side = b.dataset.goside; S.player = b.dataset.who; S.tab = "players"; window.scrollTo(0, 0); }
+  else if (b.dataset.cls) { S.cls = b.dataset.cls; S.player = null; if (b.closest("main")) S.tab = "overview"; }
+  else if (b.dataset.wk) S.wk = b.dataset.wk;
+  else if (b.dataset.side) { S.side = b.dataset.side; S.player = null; S.report = null; }
+  else if (b.dataset.season) S.season = b.dataset.season;
+  else if (b.dataset.asof) S.asof = b.dataset.asof;
+  else if (b.dataset.metric) S.metric = b.dataset.metric;
+  else if (b.dataset.hmetric) S.hmetric = b.dataset.hmetric;
+  else return;
+  S.editing = null;
+  render();
+});
+document.addEventListener("change", function (e) {
+  if (e.target.matches("input[data-sp]")) {
+    var parts = e.target.getAttribute("data-sp").split("~"), key = parts[0], id = parts[1], a = S.sp[key] || (S.sp[key] = []);
+    if (e.target.checked) { if (a.indexOf(id) < 0) a.push(id); } else S.sp[key] = a.filter(function (x) { return x !== id; });
+    var y = window.scrollY; render(); window.scrollTo(0, y); return;
+  }
+  if (e.target.matches("input[data-seeds]")) { S.seeds = e.target.checked; render(); if (S.seeds) { var sd2 = document.querySelector(".seeds"); if (sd2) sd2.closest("section").scrollIntoView({block: "start"}); } }
+});
+document.addEventListener("keydown", function (e) { if ((e.key === "Enter" || e.key === " ") && e.target.matches("tr[tabindex]")) { e.preventDefault(); e.target.click(); } });
+window.addEventListener("hashchange", function () { readHash(); render(); });
+readHash();
+render();
+})();
+</script>
+</body></html>
